@@ -103,25 +103,16 @@ class LoginController extends GetxController {
       formKey.currentState!.save();
       FullScreenDialogLoader.showDialog();
 
-      print('>>> ==========================================');
-      print('>>> LOGIN ATTEMPT');
-      print('>>> Input: $emailOrUsername');
-      print(
-          '>>> Input Type: ${emailOrUsername.contains('@') ? 'EMAIL' : 'USERNAME'}');
-      print('>>> ==========================================');
 
       // Check if input is username or email
       final isEmail = emailOrUsername.contains('@');
 
       if (!isEmail) {
         // It's a username - check if staff account exists first in database
-        print(
-            '>>> Detected USERNAME format, checking staff account in database...');
         final staffDoc =
             await authRepository.getStaffByUsername(emailOrUsername);
 
         if (staffDoc == null) {
-          print('>>> ✗ No staff account found with username: $emailOrUsername');
           FullScreenDialogLoader.cancelDialog();
           errorMessage.value =
               'Invalid username/email or password. Please check your credentials.';
@@ -129,24 +120,16 @@ class LoginController extends GetxController {
         }
 
         if (!staffDoc.isActive) {
-          print('>>> ✗ Staff account is deactivated');
           FullScreenDialogLoader.cancelDialog();
           errorMessage.value =
               'Your account has been deactivated. Please contact your administrator.';
           return;
         }
 
-        print('>>> ✓ Staff account found in database and active');
-        print('>>> Staff Name: ${staffDoc.name}');
-        print('>>> Staff Role: ${staffDoc.role}');
-        print('>>> Staff Clinic: ${staffDoc.clinicId}');
       } else {
-        print(
-            '>>> Detected EMAIL format, will check roles after authentication');
       }
 
       // Attempt authentication
-      print('>>> Attempting authentication...');
       final value = await authRepository.login({
         "email": emailOrUsername,
         "password": password,
@@ -169,49 +152,35 @@ class LoginController extends GetxController {
       _getStorage.write("userId", userId);
       _getStorage.write("sessionId", session.$id);
 
-      print('>>> ✓ Authentication successful');
-      print('>>> Auth User ID: $userId');
-      print('>>> Email: $userEmail');
 
       String role = "";
       bool matched = false;
 
       // Step 1: Check if account is ADMIN
-      print('>>> ==========================================');
-      print('>>> STEP 1: Checking if ADMIN...');
       final clinicDoc = await authRepository.getClinicByAdminId(userId);
       if (clinicDoc != null) {
         role = clinicDoc.data["role"];
         _getStorage.write("clinicId", clinicDoc.$id);
         _getStorage.write("userName", clinicDoc.data["createdBy"] ?? user.name);
         matched = true;
-        print('>>> ✓ ADMIN FOUND');
-        print('>>> Role: $role');
-        print('>>> Clinic ID: ${clinicDoc.$id}');
       } else {
-        print('>>> ✗ Not an admin account');
       }
 
       // Step 2: Check if account is STAFF
       if (!matched) {
-        print('>>> ==========================================');
-        print('>>> STEP 2: Checking if STAFF...');
 
         // Try by userId first
         var staff = await authRepository.getStaffByUserId(userId);
 
         // If not found, try by username (catches userId mismatches)
         if (staff == null && !isEmail) {
-          print('>>> Not found by userId, trying by USERNAME...');
           staff = await authRepository.getStaffByUsername(emailOrUsername);
 
           // Auto-fix userId if found by username
           if (staff != null) {
-            print('>>> ✓ STAFF FOUND BY USERNAME (userId mismatch detected)');
             await _autoFixStaffUserId(staff, userId);
           }
         } else if (staff != null) {
-          print('>>> ✓ STAFF FOUND BY USERID');
         }
 
         if (staff != null) {
@@ -222,21 +191,12 @@ class LoginController extends GetxController {
           _getStorage.write("userName", staff.name);
           _getStorage.write("username", staff.username);
           matched = true;
-          print('>>> ✓ STAFF VERIFIED');
-          print('>>> Staff Role: $role');
-          print('>>> Staff Name: ${staff.name}');
-          print('>>> Staff Username: ${staff.username}');
-          print('>>> Staff Department: ${staff.department}');
-          print('>>> Staff Authorities: ${staff.authorities}');
         } else {
-          print('>>> ✗ Not a staff account');
         }
       }
 
       // Step 3: Check if CUSTOMER
       if (!matched) {
-        print('>>> ==========================================');
-        print('>>> STEP 3: Checking if CUSTOMER...');
         final userDoc = await authRepository.getUserById(userId);
         if (userDoc != null) {
           role = userDoc.data["role"];
@@ -253,13 +213,9 @@ class LoginController extends GetxController {
           _getStorage.write("userProfilePictureId", profilePictureId ?? "");
           
           matched = true;
-          print('>>> ✓ CUSTOMER FOUND');
-          print('>>> Role: $role');
-          print('>>> Customer ID: ${userDoc.$id}');
-          print('>>> Phone: ${phone ?? "Not set"}');  // ✅ Log it
-          print('>>> Profile Picture ID: ${profilePictureId ?? "Not set"}');  // ✅ Log it
+          // ✅ Log it
+          // ✅ Log it
         } else {
-          print('>>> ✗ Not a customer account');
         }
       }
 
@@ -268,16 +224,10 @@ class LoginController extends GetxController {
         role = "developer";
         _getStorage.write("userName", user.name);
         matched = true;
-        print('>>> ==========================================');
-        print('>>> ✓ DEVELOPER ACCOUNT DETECTED');
       }
 
       // If no role matched, deny access
       if (!matched) {
-        print('>>> ==========================================');
-        print('>>> ✗ NO VALID ROLE FOUND');
-        print('>>> This account has no assigned role in the database');
-        print('>>> ==========================================');
 
         if (sessionId != null) {
           await authRepository.logout(sessionId);
@@ -295,9 +245,6 @@ class LoginController extends GetxController {
       _initializeSecureSession(userId, role);
 
       // Register FCM token for push notifications (Mobile only)
-      print('>>> ==========================================');
-      print('>>> REGISTERING FCM TOKEN FOR PUSH NOTIFICATIONS');
-      print('>>> ==========================================');
 
       try {
         // Only register FCM on mobile platforms
@@ -312,7 +259,6 @@ class LoginController extends GetxController {
             final fcmToken = await notificationService.getFreshToken();
 
             if (fcmToken != null && fcmToken.isNotEmpty) {
-              print('>>> FCM Token available: ${fcmToken.substring(0, 20)}...');
 
               // Get AppwriteProvider instance
               final appwriteProvider = Get.find<AppWriteProvider>();
@@ -325,22 +271,15 @@ class LoginController extends GetxController {
 
               if (target != null) {
                 _getStorage.write('push_target_id', target.$id);
-                print('>>> ✓ Push notifications enabled for user');
-                print('>>> Target ID: ${target.$id}');
               } else {
-                print('>>> ⚠ Warning: Could not register push target');
               }
             } else {
-              print('>>> ⚠ Warning: FCM token not available');
             }
           } else {
-            print('>>> ℹ Push notification permission denied by user');
           }
         } else {
-          print('>>> ℹ Web platform: Skipping FCM registration');
         }
       } catch (e) {
-        print('>>> ⚠ Warning: FCM registration failed (non-critical): $e');
         // Don't fail login if FCM registration fails
       }
 
@@ -348,19 +287,10 @@ class LoginController extends GetxController {
       try {
         final notificationService = Get.find<InAppNotificationService>();
         await notificationService.initialize();
-        print('>>> Notification service initialized after login');
       } catch (e) {
-        print('>>> Warning: Could not initialize notifications: $e');
       }
 
-      print('>>> ==========================================');
 
-      print('>>> ==========================================');
-      print('>>> ✓✓✓ LOGIN SUCCESS ✓✓✓');
-      print('>>> Final Role: $role');
-      print('>>> User ID: $userId');
-      print('>>> Session ID: $sessionId');
-      print('>>> ==========================================');
 
       FullScreenDialogLoader.cancelDialog();
       CustomSnackBar.showSuccessSnackBar(
@@ -381,18 +311,11 @@ class LoginController extends GetxController {
         Get.offAllNamed(Routes.userHome);
       }
     } catch (e) {
-      print('>>> ==========================================');
-      print('>>> ✗✗✗ LOGIN ERROR ✗✗✗');
-      print('>>> Error Type: ${e.runtimeType}');
-      print('>>> Error Details: $e');
-      print('>>> ==========================================');
 
       if (sessionId != null) {
         try {
           await authRepository.logout(sessionId);
-          print('>>> Session cleaned up');
         } catch (logoutError) {
-          print('>>> Error during session cleanup: $logoutError');
         }
       }
 
@@ -406,16 +329,11 @@ class LoginController extends GetxController {
 
   Future<void> _autoFixStaffUserId(Staff staff, String correctUserId) async {
     if (staff.userId != correctUserId) {
-      print('>>> Auto-fixing userId mismatch...');
-      print('>>> DB userId: ${staff.userId}');
-      print('>>> Auth userId: $correctUserId');
 
       try {
         await authRepository.fixStaffUserId(staff.documentId!, correctUserId);
         staff.userId = correctUserId;
-        print('>>> ✓ UserId fixed!');
       } catch (e) {
-        print('>>> Warning: Could not auto-fix userId: $e');
       }
     }
   }
@@ -427,7 +345,6 @@ class LoginController extends GetxController {
       isGoogleLoading.value = true;
       errorMessage.value = '';
 
-      print('>>> LOGIN: Initiating Google Sign-In for Mobile...');
 
       if (kIsWeb) {
         final appWriteProvider = Get.find<AppWriteProvider>();
@@ -444,7 +361,6 @@ class LoginController extends GetxController {
       }
       // If success, the handler will navigate to userHome automatically
     } catch (e) {
-      print('>>> LOGIN: Google Sign-In error: $e');
       isGoogleLoading.value = false;
       errorMessage.value =
           'Google Sign-In failed. Please try again or use email/password.';
@@ -457,11 +373,6 @@ class LoginController extends GetxController {
   }
 
   void _initializeSecureSession(String userId, String role) {
-    print('>>> ============================================');
-    print('>>> INITIALIZING SECURE SESSION');
-    print('>>> User ID: $userId');
-    print('>>> Role: $role');
-    print('>>> ============================================');
 
     // Store session timestamp
     _getStorage.write('sessionTimestamp', DateTime.now().toIso8601String());
@@ -479,8 +390,6 @@ class LoginController extends GetxController {
     // Clean up old security data periodically
     // SessionManager.cleanupOldData();
 
-    print('>>> Secure session initialized');
-    print('>>> ============================================');
   }
 
   Future<void> sendPasswordResetEmail() async {
@@ -510,10 +419,6 @@ class LoginController extends GetxController {
         return;
       }
 
-      print('>>> ============================================');
-      print('>>> FORGOT PASSWORD REQUEST');
-      print('>>> Email: $email');
-      print('>>> ============================================');
 
       // Show loading
       Get.dialog(
@@ -528,7 +433,6 @@ class LoginController extends GetxController {
       Get.back();
 
       if (result['success'] == true) {
-        print('>>> ✅ Password reset email sent');
 
         // Clear the email field
         emailForPasswordResetController.clear();
@@ -542,7 +446,6 @@ class LoginController extends GetxController {
           duration: const Duration(seconds: 5),
         );
       } else {
-        print('>>> ❌ Failed to send password reset email');
 
         Get.snackbar(
           'Error',
@@ -553,9 +456,7 @@ class LoginController extends GetxController {
         );
       }
 
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> ❌ Error sending password reset email: $e');
 
       // Hide loading if still showing
       if (Get.isDialogOpen ?? false) {

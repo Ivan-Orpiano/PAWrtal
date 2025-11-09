@@ -2482,13 +2482,10 @@ class _EnhancedWebAppointmentsPageState
       List<String> imageIds = [];
       if (images.isNotEmpty) {
         try {
-          print('Uploading ${images.length} review images...');
           final uploadedFiles =
               await Get.find<AuthRepository>().uploadReviewImages(images);
           imageIds = uploadedFiles.map((file) => file.$id).toList();
-          print('Successfully uploaded ${imageIds.length} images');
         } catch (e) {
-          print('Error uploading images: $e');
         }
       }
 
@@ -2535,7 +2532,6 @@ class _EnhancedWebAppointmentsPageState
       );
     } catch (e) {
       Get.back();
-      print('Error submitting review: $e');
       Get.snackbar(
         'Error',
         'Failed to submit review: ${e.toString()}',

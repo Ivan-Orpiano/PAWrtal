@@ -66,7 +66,6 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
         }
       }
     } catch (e) {
-      print("Error fetching user location: $e");
       if (mounted) {
         setState(() {
           userLocation = sanJoseDelMonteBounds.center;
@@ -111,7 +110,6 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
         desiredAccuracy: LocationAccuracy.high,
       );
     } catch (e) {
-      print("Error getting current location: $e");
       return null;
     }
   }

@@ -75,11 +75,9 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
           .subscribeToClinicAppointments(clinicId)
           .listen((message) {
         // When an appointment is created, updated, or deleted, refresh time slots
-        print('Real-time update received: ${message.events}');
         _fetchOccupiedSlots();
       });
     } catch (e) {
-      print('Error setting up realtime subscription: $e');
     }
   }
 
@@ -91,14 +89,12 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
       final slots = await Get.find<AuthRepository>()
           .getOccupiedTimeSlots(clinicId, today);
 
-      print('Fetched occupied slots for ${today.toString()}: $slots');
 
       setState(() {
         occupiedTimeSlots = slots;
       });
       _updateAvailableTimeSlots();
     } catch (e) {
-      print('Error fetching occupied slots: $e');
     }
   }
 
@@ -140,13 +136,10 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
     final filteredSlots = slots.where((slot) {
       final isOccupied = occupiedTimeSlots.contains(slot);
       if (isOccupied) {
-        print('Slot $slot is occupied, filtering out');
       }
       return !isOccupied;
     }).toList();
 
-    print('Available slots after filtering: $filteredSlots');
-    print('Occupied slots: $occupiedTimeSlots');
 
     setState(() {
       availableTimeSlots = filteredSlots;
@@ -285,7 +278,6 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
         return DateTime(date.year, date.month, date.day, hour, minute);
       }
     } catch (e) {
-      print('Error parsing time string: $timeString - $e');
       // Fallback: return current date with 9 AM
       return DateTime(date.year, date.month, date.day, 9, 0);
     }
@@ -353,11 +345,9 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
             );
 
             await Get.find<AuthRepository>().createNotification(notification);
-            print('>>> Booking notification sent to admin');
           }
         }
       } catch (e) {
-        print('>>> Error creating notification: $e');
       }
 
       // ============= Notify admin of new appointment =============
@@ -381,20 +371,17 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
 
   Future<void> _notifyAdminOfNewAppointment(Appointment appointment) async {
     try {
-      print('>>> Notifying admin of new appointment');
 
       // Get clinic admin ID
       final clinicDoc = await Get.find<AuthRepository>()
           .getClinicById(widget.clinic.documentId ?? '');
 
       if (clinicDoc == null) {
-        print('>>> Clinic not found, skipping admin notification');
         return;
       }
 
       final adminId = clinicDoc.data['adminId'] as String?;
       if (adminId == null || adminId.isEmpty) {
-        print('>>> Admin ID not found, skipping notification');
         return;
       }
 
@@ -414,9 +401,7 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
         appointmentId: '', // Will be empty for new appointments
       );
 
-      print('>>> Admin notification sent successfully');
     } catch (e) {
-      print('>>> Error notifying admin: $e');
       // Don't fail booking if notification fails
     }
   }

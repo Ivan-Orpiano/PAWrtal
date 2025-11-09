@@ -52,7 +52,6 @@ class MessagingController extends GetxController {
 
   @override
   void onClose() {
-    print('=== Cleaning up MessagingController ===');
 
     // Dispose controllers
     messageController.dispose();
@@ -81,18 +80,14 @@ class MessagingController extends GetxController {
 
     // Set user offline
     setUserOffline().then((_) {
-      print('User status set to offline');
     }).catchError((e) {
-      print('Error setting user offline: $e');
     });
 
     super.onClose();
-    print('MessagingController cleanup complete');
   }
 
   // ADDED: Method to clear all data (call this on logout)
   void clearAllData() {
-    print('=== Clearing MessagingController data ===');
 
     // Cancel subscriptions
     _messageSubscription?.cancel();
@@ -116,7 +111,6 @@ class MessagingController extends GetxController {
     // Clear text input
     messageController.clear();
 
-    print('MessagingController data cleared');
   }
 
   // ============= CONVERSATION METHODS =============
@@ -128,7 +122,6 @@ class MessagingController extends GetxController {
           await _authRepository.getUserConversations(_userSession.userId);
 
       conversations.value = userConversations;
-      print('Loaded ${userConversations.length} conversations');
     } catch (e) {
       Get.snackbar('Error', 'Failed to load conversations: $e',
           backgroundColor: Colors.red, colorText: Colors.white);
@@ -141,9 +134,6 @@ class MessagingController extends GetxController {
     try {
       isLoading.value = true;
 
-      print('=== DEBUG: User Starting conversation ===');
-      print('User ID: ${_userSession.userId}');
-      print('Clinic ID: $clinicId');
 
       if (!AppwriteConstants.messagingCollectionsConfigured) {
         Get.snackbar(
@@ -157,7 +147,6 @@ class MessagingController extends GetxController {
       }
 
       if (_userSession.userId.isEmpty) {
-        print('ERROR: User ID is empty');
         Get.snackbar(
           'Login Required',
           'Please log in first to start a conversation.',
@@ -168,7 +157,6 @@ class MessagingController extends GetxController {
       }
 
       if (clinicId.isEmpty) {
-        print('ERROR: Clinic ID is empty');
         Get.snackbar(
           'Error',
           'Invalid clinic information.',
@@ -179,13 +167,10 @@ class MessagingController extends GetxController {
       }
 
       // Get or create conversation
-      print('Creating/getting conversation...');
       final conversation = await _authRepository.getOrCreateConversation(
           _userSession.userId, clinicId);
 
       if (conversation == null) {
-        print(
-            'ERROR: Failed to create/get conversation - conversation is null');
         Get.snackbar(
           'Error',
           'Failed to create conversation. Please check your internet connection and try again.',
@@ -196,17 +181,14 @@ class MessagingController extends GetxController {
         return null;
       }
 
-      print('SUCCESS: Conversation created/found: ${conversation.documentId}');
 
       // Update conversations list - add to TOP or move existing to TOP
       final existingIndex = conversations
           .indexWhere((c) => c.documentId == conversation.documentId);
 
       if (existingIndex != -1) {
-        print('Conversation exists, moving to top');
         conversations.removeAt(existingIndex);
       } else {
-        print('New conversation, adding to top');
       }
       conversations.insert(0, conversation);
 
@@ -215,28 +197,19 @@ class MessagingController extends GetxController {
       currentReceiverId.value = clinicId;
       currentReceiverType.value = 'clinic';
 
-      print(
-          'Current conversation set: ${currentConversation.value?.documentId}');
 
       // Subscribe to real-time messages FIRST (so we catch any incoming messages)
-      print('Subscribing to messages...');
       subscribeToMessages(conversation.documentId!);
 
       // Load conversation data
-      print('Loading conversation data...');
       await Future.wait([
         loadConversationMessages(conversation.documentId!),
         loadConversationStarters(clinicId),
       ]);
 
-      print('SUCCESS: Conversation setup complete');
-      print('Messages loaded: ${currentMessages.length}');
-      print('Starters loaded: ${conversationStarters.length}');
 
       return conversation;
     } catch (e) {
-      print('ERROR: Exception in startConversationWithClinic: $e');
-      print('Stack trace: ${StackTrace.current}');
       Get.snackbar(
         'Error',
         'Failed to start conversation: $e',
@@ -312,17 +285,9 @@ class MessagingController extends GetxController {
 
       if (text == null) messageController.clear();
 
-      print('>>> ============================================');
-      print('>>> USER CONTROLLER: Sending message');
-      print('>>> Conversation: ${currentConversation.value!.documentId}');
-      print('>>> Sender: ${_userSession.userId}');
-      print('>>> Receiver: ${currentReceiverId.value}');
-      print('>>> Message: $messageText');
-      print('>>> ============================================');
 
       String senderType = 'user';
 
-      print('>>> SenderType: $senderType');
 
       // Send message
       final sentMessage = await _authRepository.sendMessage(
@@ -332,7 +297,6 @@ class MessagingController extends GetxController {
         attachment: attachmentUrl,
       );
 
-      print('>>> Message sent successfully: ${sentMessage.documentId}');
 
       // Update conversation - user sent message so their unread count stays 0
       final updatedConversation = currentConversation.value!.copyWith(
@@ -351,10 +315,7 @@ class MessagingController extends GetxController {
       }
       conversations.insert(0, updatedConversation);
 
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> ERROR sending message: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
       Get.snackbar('Error', 'Failed to send message: $e',
           backgroundColor: Colors.red, colorText: Colors.white);
     } finally {
@@ -363,70 +324,47 @@ class MessagingController extends GetxController {
   }
 
   Future<void> sendStarterMessage(ConversationStarter starter) async {
-    print('>>> ═══════════════════════════════════════════════════════');
-    print('>>> SENDSTARTERMESSAGE CALLED');
-    print('>>> Time: ${DateTime.now().millisecondsSinceEpoch}');
-    print('>>> Trigger: ${starter.triggerText}');
-    print('>>> isSendingMessage BEFORE: ${isSendingMessage.value}');
-    print('>>> ═══════════════════════════════════════════════════════');
 
     if (currentConversation.value == null) {
-      print('>>> ERROR: No conversation selected');
       return;
     }
 
     // CRITICAL: Check if already sending
     if (isSendingMessage.value) {
-      print('>>> ⚠️ BLOCKED: Already sending a message!');
-      print('>>> This call will be ignored to prevent duplicates');
       return;
     }
 
     try {
       // Set flag IMMEDIATELY
       isSendingMessage.value = true;
-      print('>>> ✓ isSendingMessage set to TRUE');
 
       // Wait a tiny bit to ensure state propagates
       await Future.delayed(const Duration(milliseconds: 50));
 
-      print('>>> Step 1: User sending trigger message...');
       await _authRepository.sendMessage(
         conversationId: currentConversation.value!.documentId!,
         senderId: _userSession.userId,
         messageText: starter.triggerText,
       );
-      print('>>> ✓ User trigger message sent');
 
       // Wait for message to be delivered
       await Future.delayed(const Duration(milliseconds: 500));
 
-      print('>>> Step 2: Sending clinic auto-response...');
       await _authRepository.sendConversationStarterResponse(
         conversationId: currentConversation.value!.documentId!,
         clinicId: currentReceiverId.value,
         responseText: starter.responseText,
       );
-      print('>>> ✓ Clinic auto-response sent');
 
       // Wait before reloading
       await Future.delayed(const Duration(milliseconds: 300));
 
-      print('>>> Step 3: Reloading messages...');
       await loadConversationMessages(currentConversation.value!.documentId!);
-      print('>>> ✓ Messages reloaded');
 
       // Scroll to bottom
       _scrollToBottom();
 
-      print('>>> ═══════════════════════════════════════════════════════');
-      print('>>> CONVERSATION STARTER COMPLETE');
-      print('>>> ═══════════════════════════════════════════════════════');
     } catch (e) {
-      print('>>> ═══════════════════════════════════════════════════════');
-      print('>>> ERROR in sendStarterMessage: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
-      print('>>> ═══════════════════════════════════════════════════════');
 
       Get.snackbar(
         'Error',
@@ -436,7 +374,6 @@ class MessagingController extends GetxController {
       );
     } finally {
       isSendingMessage.value = false;
-      print('>>> ✓ isSendingMessage set to FALSE');
     }
   }
 
@@ -461,7 +398,6 @@ class MessagingController extends GetxController {
         }
       }
     } catch (e) {
-      print('Error marking messages as read: $e');
     }
   }
 
@@ -473,7 +409,6 @@ class MessagingController extends GetxController {
           await _authRepository.getClinicConversationStarters(clinicId);
       conversationStarters.value = starters;
     } catch (e) {
-      print('Error loading conversation starters: $e');
     }
   }
 
@@ -483,7 +418,6 @@ class MessagingController extends GetxController {
     try {
       await _authRepository.setUserOnline(_userSession.userId);
     } catch (e) {
-      print('Error setting user online: $e');
     }
   }
 
@@ -491,7 +425,6 @@ class MessagingController extends GetxController {
     try {
       await _authRepository.setUserOffline(_userSession.userId);
     } catch (e) {
-      print('Error setting user offline: $e');
     }
   }
 
@@ -502,17 +435,12 @@ class MessagingController extends GetxController {
         userStatuses[userId] = status;
       }
     } catch (e) {
-      print('Error loading user status: $e');
     }
   }
 
   // ============= REAL-TIME SUBSCRIPTION METHODS =============
 
   void subscribeToConversationUpdates() {
-    print('>>> ============================================');
-    print('>>> CONTROLLER: Setting up conversation subscription');
-    print('>>> User ID: ${_userSession.userId}');
-    print('>>> ============================================');
 
     _conversationSubscription?.cancel();
 
@@ -520,21 +448,10 @@ class MessagingController extends GetxController {
     _conversationSubscription = _authRepository
         .subscribeToUserConversations(_userSession.userId)
         .listen((realtimeMessage) {
-      print('>>> ============================================');
-      print('>>> REAL-TIME CONVERSATION EVENT RECEIVED');
-      print('>>> Time: ${DateTime.now().millisecondsSinceEpoch}');
-      print('>>> Events: ${realtimeMessage.events}');
-      print('>>> ============================================');
 
       try {
         final conversationData = realtimeMessage.payload;
 
-        print('>>> Conversation data:');
-        print('>>>   - Conversation ID: ${conversationData['\$id']}');
-        print('>>>   - User ID: ${conversationData['userId']}');
-        print('>>>   - Clinic ID: ${conversationData['clinicId']}');
-        print('>>>   - Last Message: ${conversationData['lastMessageText']}');
-        print('>>>   - User Unread: ${conversationData['userUnreadCount']}');
 
         final updatedConversation = Conversation.fromMap(conversationData);
         final conversationWithId =
@@ -542,25 +459,16 @@ class MessagingController extends GetxController {
 
         if (realtimeMessage.events
             .contains('databases.*.collections.*.documents.*.update')) {
-          print('>>> Event type: UPDATE');
           _handleConversationUpdate(conversationWithId);
         } else if (realtimeMessage.events
             .contains('databases.*.collections.*.documents.*.create')) {
-          print('>>> Event type: CREATE');
           _handleNewConversation(conversationWithId);
         }
 
-        print('>>> ============================================');
       } catch (e) {
-        print('>>> ============================================');
-        print('>>> ERROR processing conversation update: $e');
-        print('>>> Stack trace: ${StackTrace.current}');
-        print('>>> ============================================');
       }
     });
 
-    print('>>> ✓ Subscription active');
-    print('>>> ============================================');
   }
 
   void _handleConversationUpdate(Conversation updatedConversation) {
@@ -595,20 +503,11 @@ class MessagingController extends GetxController {
   }
 
   void subscribeToMessages(String conversationId) {
-    print('>>> ═══════════════════════════════════════════════════════');
-    print('>>> SUBSCRIBING TO MESSAGES');
-    print('>>> Conversation ID: $conversationId');
-    print('>>> ═══════════════════════════════════════════════════════');
 
     _messageSubscription?.cancel();
     _messageSubscription = _authRepository
         .subscribeToMessages(conversationId)
         .listen((realtimeMessage) {
-      print('>>> ═══════════════════════════════════════════════════════');
-      print('>>> REAL-TIME MESSAGE EVENT RECEIVED');
-      print('>>> Time: ${DateTime.now().millisecondsSinceEpoch}');
-      print('>>> Events: ${realtimeMessage.events}');
-      print('>>> ═══════════════════════════════════════════════════════');
 
       if (realtimeMessage.events
           .contains('databases.*.collections.*.documents.*.create')) {
@@ -618,17 +517,11 @@ class MessagingController extends GetxController {
           final messageWithId =
               message.copyWith(documentId: messageData['\$id']);
 
-          print('>>> New message from real-time:');
-          print('>>>   - Message ID: ${messageWithId.documentId}');
-          print('>>>   - Sender: ${messageWithId.senderId}');
-          print('>>>   - Text: ${messageWithId.messageText}');
-          print('>>>   - Timestamp: ${messageWithId.messageTimestamp}');
 
           // CRITICAL: Check for duplicates in currentMessages
           final existingIndex = currentMessages.indexWhere((m) {
             // Check by ID first
             if (m.documentId == messageWithId.documentId) {
-              print('>>>   ⚠️ Duplicate found by ID: ${m.documentId}');
               return true;
             }
 
@@ -640,10 +533,6 @@ class MessagingController extends GetxController {
                         .abs()
                         .inSeconds <
                     2) {
-              print('>>>   ⚠️ Duplicate found by content');
-              print('>>>   - Existing ID: ${m.documentId}');
-              print(
-                  '>>>   - Time diff: ${m.messageTimestamp.difference(messageWithId.messageTimestamp).inSeconds}s');
               return true;
             }
 
@@ -651,13 +540,10 @@ class MessagingController extends GetxController {
           });
 
           if (existingIndex == -1) {
-            print('>>>   ✓ No duplicate found, adding message to list');
-            print('>>>   - Current message count: ${currentMessages.length}');
 
             currentMessages.add(messageWithId);
             currentMessages.refresh();
 
-            print('>>>   - New message count: ${currentMessages.length}');
 
             // Auto-scroll to bottom for new messages
             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -667,20 +553,12 @@ class MessagingController extends GetxController {
             // If this is from clinic and user is viewing, mark as read
             if (messageWithId.senderId != _userSession.userId &&
                 currentConversation.value?.documentId == conversationId) {
-              print('>>>   - Auto-marking incoming message as read');
               markConversationAsRead(conversationId);
             }
           } else {
-            print(
-                '>>>   ⚠️ DUPLICATE BLOCKED - Message already exists at index $existingIndex');
           }
 
-          print('>>> ═══════════════════════════════════════════════════════');
         } catch (e) {
-          print('>>> ═══════════════════════════════════════════════════════');
-          print('>>> ERROR processing real-time message: $e');
-          print('>>> Stack trace: ${StackTrace.current}');
-          print('>>> ═══════════════════════════════════════════════════════');
         }
       }
     });
@@ -695,7 +573,6 @@ class MessagingController extends GetxController {
         final status = UserStatus.fromMap(statusData);
         userStatuses[userId] = status;
       } catch (e) {
-        print('Error processing user status update: $e');
       }
     });
   }
@@ -734,8 +611,6 @@ class MessagingController extends GetxController {
         'timestamp': DateTime.now().millisecondsSinceEpoch,
       };
       shouldAutoSelectConversation.value = true;
-      print(
-          '>>> Preserved conversation: ${currentConversation.value?.documentId}');
     }
   }
 
@@ -743,7 +618,6 @@ class MessagingController extends GetxController {
   void clearPreservedConversation() {
     selectedConversationData.value = null;
     shouldAutoSelectConversation.value = false;
-    print('>>> Cleared preserved conversation');
   }
 
   /// Check if we should restore a preserved conversation
@@ -768,7 +642,6 @@ class MessagingController extends GetxController {
     final receiverId = data['receiverId'] as String;
     final receiverType = data['receiverType'] as String;
 
-    print('>>> Restoring conversation: ${conversation.documentId}');
 
     await openConversation(conversation, receiverId, receiverType);
     clearPreservedConversation();

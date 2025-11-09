@@ -48,19 +48,15 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
   }
 
   void _setupRealtimeListeners() {
-    print('🔔 Setting up real-time listeners for clinic updates...');
 
     final authRepository = Get.find<AuthRepository>();
 
     _clinicSubscription = authRepository.subscribeToClinicChanges().listen(
         (RealtimeMessage event) {
-      print('🔔 Clinic real-time event received');
-      print('   Events: ${event.events}');
 
       final eventType = event.events.first;
 
       if (eventType.contains('.create')) {
-        print('✅ New clinic created - refreshing list');
         _showRealTimeNotification(
           'New clinic added to the network',
           Icons.add_business_rounded,
@@ -68,7 +64,6 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
         );
         _fetchClinicsData();
       } else if (eventType.contains('.update')) {
-        print('🔄 Clinic updated - refreshing list');
         final clinicName = event.payload['clinicName'] as String?;
         _showRealTimeNotification(
           'Clinic "${clinicName ?? 'Unknown'}" information updated',
@@ -77,7 +72,6 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
         );
         _fetchClinicsData();
       } else if (eventType.contains('.delete')) {
-        print('🗑️ Clinic deleted - refreshing list');
         _showRealTimeNotification(
           'A clinic has been removed',
           Icons.delete_rounded,
@@ -86,26 +80,20 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
         _fetchClinicsData();
       }
     }, onError: (error) {
-      print('❌ Clinic subscription error: $error');
     });
 
     _settingsSubscription = authRepository
         .subscribeToClinicSettingsChanges()
         .listen((RealtimeMessage event) {
-      print('🔔 Settings real-time event received');
-      print('   Events: ${event.events}');
 
       final eventType = event.events.first;
 
       if (eventType.contains('.update') || eventType.contains('.create')) {
-        print('🔄 Clinic settings updated - refreshing list');
         _fetchClinicsData();
       }
     }, onError: (error) {
-      print('❌ Settings subscription error: $error');
     });
 
-    print('✅ Real-time listeners initialized successfully');
   }
 
   void _showRealTimeNotification(String message, IconData icon, Color color) {
@@ -196,10 +184,6 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
       final settingsMap = <String, ClinicSettings?>{};
       final statsCache = <String, ClinicRatingStats>{};
 
-      print('>>> ============================================');
-      print('>>> FETCHING CLINICS DATA FOR DASHBOARD');
-      print('>>> Total clinics: ${clinicsWithSettings.length}');
-      print('>>> ============================================');
 
       for (final data in clinicsWithSettings) {
         final clinic = data['clinic'] as Clinic;
@@ -208,10 +192,6 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
         // CRITICAL: Get the correct clinic document ID
         final clinicDocId = clinic.documentId ?? '';
 
-        print('>>> Processing clinic: ${clinic.clinicName}');
-        print('>>>   Document ID: $clinicDocId');
-        print('>>>   Image URL: ${clinic.image}');
-        print('>>>   Dashboard Pic: ${clinic.dashboardPic}');
 
         clinics.add(clinic);
         settingsMap[clinicDocId] = settings;
@@ -221,10 +201,7 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
           final stats = await authRepository.getClinicRatingStats(clinicDocId);
           statsCache[clinicDocId] = stats;
 
-          print(
-              '>>>   Rating: ${stats.averageRating} (${stats.totalReviews} reviews)');
         } catch (e) {
-          print('>>>   Error loading stats: $e');
           // Create empty stats for clinics without ratings
           statsCache[clinicDocId] = ClinicRatingStats(
             averageRating: 0.0,
@@ -235,7 +212,6 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
           );
         }
 
-        print('>>> ---');
       }
 
       if (mounted) {
@@ -247,17 +223,8 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
           isLoading = false;
         });
 
-        print('>>> ============================================');
-        print('>>> DATA LOADED SUCCESSFULLY');
-        print('>>> Total clinics: ${allClinics.length}');
-        print('>>> Filtered clinics: ${filteredClinics.length}');
-        print('>>> ============================================');
       }
     } catch (e, stackTrace) {
-      print('>>> ============================================');
-      print('>>> ERROR FETCHING CLINICS DATA: $e');
-      print('>>> Stack trace: $stackTrace');
-      print('>>> ============================================');
 
       if (mounted) {
         setState(() {

@@ -31,7 +31,6 @@ class AdminFeedbackController extends GetxController {
     try {
       await Get.find<AppWriteProvider>().migrateFeedbackPinFields();
     } catch (e) {
-      print('Migration error: $e');
     }
   }
 
@@ -135,14 +134,12 @@ Future<void> addReply(String documentId, String reply) async {
   /// Toggle pin status with database persistence
   Future<void> togglePin(String feedbackId) async {
     try {
-      print('>>> Toggling pin for feedback: $feedbackId');
 
       // Find the feedback item
       final feedbackIndex =
           allFeedback.indexWhere((f) => f.documentId == feedbackId);
 
       if (feedbackIndex == -1) {
-        print('>>> Error: Feedback not found');
         return;
       }
 
@@ -153,8 +150,6 @@ Future<void> addReply(String documentId, String reply) async {
       final userId = _storage.read('userId') ?? '';
       final userName = _storage.read('name') ?? 'System';
 
-      print('>>> New pin status: $newPinStatus');
-      print('>>> Pinned by: $userName');
 
       // Update in database
       await authRepository.toggleFeedbackPin(
@@ -187,9 +182,7 @@ Future<void> addReply(String documentId, String reply) async {
         duration: const Duration(seconds: 2),
       );
 
-      print('>>> Pin toggle successful');
     } catch (e) {
-      print('>>> Error toggling pin: $e');
       Get.snackbar(
         'Error',
         'Failed to toggle pin: $e',
@@ -206,7 +199,6 @@ Future<void> archiveFeedback(String documentId) async {
     // Get current admin/user info
     final userName = _storage.read('name') ?? 'System';
     
-    print('>>> Archiving feedback: $documentId by $userName');
     
     await authRepository.archiveFeedback(documentId, userName);
     
@@ -228,9 +220,7 @@ Future<void> archiveFeedback(String documentId) async {
       icon: const Icon(Icons.archive, color: Colors.green),
     );
     
-    print('>>> Archive successful');
   } catch (e) {
-    print('>>> Error archiving feedback: $e');
     Get.snackbar(
       'Error',
       'Failed to archive feedback: $e',
@@ -249,7 +239,6 @@ Future<void> deleteFeedback(String documentId, List<String> attachmentIds) async
   try {
     isLoading.value = true;
     
-    print('>>> Deleting feedback permanently: $documentId');
     
     await authRepository.deleteFeedback(documentId, attachmentIds);
     
@@ -268,9 +257,7 @@ Future<void> deleteFeedback(String documentId, List<String> attachmentIds) async
       icon: const Icon(Icons.delete_forever, color: Colors.orange),
     );
     
-    print('>>> Delete successful');
   } catch (e) {
-    print('>>> Error deleting feedback: $e');
     Get.snackbar(
       'Error',
       'Failed to delete feedback: $e',

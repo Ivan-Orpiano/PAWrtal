@@ -91,10 +91,6 @@ class _SuperAdminStaffManagementPageState
 
 
       for (var s in staff) {
-      print('>>> Staff: ${s.name}');
-      print('>>> Image field: ${s.image}');
-      print('>>> Full URL: ${authRepository.getImageUrl(s.image)}');
-      print('>>> ---');
     }
 
 

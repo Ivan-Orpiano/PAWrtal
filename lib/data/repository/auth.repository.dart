@@ -42,14 +42,11 @@ class AuthRepository {
       final email = map["email"];
       final password = map["password"];
 
-      print('=== AUTH REPOSITORY LOGIN ===');
-      print('Email: $email');
 
       // First check if this is a staff account BY CHECKING DATABASE
       final staffCheck = await appWriteProvider.checkIfStaffAccount(email);
 
       if (staffCheck['isStaff'] == true) {
-        print('Detected staff account, using staff login...');
         final staffLoginResult =
             await appWriteProvider.staffLogin(email, password);
 
@@ -57,12 +54,10 @@ class AuthRepository {
       }
 
       // Regular user login
-      print('Regular user login...');
       final result = await appWriteProvider.login(map);
 
       return result;
     } catch (e) {
-      print('Repository login error: $e');
       rethrow;
     }
   }
@@ -104,7 +99,6 @@ class AuthRepository {
         return clinic;
       }).toList();
     } catch (e) {
-      print('Error getting all clinics: $e');
       return [];
     }
   }
@@ -117,13 +111,10 @@ class AuthRepository {
         try {
           return Appointment.fromMap(Map<String, dynamic>.from(data));
         } catch (e) {
-          print('Error converting appointment data: $e');
-          print('Problematic data: $data');
           throw Exception('Invalid appointment data: $e');
         }
       }).toList();
     } catch (e) {
-      print('Error in getClinicAppointments: $e');
       return [];
     }
   }
@@ -137,10 +128,6 @@ class AuthRepository {
 
   Future<void> updateFullAppointment(
       String documentId, Map<String, dynamic> data) {
-    print('>>> ============================================');
-    print('>>> REPOSITORY: Updating appointment');
-    print('>>> Document ID: $documentId');
-    print('>>> ============================================');
 
     // CRITICAL: Validate that no medical data is being sent
     final medicalFields = [
@@ -154,10 +141,6 @@ class AuthRepository {
         data.keys.where((key) => medicalFields.contains(key)).toList();
 
     if (foundMedicalFields.isNotEmpty) {
-      print('>>> ⚠️ WARNING: Medical fields detected in appointment update!');
-      print('>>> Found: $foundMedicalFields');
-      print('>>> These should be in MedicalRecord, not Appointment');
-      print('>>> Removing them from update...');
 
       // Remove medical fields
       for (var field in foundMedicalFields) {
@@ -165,8 +148,6 @@ class AuthRepository {
       }
     }
 
-    print('>>> Final data keys: ${data.keys.toList()}');
-    print('>>> ============================================');
 
     // Call the provider method which will clean data again (defense in depth)
     return appWriteProvider.updateFullAppointment(documentId, data);
@@ -182,7 +163,6 @@ class AuthRepository {
 
   Future<models.Document?> getPetById(String petId) async {
     try {
-      print('>>> REPOSITORY: Fetching pet by ID: $petId');
 
       // STRATEGY 1: Try as document ID first
       try {
@@ -192,10 +172,8 @@ class AuthRepository {
           documentId: petId,
         );
 
-        print('>>> Pet found by document ID');
         return result;
       } catch (e) {
-        print('>>> Not a document ID, trying as petId field...');
       }
 
       // STRATEGY 2: Try as petId field (for backward compatibility)
@@ -206,14 +184,11 @@ class AuthRepository {
       );
 
       if (result.documents.isNotEmpty) {
-        print('>>> Pet found by petId field');
         return result.documents.first;
       }
 
-      print('>>> No pet found with ID: $petId');
       return null;
     } catch (e) {
-      print(">>> Error fetching pet: $e");
       return null;
     }
   }
@@ -232,12 +207,6 @@ class AuthRepository {
 
   Future<void> createAppointment(Appointment appointment) async {
     try {
-      print('>>> ============================================');
-      print('>>> REPOSITORY: Creating appointment');
-      print('>>> Service: ${appointment.service}');
-      print('>>> Clinic ID: ${appointment.clinicId}');
-      print('>>> Initial isMedicalService: ${appointment.isMedicalService}');
-      print('>>> ============================================');
 
       // CRITICAL: Check if service is medical from clinic settings
       final clinicSettings =
@@ -246,11 +215,7 @@ class AuthRepository {
       bool isMedicalService = false;
       if (clinicSettings != null) {
         isMedicalService = clinicSettings.isServiceMedical(appointment.service);
-        print('>>> Checked clinic settings - is medical: $isMedicalService');
-        print(
-            '>>> Medical services in settings: ${clinicSettings.medicalServices}');
       } else {
-        print('>>> Warning: No clinic settings found');
       }
 
       // Create appointment with correct medical status
@@ -258,14 +223,10 @@ class AuthRepository {
         isMedicalService: isMedicalService,
       );
 
-      print(
-          '>>> Final appointment isMedicalService: ${appointmentWithMedicalStatus.isMedicalService}');
-      print('>>> ============================================');
 
       return appWriteProvider
           .createAppointment(appointmentWithMedicalStatus.toMap());
     } catch (e) {
-      print('>>> Error in repository createAppointment: $e');
       rethrow;
     }
   }
@@ -278,53 +239,31 @@ class AuthRepository {
         try {
           return Appointment.fromMap(Map<String, dynamic>.from(data));
         } catch (e) {
-          print('Error converting appointment data: $e');
-          print('Problematic data: $data');
           throw Exception('Invalid appointment data: $e');
         }
       }).toList();
     } catch (e) {
-      print('Error in getUserAppointments: $e');
       return [];
     }
   }
 
   Future<models.Document> createMedicalRecord(MedicalRecord medicalRecord) {
-    print('>>> ============================================');
-    print('>>> REPOSITORY: Creating medical record');
-    print('>>> ============================================');
 
     final recordMap = medicalRecord.toMap();
 
-    print('>>> Medical record data:');
-    print('>>>   - petId: ${recordMap['petId']}');
-    print('>>>   - service: ${recordMap['service']}');
-    print('>>>   - diagnosis: ${recordMap['diagnosis']}');
-    print('>>>   - treatment: ${recordMap['treatment']}');
-    print('>>>   - Individual vitals:');
-    print('>>>     * temperature: ${recordMap['temperature']}');
-    print('>>>     * weight: ${recordMap['weight']}');
-    print('>>>     * bloodPressure: ${recordMap['bloodPressure']}');
-    print('>>>     * heartRate: ${recordMap['heartRate']}');
-    print('>>>   - vitals column: ${recordMap['vitals']} (should be null)');
-    print('>>> ============================================');
 
     // CRITICAL: Validate that vitals column is null
     if (recordMap['vitals'] != null) {
-      print('>>> ⚠️ WARNING: vitals column is not null!');
-      print('>>> Forcing it to null...');
       recordMap['vitals'] = null;
     }
 
     // Validate required fields
     if (recordMap['diagnosis'] == null ||
         recordMap['diagnosis'].toString().isEmpty) {
-      print('>>> ✗ ERROR: Missing diagnosis');
       throw Exception('Diagnosis is required for medical records');
     }
     if (recordMap['treatment'] == null ||
         recordMap['treatment'].toString().isEmpty) {
-      print('>>> ✗ ERROR: Missing treatment');
       throw Exception('Treatment is required for medical records');
     }
 
@@ -333,41 +272,25 @@ class AuthRepository {
 
   Future<List<MedicalRecord>> getPetMedicalRecords(String petId) async {
     try {
-      print('>>> ============================================');
-      print('>>> REPOSITORY: Getting medical records for pet: $petId');
-      print('>>> ============================================');
 
       final rawRecords = await appWriteProvider.getPetMedicalRecords(petId);
 
-      print('>>> Found ${rawRecords.length} raw medical records');
 
       final records = rawRecords.map((data) {
         // Log each record's data
-        print('>>> Processing record:');
-        print('>>>   \$id: ${data['\$id']}');
-        print('>>>   appointmentId: ${data['appointmentId']}');
-        print('>>>   petId: ${data['petId']}');
-        print('>>>   service: ${data['service']}');
 
         return MedicalRecord.fromMap(data);
       }).toList();
 
-      print('>>> Successfully parsed ${records.length} medical records');
-      print('>>> ============================================');
 
       return records;
     } catch (e, stackTrace) {
-      print('>>> ============================================');
-      print('>>> ERROR getting pet medical records: $e');
-      print('>>> Stack trace: $stackTrace');
-      print('>>> ============================================');
       return [];
     }
   }
 
   Future<List<Appointment>> getPetMedicalAppointments(String petId) async {
     try {
-      print('>>> REPOSITORY: Getting medical appointments for pet: $petId');
 
       final rawAppointments = await appWriteProvider.getUserAppointments(petId);
 
@@ -381,37 +304,29 @@ class AuthRepository {
             (appointment.isCompleted || appointment.hasServiceCompleted);
       }).toList();
 
-      print('>>> Found ${medicalAppointments.length} medical appointments');
 
       return medicalAppointments;
     } catch (e) {
-      print('>>> Error getting pet medical appointments: $e');
       return [];
     }
   }
 
   Future<List<MedicalRecord>> getClinicMedicalRecords(String clinicId) async {
     try {
-      print('>>> REPOSITORY: Getting medical records for clinic: $clinicId');
 
       final rawRecords =
           await appWriteProvider.getClinicMedicalRecords(clinicId);
 
-      print('>>> Found ${rawRecords.length} medical records');
 
       final records = rawRecords.map((data) {
         // Log vitals data for debugging
-        print(
-            '>>> Record vitals: temp=${data['temperature']}, weight=${data['weight']}, bp=${data['bloodPressure']}, hr=${data['heartRate']}');
 
         return MedicalRecord.fromMap(data);
       }).toList();
 
-      print('>>> Successfully parsed ${records.length} medical records');
 
       return records;
     } catch (e) {
-      print('>>> Error getting clinic medical records: $e');
       return [];
     }
   }
@@ -429,7 +344,6 @@ class AuthRepository {
       }
       return null;
     } catch (e) {
-      print('Error getting clinic settings: $e');
       return null;
     }
   }
@@ -457,10 +371,8 @@ class AuthRepository {
       final defaultSettings = ClinicSettings(clinicId: clinicId);
       final doc = await createClinicSettings(defaultSettings);
       defaultSettings.documentId = doc.$id;
-      print('>>> Clinic settings initialized successfully');
       return defaultSettings;
     } catch (e) {
-      print('Error initializing clinic settings: $e');
       rethrow;
     }
   }
@@ -480,7 +392,6 @@ class AuthRepository {
       }
       return null;
     } catch (e) {
-      print('Error getting or creating conversation: $e');
       return null;
     }
   }
@@ -493,7 +404,6 @@ class AuthRepository {
         return conversation.copyWith(documentId: doc.$id);
       }).toList();
     } catch (e) {
-      print('Error getting user conversations: $e');
       return [];
     }
   }
@@ -506,7 +416,6 @@ class AuthRepository {
         return conversation.copyWith(documentId: doc.$id);
       }).toList();
     } catch (e) {
-      print('Error getting clinic conversations: $e');
       return [];
     }
   }
@@ -532,46 +441,29 @@ class AuthRepository {
         return message.copyWith(documentId: doc.$id);
       }).toList();
     } catch (e) {
-      print('Error getting conversation messages: $e');
       return [];
     }
   }
 
   Future<models.Document> updateMedicalRecord(
       String documentId, Map<String, dynamic> data) async {
-    print('>>> ============================================');
-    print('>>> REPOSITORY: Updating medical record');
-    print('>>> Document ID: $documentId');
-    print('>>> ============================================');
 
     // Ensure vitals column is null
     if (data.containsKey('vitals') && data['vitals'] != null) {
-      print('>>> ⚠️ WARNING: vitals column in update data, setting to null');
       data['vitals'] = null;
     }
 
     // Log individual vitals
-    print('>>> Individual vitals in update:');
-    print('>>>   - temperature: ${data['temperature']}');
-    print('>>>   - weight: ${data['weight']}');
-    print('>>>   - bloodPressure: ${data['bloodPressure']}');
-    print('>>>   - heartRate: ${data['heartRate']}');
-    print('>>> ============================================');
 
     return appWriteProvider.updateMedicalRecord(documentId, data);
   }
 
   Future<void> migrateMedicalRecordsVitals(String clinicId) async {
     try {
-      print('>>> ============================================');
-      print('>>> MIGRATING MEDICAL RECORDS VITALS');
-      print('>>> Clinic ID: $clinicId');
-      print('>>> ============================================');
 
       final rawRecords =
           await appWriteProvider.getClinicMedicalRecords(clinicId);
 
-      print('>>> Found ${rawRecords.length} records to check');
 
       int migratedCount = 0;
       int alreadyMigratedCount = 0;
@@ -599,7 +491,6 @@ class AuthRepository {
             continue;
           }
 
-          print('>>> Migrating record: $recordId');
 
           // Parse old vitals JSON
           Map<String, dynamic> vitals;
@@ -608,7 +499,6 @@ class AuthRepository {
           } else if (vitalsData is Map) {
             vitals = Map<String, dynamic>.from(vitalsData);
           } else {
-            print('>>>   ⚠️ Unknown vitals format, skipping');
             continue;
           }
 
@@ -629,23 +519,13 @@ class AuthRepository {
 
           await appWriteProvider.updateMedicalRecord(recordId, updateData);
 
-          print('>>>   ✓ Migrated successfully');
           migratedCount++;
         } catch (e) {
-          print('>>>   ✗ Error migrating record: $e');
           errorCount++;
         }
       }
 
-      print('>>> ============================================');
-      print('>>> MIGRATION COMPLETE');
-      print('>>> Total records: ${rawRecords.length}');
-      print('>>> Migrated: $migratedCount');
-      print('>>> Already migrated: $alreadyMigratedCount');
-      print('>>> Errors: $errorCount');
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> Error in migration: $e');
       rethrow;
     }
   }
@@ -663,12 +543,6 @@ class AuthRepository {
     String? attachment,
   }) async {
     try {
-      print('>>> ============================================');
-      print('>>> REPOSITORY: Sending message');
-      print('>>> Conversation: $conversationId');
-      print('>>> Sender: $senderId');
-      print('>>> Text: $messageText');
-      print('>>> ============================================');
 
       // Prepare message data with all required fields (WITHOUT isStarterMessage)
       final messageMap = {
@@ -685,12 +559,10 @@ class AuthRepository {
         'sentAt': DateTime.now().toIso8601String(),
       };
 
-      print('>>> Calling createMessage with complete data...');
 
       // The createMessage method will add senderType and receiverId automatically
       final messageDoc = await appWriteProvider.createMessage(messageMap);
 
-      print('>>> Message created: ${messageDoc.$id}');
 
       // Create Message object for return
       final createdMessage = Message(
@@ -705,13 +577,8 @@ class AuthRepository {
         updatedAt: DateTime.now(),
       );
 
-      print('>>> ============================================');
       return createdMessage;
     } catch (e) {
-      print('>>> ============================================');
-      print('>>> REPOSITORY ERROR: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
-      print('>>> ============================================');
       rethrow;
     }
   }
@@ -726,7 +593,6 @@ class AuthRepository {
     bool updateUnreadCount = true,
   }) async {
     try {
-      print('>>> REPOSITORY: Sending message (advanced mode)');
 
       final message = Message(
         conversationId: conversationId,
@@ -751,10 +617,8 @@ class AuthRepository {
 
       await appWriteProvider.updateConversation(conversationId, updateData);
 
-      print('>>> REPOSITORY: Message sent successfully');
       return createdMessage;
     } catch (e) {
-      print('>>> REPOSITORY: Error in sendMessageAdvanced: $e');
       rethrow;
     }
   }
@@ -762,16 +626,13 @@ class AuthRepository {
   /// Mark a single message as read
   Future<void> markMessageAsRead(String messageId) async {
     try {
-      print('>>> REPOSITORY: Marking message as read: $messageId');
 
       await appWriteProvider.updateMessage(messageId, {
         'isRead': true,
         'updatedAt': DateTime.now().toIso8601String(),
       });
 
-      print('>>> REPOSITORY: Message marked as read');
     } catch (e) {
-      print('>>> REPOSITORY: Error marking message as read: $e');
       rethrow;
     }
   }
@@ -796,7 +657,6 @@ class AuthRepository {
         return withDocId;
       }).toList();
     } catch (e) {
-      print('Error getting clinic conversations: $e');
       return [];
     }
   }
@@ -821,7 +681,6 @@ class AuthRepository {
         return withDocId;
       }).toList();
     } catch (e) {
-      print('Error getting user conversations: $e');
       return [];
     }
   }
@@ -840,7 +699,6 @@ class AuthRepository {
         return starter.copyWith(documentId: doc.$id);
       }).toList();
     } catch (e) {
-      print('Error getting clinic conversation starters: $e');
       return [];
     }
   }
@@ -870,7 +728,6 @@ class AuthRepository {
       }
       return null;
     } catch (e) {
-      print('Error getting user status: $e');
       return null;
     }
   }
@@ -895,25 +752,19 @@ class AuthRepository {
 
   Future<List<Map<String, dynamic>>> getClinicsWithSettings() async {
     try {
-      print('>>> ============================================');
-      print('>>> REPOSITORY: Getting clinics with settings');
-      print('>>> ============================================');
 
       final clinics = await getAllClinics();
       final List<Map<String, dynamic>> clinicsWithSettings = [];
 
       for (final clinic in clinics) {
-        print('>>> Processing clinic: ${clinic.clinicName}');
 
         final settings =
             await getClinicSettingsByClinicId(clinic.documentId ?? '');
 
         // CRITICAL: Pass dashboard picture from settings to clinic
         if (settings != null && settings.dashboardPic.isNotEmpty) {
-          print('>>>   âœ" Found dashboard picture: ${settings.dashboardPic}');
           clinic.dashboardPic = settings.dashboardPic;
         } else {
-          print('>>>   - No dashboard picture, using clinic image');
         }
 
         clinicsWithSettings.add({
@@ -922,12 +773,9 @@ class AuthRepository {
         });
       }
 
-      print('>>> Total clinics processed: ${clinicsWithSettings.length}');
-      print('>>> ============================================');
 
       return clinicsWithSettings;
     } catch (e) {
-      print(">>> ERROR fetching clinics with settings: $e");
       return [];
     }
   }
@@ -981,49 +829,34 @@ class AuthRepository {
         return staff;
       }).toList();
     } catch (e) {
-      print('Error getting clinic staff: $e');
       return [];
     }
   }
 
   Future<Staff?> getStaffByUserId(String userId) async {
     try {
-      print('>>> AUTH REPO: Getting staff by user ID: $userId');
       final doc = await appWriteProvider.getStaffByUserId(userId);
       if (doc != null) {
         final staff = Staff.fromMap(doc.data);
         staff.documentId = doc.$id;
-        print('>>> AUTH REPO: Staff found');
-        print('>>> Staff Role: ${staff.role}');
-        print('>>> Staff Name: ${staff.name}');
-        print('>>> Is Doctor: ${staff.isDoctor}');
         return staff;
       }
-      print('>>> AUTH REPO: No staff found');
       return null;
     } catch (e) {
-      print('Error getting staff by user ID: $e');
       return null;
     }
   }
 
   Future<Staff?> getStaffByUsername(String username) async {
     try {
-      print('>>> AUTH REPO: Getting staff by username: $username');
       final doc = await appWriteProvider.getStaffByUsername(username);
       if (doc != null) {
         final staff = Staff.fromMap(doc.data);
         staff.documentId = doc.$id;
-        print('>>> AUTH REPO: Staff found by username');
-        print('>>> Staff Role: ${staff.role}');
-        print('>>> Staff Name: ${staff.name}');
-        print('>>> Staff Username: ${staff.username}');
         return staff;
       }
-      print('>>> AUTH REPO: No staff found by username');
       return null;
     } catch (e) {
-      print('Error getting staff by username: $e');
       return null;
     }
   }
@@ -1044,7 +877,6 @@ class AuthRepository {
       await appWriteProvider.updateStaffAuthorities(
           staffDocumentId, authorities);
     } catch (e) {
-      print('Error updating staff authorities: $e');
       rethrow;
     }
   }
@@ -1070,7 +902,6 @@ class AuthRepository {
         authorities: authorities,
       );
     } catch (e) {
-      print('Error updating staff info: $e');
       rethrow;
     }
   }
@@ -1090,9 +921,7 @@ class AuthRepository {
           'updatedAt': DateTime.now().toIso8601String(),
         },
       );
-      print('>>> Staff doctor status updated: $isDoctor');
     } catch (e) {
-      print('>>> Error updating staff doctor status: $e');
       rethrow;
     }
   }
@@ -1106,7 +935,6 @@ class AuthRepository {
         return staff;
       }).toList();
     } catch (e) {
-      print('Error getting clinic doctors: $e');
       return [];
     }
   }
@@ -1120,7 +948,6 @@ class AuthRepository {
         return staff;
       }).toList();
     } catch (e) {
-      print('Error getting non-doctor staff: $e');
       return [];
     }
   }
@@ -1129,7 +956,6 @@ class AuthRepository {
     try {
       return await appWriteProvider.isStaffDoctor(staffDocumentId);
     } catch (e) {
-      print('Error checking if staff is doctor: $e');
       return false;
     }
   }
@@ -1188,7 +1014,6 @@ class AuthRepository {
       }
       return null;
     } catch (e) {
-      print('Error getting ID verification: $e');
       return null;
     }
   }
@@ -1205,7 +1030,6 @@ class AuthRepository {
       }
       return null;
     } catch (e) {
-      print('Error getting ID verification by submission: $e');
       return null;
     }
   }
@@ -1244,7 +1068,6 @@ class AuthRepository {
       final doc = await appWriteProvider.createRatingAndReview(review.toMap());
       return review.copyWith(documentId: doc.$id);
     } catch (e) {
-      print('Error creating rating and review: $e');
       rethrow;
     }
   }
@@ -1269,7 +1092,6 @@ class AuthRepository {
         return review.copyWith(documentId: doc.$id);
       }).toList();
     } catch (e) {
-      print('Error getting clinic reviews: $e');
       return [];
     }
   }
@@ -1282,7 +1104,6 @@ class AuthRepository {
         return review.copyWith(documentId: doc.$id);
       }).toList();
     } catch (e) {
-      print('Error getting user reviews: $e');
       return [];
     }
   }
@@ -1298,7 +1119,6 @@ class AuthRepository {
       }
       return null;
     } catch (e) {
-      print('Error getting review by appointment: $e');
       return null;
     }
   }
@@ -1314,7 +1134,6 @@ class AuthRepository {
       );
       return RatingAndReview.fromMap(doc.data).copyWith(documentId: doc.$id);
     } catch (e) {
-      print('Error updating rating and review: $e');
       rethrow;
     }
   }
@@ -1327,7 +1146,6 @@ class AuthRepository {
       }
       await appWriteProvider.deleteRatingAndReview(documentId);
     } catch (e) {
-      print('Error deleting rating and review: $e');
       rethrow;
     }
   }
@@ -1341,7 +1159,6 @@ class AuthRepository {
           await appWriteProvider.addClinicResponse(documentId, response);
       return RatingAndReview.fromMap(doc.data).copyWith(documentId: doc.$id);
     } catch (e) {
-      print('Error adding clinic response: $e');
       rethrow;
     }
   }
@@ -1357,7 +1174,6 @@ class AuthRepository {
         reviewsWithImages: stats['reviewsWithImages'],
       );
     } catch (e) {
-      print('Error getting clinic rating stats: $e');
       return ClinicRatingStats(
         averageRating: 0.0,
         totalReviews: 0,
@@ -1385,28 +1201,23 @@ class AuthRepository {
       final doc = await appWriteProvider.createVaccination(vaccination.toMap());
       return vaccination.copyWith(documentId: doc.$id);
     } catch (e) {
-      print('Error creating vaccination: $e');
       rethrow;
     }
   }
 
   Future<List<Vaccination>> getPetVaccinations(String petId) async {
     try {
-      print('>>> REPOSITORY: Getting vaccinations for pet: $petId');
 
       final rawVaccinations = await appWriteProvider.getPetVaccinations(petId);
 
-      print('>>> Found ${rawVaccinations.length} vaccinations');
 
       final vaccinations = rawVaccinations.map((data) {
         return Vaccination.fromMap(data);
       }).toList();
 
-      print('>>> Successfully parsed ${vaccinations.length} vaccinations');
 
       return vaccinations;
     } catch (e) {
-      print('>>> Error getting pet vaccinations: $e');
       return [];
     }
   }
@@ -1417,7 +1228,6 @@ class AuthRepository {
           await appWriteProvider.getClinicVaccinations(clinicId);
       return rawVaccinations.map((data) => Vaccination.fromMap(data)).toList();
     } catch (e) {
-      print('Error getting clinic vaccinations: $e');
       return [];
     }
   }
@@ -1433,7 +1243,6 @@ class AuthRepository {
       );
       return Vaccination.fromMap(doc.data).copyWith(documentId: doc.$id);
     } catch (e) {
-      print('Error updating vaccination: $e');
       rethrow;
     }
   }
@@ -1442,7 +1251,6 @@ class AuthRepository {
     try {
       await appWriteProvider.deleteVaccination(documentId);
     } catch (e) {
-      print('Error deleting vaccination: $e');
       rethrow;
     }
   }
@@ -1454,7 +1262,6 @@ class AuthRepository {
           await appWriteProvider.createFeedbackAndReport(feedback.toMap());
       return feedback.copyWith(documentId: doc.$id);
     } catch (e) {
-      print('Error creating feedback and report: $e');
       rethrow;
     }
   }
@@ -1475,7 +1282,6 @@ class AuthRepository {
         return feedback.copyWith(documentId: doc.$id);
       }).toList();
     } catch (e) {
-      print('Error getting all feedback: $e');
       return [];
     }
   }
@@ -1488,7 +1294,6 @@ class AuthRepository {
         return feedback.copyWith(documentId: doc.$id);
       }).toList();
     } catch (e) {
-      print('Error getting user feedback: $e');
       return [];
     }
   }
@@ -1517,7 +1322,6 @@ class AuthRepository {
         return feedback.copyWith(documentId: doc.$id);
       }).toList();
     } catch (e) {
-      print('Error getting admin feedback: $e');
       return [];
     }
   }
@@ -1544,7 +1348,6 @@ class AuthRepository {
         return feedback.copyWith(documentId: doc.$id);
       }).toList();
     } catch (e) {
-      print('Error getting staff feedback: $e');
       return [];
     }
   }
@@ -1562,7 +1365,6 @@ class AuthRepository {
         return feedback.copyWith(documentId: doc.$id);
       }).toList();
     } catch (e) {
-      print('Error getting feedback by admin ID: $e');
       return [];
     }
   }
@@ -1580,7 +1382,6 @@ class AuthRepository {
         return feedback.copyWith(documentId: doc.$id);
       }).toList();
     } catch (e) {
-      print('Error getting feedback by staff ID: $e');
       return [];
     }
   }
@@ -1598,7 +1399,6 @@ class AuthRepository {
         return feedback.copyWith(documentId: doc.$id);
       }).toList();
     } catch (e) {
-      print('Error getting clinic feedback: $e');
       return [];
     }
   }
@@ -1617,7 +1417,6 @@ class AuthRepository {
         return feedback.copyWith(documentId: doc.$id);
       }).toList();
     } catch (e) {
-      print('Error getting feedback by reported by: $e');
       return [];
     }
   }
@@ -1649,13 +1448,10 @@ class AuthRepository {
 
   Future<void> archiveFeedback(String documentId, String archivedBy) async {
     try {
-      print('>>> REPOSITORY: Archiving feedback: $documentId');
 
       await appWriteProvider.archiveFeedback(documentId, archivedBy);
 
-      print('>>> REPOSITORY: Archive successful');
     } catch (e) {
-      print('>>> REPOSITORY: Archive failed: $e');
       rethrow;
     }
   }
@@ -1716,7 +1512,6 @@ class AuthRepository {
       }
       return null;
     } catch (e) {
-      print('Error getting archived user in repository: $e');
       return null;
     }
   }
@@ -1737,7 +1532,6 @@ class AuthRepository {
         return archivedUser.copyWith(documentId: doc.$id);
       }).toList();
     } catch (e) {
-      print('Error getting all archived users in repository: $e');
       return [];
     }
   }
@@ -1752,7 +1546,6 @@ class AuthRepository {
         return archivedUser.copyWith(documentId: doc.$id);
       }).toList();
     } catch (e) {
-      print('Error getting users due for deletion in repository: $e');
       return [];
     }
   }
@@ -1815,7 +1608,6 @@ class AuthRepository {
       }
       return null;
     } catch (e) {
-      print('Error getting archived clinic in repository: $e');
       return null;
     }
   }
@@ -1836,7 +1628,6 @@ class AuthRepository {
         return archivedClinic.copyWith(documentId: doc.$id);
       }).toList();
     } catch (e) {
-      print('Error getting all archived clinics in repository: $e');
       return [];
     }
   }
@@ -1851,7 +1642,6 @@ class AuthRepository {
         return archivedClinic.copyWith(documentId: doc.$id);
       }).toList();
     } catch (e) {
-      print('Error getting clinics due for deletion in repository: $e');
       return [];
     }
   }
@@ -1966,7 +1756,6 @@ class AuthRepository {
     List<String>? attachmentIds,
   }) async {
     try {
-      print('>>> REPOSITORY: Creating feedback deletion request...');
 
       final data = {
         'reviewId': reviewId,
@@ -1988,10 +1777,8 @@ class AuthRepository {
       };
 
       final doc = await appWriteProvider.createFeedbackDeletionRequest(data);
-      print('>>> REPOSITORY: Deletion request created: ${doc.$id}');
       return doc;
     } catch (e) {
-      print('>>> REPOSITORY: Error creating deletion request: $e');
       rethrow;
     }
   }
@@ -2014,26 +1801,21 @@ class AuthRepository {
     String? status,
   }) async {
     try {
-      print('>>> REPOSITORY: Fetching deletion requests for clinic: $clinicId');
 
       final docs = await appWriteProvider.getClinicDeletionRequests(
         clinicId,
         status: status,
       );
 
-      print('>>> REPOSITORY: Found ${docs.length} deletion request documents');
 
       final requests = docs.map((doc) {
         final request = FeedbackDeletionRequest.fromMap(doc.data);
         return request.copyWith(documentId: doc.$id);
       }).toList();
 
-      print('>>> REPOSITORY: Parsed ${requests.length} deletion requests');
 
       return requests;
     } catch (e, stackTrace) {
-      print('>>> REPOSITORY ERROR getting clinic deletion requests: $e');
-      print('>>> Stack trace: $stackTrace');
       return [];
     }
   }
@@ -2198,17 +1980,13 @@ class AuthRepository {
   ) async {
     // ... keep existing implementation unchanged ...
     try {
-      print('>>> REPOSITORY: Getting ALL medical appointments (Super Admin)');
-      print('>>> Pet ID: $petId');
 
       final petDoc = await getPetById(petId);
       String? petName;
 
       if (petDoc != null) {
         petName = petDoc.data['name'] as String?;
-        print('>>> Pet found: $petName (ID: $petId)');
       } else {
-        print('>>> Warning: Pet document not found for ID: $petId');
       }
 
       final rawAppointments =
@@ -2236,7 +2014,6 @@ class AuthRepository {
 
           enrichedAppointments.add(appointmentData);
         } catch (e) {
-          print('>>> Error enriching appointment: $e');
           appointmentData['clinicName'] = 'Unknown Clinic';
           appointmentData['clinicAddress'] = 'N/A';
           appointmentData['clinicContact'] = 'N/A';
@@ -2244,19 +2021,15 @@ class AuthRepository {
         }
       }
 
-      print(
-          '>>> Successfully enriched ${enrichedAppointments.length} appointments');
 
       return enrichedAppointments;
     } catch (e) {
-      print('>>> REPOSITORY: Error getting medical appointments: $e');
       return [];
     }
   }
 
   Future<models.Document?> getPetByPetId(String petId) async {
     try {
-      print('>>> REPOSITORY: Fetching pet by petId: $petId');
 
       final result = await appWriteProvider.databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
@@ -2265,14 +2038,11 @@ class AuthRepository {
       );
 
       if (result.documents.isNotEmpty) {
-        print('>>> Pet found by petId');
         return result.documents.first;
       }
 
-      print('>>> No pet found with petId: $petId');
       return null;
     } catch (e) {
-      print(">>> Error fetching pet by petId: $e");
       return null;
     }
   }
@@ -2284,44 +2054,24 @@ class AuthRepository {
   /// Debug method to check medical records and appointments relationship
   Future<void> debugMedicalRecordsForPet(String petId) async {
     try {
-      print('>>> ============================================');
-      print('>>> DEBUGGING MEDICAL RECORDS FOR PET: $petId');
-      print('>>> ============================================');
 
       // Get medical records
       final records = await getPetMedicalRecords(petId);
-      print('>>> Found ${records.length} medical records');
 
       for (var record in records) {
-        print('>>> Medical Record:');
-        print('>>>   ID: ${record.id}');
-        print('>>>   Appointment ID: ${record.appointmentId}');
-        print('>>>   Service: ${record.service}');
-        print('>>>   Diagnosis: ${record.diagnosis}');
-        print('>>>   Has vitals: ${record.hasVitals}');
-        print('>>> ---');
       }
 
       // Get medical appointments
       final appointments = await getPetMedicalAppointmentsAllClinics(petId);
-      print('>>> Found ${appointments.length} medical appointments');
 
       for (var appointment in appointments) {
-        print('>>> Medical Appointment:');
-        print('>>>   ID: ${appointment['\$id']}');
-        print('>>>   Service: ${appointment['service']}');
-        print('>>>   Date: ${appointment['dateTime']}');
 
         // Check if has matching medical record
         final hasRecord =
             records.any((r) => r.appointmentId == appointment['\$id']);
-        print('>>>   Has medical record: $hasRecord');
-        print('>>> ---');
       }
 
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> DEBUG ERROR: $e');
     }
   }
 
@@ -2331,21 +2081,14 @@ class AuthRepository {
     required String messageText,
   }) async {
     try {
-      print('>>> ============================================');
-      print('>>> AUTH REPO: Sending automated appointment message');
-      print('>>> User ID: $userId');
-      print('>>> Clinic ID: $clinicId');
-      print('>>> ============================================');
 
       // Step 1: Get or create conversation
       final conversation = await getOrCreateConversation(userId, clinicId);
 
       if (conversation == null) {
-        print('>>> ERROR: Failed to get/create conversation');
         return false;
       }
 
-      print('>>> Conversation ready: ${conversation.documentId}');
 
       // Step 2: Send the message
       final messageData = {
@@ -2363,15 +2106,9 @@ class AuthRepository {
 
       await appWriteProvider.createMessage(messageData);
 
-      print('>>> ✅ Automated message sent successfully');
-      print('>>> ============================================');
 
       return true;
     } catch (e) {
-      print('>>> ============================================');
-      print('>>> ⚠️ ERROR in sendAutomatedAppointmentMessage: $e');
-      print('>>> Stack trace: ${StackTrace.current}');
-      print('>>> ============================================');
       return false;
     }
   }
@@ -2390,11 +2127,9 @@ class AuthRepository {
 
       final isVerified = verificationDoc.documents.isNotEmpty;
 
-      print('>>> Verification check for user $userId: $isVerified');
 
       return isVerified;
     } catch (e) {
-      print('>>> Error checking verification: $e');
       return false;
     }
   }
@@ -2419,12 +2154,9 @@ class AuthRepository {
         }
       }
 
-      print(
-          '>>> Found ${verifiedIds.length} verified users in ID Verification collection');
 
       return verifiedIds;
     } catch (e) {
-      print('>>> Error getting verified user IDs: $e');
       return {};
     }
   }
@@ -2443,7 +2175,6 @@ class AuthRepository {
 
       return requests.documents.isNotEmpty;
     } catch (e) {
-      print('Error checking deletion request: $e');
       return false;
     }
   }
@@ -2461,66 +2192,43 @@ class AuthRepository {
       staff.documentId = doc.$id;
       return staff;
     } catch (e) {
-      print('>>> Error getting staff by document ID: $e');
       return null;
     }
   }
 
   String getStaffProfilePictureUrl(String imageId) {
     if (imageId.isEmpty) {
-      print('>>> Empty image ID provided');
       return '';
     }
 
     final url = authRepository.getImageUrl(imageId);
-    print('>>> Generated staff profile picture URL: $url');
     return url;
   }
 
   Future<void> debugStaffProfilePicture(String staffDocumentId) async {
     try {
-      print('>>> ============================================');
-      print('>>> DEBUG: STAFF PROFILE PICTURE');
-      print('>>> Staff Document ID: $staffDocumentId');
-      print('>>> ============================================');
 
       final staff = await getStaffByDocumentId(staffDocumentId);
 
       if (staff != null) {
-        print('>>> Staff Data:');
-        print('>>>   Name: ${staff.name}');
-        print('>>>   Image Field: "${staff.image}"');
-        print('>>>   Image Length: ${staff.image.length}');
-        print('>>>   Image isEmpty: ${staff.image.isEmpty}');
 
         if (staff.image.isNotEmpty) {
           final imageUrl = getStaffProfilePictureUrl(staff.image);
-          print('>>> Generated URL: $imageUrl');
 
           // Try to verify the image exists
-          print('>>> Attempting to verify image exists...');
           try {
             final imageDoc = await appWriteProvider.storage!.getFile(
               bucketId: AppwriteConstants.imageBucketID,
               fileId: staff.image,
             );
-            print('>>> âœ" Image file exists in bucket');
-            print('>>>   File ID: ${imageDoc.$id}');
-            print('>>>   File Name: ${imageDoc.name}');
-            print('>>>   File Size: ${imageDoc.sizeOriginal} bytes');
           } catch (e) {
-            print('>>> âœ— Image file NOT found in bucket: $e');
           }
         } else {
-          print('>>> âš ï¸ Staff has NO image field value');
         }
       } else {
-        print('>>> âœ— Staff not found');
       }
 
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> ERROR in debug: $e');
     }
   }
 
@@ -2627,7 +2335,6 @@ class AuthRepository {
         'settings': settings,
       };
     } catch (e) {
-      print('Error getting clinic settings with closed dates info: $e');
       return {
         'hasClosedDates': false,
         'totalClosedDates': 0,
@@ -2691,7 +2398,6 @@ class AuthRepository {
         'message': 'Date can be marked as closed',
       };
     } catch (e) {
-      print('Error validating closed date: $e');
       return {
         'isValid': false,
         'error': 'Validation failed: ${e.toString()}',
@@ -2704,9 +2410,6 @@ class AuthRepository {
     String clinicId,
   ) async {
     try {
-      print('>>> REPOSITORY: Getting clinic-specific medical appointments');
-      print('>>> Pet ID: $petId');
-      print('>>> Clinic ID: $clinicId');
 
       final rawAppointments = await appWriteProvider
           .getPetMedicalAppointmentsByClinic(petId, clinicId);
@@ -2736,7 +2439,6 @@ class AuthRepository {
 
           enrichedAppointments.add(appointmentData);
         } catch (e) {
-          print('>>> Error enriching appointment: $e');
           appointmentData['clinicName'] = 'Unknown Clinic';
           appointmentData['clinicAddress'] = 'N/A';
           appointmentData['clinicContact'] = 'N/A';
@@ -2744,12 +2446,9 @@ class AuthRepository {
         }
       }
 
-      print(
-          '>>> Successfully enriched ${enrichedAppointments.length} appointments for clinic');
 
       return enrichedAppointments;
     } catch (e) {
-      print('>>> REPOSITORY: Error getting clinic-specific appointments: $e');
       return [];
     }
   }
@@ -2807,10 +2506,8 @@ class AuthRepository {
         // Delete the controller instance
         Get.delete<WebAppointmentController>(force: true);
 
-        print('>>> WebAppointmentController cleaned up and deleted');
       }
     } catch (e) {
-      print('>>> Error cleaning up appointment controller: $e');
     }
   }
 }

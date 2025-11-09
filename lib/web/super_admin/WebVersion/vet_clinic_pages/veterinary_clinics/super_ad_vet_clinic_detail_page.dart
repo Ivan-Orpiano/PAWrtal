@@ -70,9 +70,6 @@ class _SuperAdminVetClinicDetailPageState
   }
 
   void _initializeServices() {
-    print('>>> ============================================');
-    print('>>> DETAIL PAGE: Initializing services');
-    print('>>> ============================================');
 
     // Parse services from clinic's services string
     if (currentClinic!.services.isNotEmpty) {
@@ -82,8 +79,6 @@ class _SuperAdminVetClinicDetailPageState
           .where((s) => s.isNotEmpty)
           .toList();
 
-      print(
-          '>>> Parsed ${clinicServices.length} services from clinic.services');
     }
 
     // Load medical services map AND gallery from settings
@@ -94,15 +89,10 @@ class _SuperAdminVetClinicDetailPageState
       // CRITICAL: Also track gallery images for display
       final galleryCount = currentSettings!.gallery.length;
 
-      print('>>> Loaded from settings:');
-      print('>>>   Medical services: ${medicalServices.length}');
-      print('>>>   Gallery images: $galleryCount');
     } else {
-      print('>>> No settings available - empty medical services map');
       medicalServices = {};
     }
 
-    print('>>> ============================================');
   }
 
   @override
@@ -123,7 +113,6 @@ class _SuperAdminVetClinicDetailPageState
         });
       }
     } catch (e) {
-      print('Error loading staff count: $e');
     }
   }
 
@@ -154,9 +143,6 @@ class _SuperAdminVetClinicDetailPageState
 
   Future<void> _refreshClinicData() async {
     try {
-      print('>>> ============================================');
-      print('>>> DETAIL PAGE: Refreshing clinic data');
-      print('>>> ============================================');
 
       final clinicDoc =
           await authRepository.getClinicById(currentClinic?.documentId ?? '');
@@ -191,20 +177,12 @@ class _SuperAdminVetClinicDetailPageState
             medicalServices = {};
           }
 
-          print('>>> ✓ Refresh complete');
-          print('>>>   Services: ${clinicServices.length}');
-          print('>>>   Medical services: ${medicalServices.length}');
-          print(
-              '>>>   Gallery images: ${currentSettings?.gallery.length ?? 0}');
-          print('>>>   Dashboard pic: ${currentClinic!.dashboardPic}');
         });
 
         // _showUpdateNotification('Clinic information updated');
       }
 
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> Error refreshing clinic data: $e');
     }
   }
 

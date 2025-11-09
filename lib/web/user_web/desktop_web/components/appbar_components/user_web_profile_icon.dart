@@ -71,7 +71,6 @@ class _WebProfileIconState extends State<WebProfileIcon> {
         }
       }
     } catch (e) {
-      print('Error loading user data: $e');
       if (mounted) {
         setState(() {
           isLoadingVerification = false;
@@ -251,7 +250,6 @@ class _WebProfileIconState extends State<WebProfileIcon> {
         backgroundColor: Colors.grey[200],
         backgroundImage: NetworkImage(profilePictureUrl),
         onBackgroundImageError: (exception, stackTrace) {
-          print('Error loading profile picture: $exception');
         },
       );
     }

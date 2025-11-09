@@ -31,24 +31,14 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
 
   Future<void> _handleCallback() async {
     try {
-      print('>>> ============================================');
-      print('>>> OAUTH CALLBACK HANDLER START');
-      print('>>> Current URL: ${Uri.base}');
-      print('>>> Platform: ${kIsWeb ? 'Web' : 'Mobile'}');
-      print('>>> ============================================');
 
       // WEB SPECIFIC: Check if we have OAuth query parameters
       if (kIsWeb) {
         final uri = Uri.base;
-        print('>>> Checking URL parameters...');
-        print('>>> Query params: ${uri.queryParameters}');
-        print('>>> Fragment: ${uri.fragment}');
         
         // Check if there's a userId or secret in URL (Appwrite OAuth callback params)
         if (uri.queryParameters.containsKey('userId') || 
             uri.queryParameters.containsKey('secret')) {
-          print('>>> ⚠️ OAuth parameters detected in URL - this is unexpected');
-          print('>>> This might indicate an OAuth flow issue');
         }
       }
 
@@ -56,30 +46,20 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
       await _establishSession();
 
       // Step 1: Get authenticated user
-      print('>>> Step 1: Getting authenticated user...');
       final user = await _appwriteProvider.account!.get();
 
       if (user == null) {
         throw Exception('User not found in Appwrite Auth after OAuth');
       }
 
-      print('>>> ✅ User authenticated via OAuth');
-      print('>>> User ID: ${user.$id}');
-      print('>>> User Email: ${user.email}');
-      print('>>> User Name: ${user.name}');
 
       // Step 2: Get current session
-      print('>>> Step 2: Getting session...');
       final session = await _appwriteProvider.account!.getSession(sessionId: 'current');
-      print('>>> ✅ Session ID: ${session.$id}');
 
       // Step 3: Check if user exists in database
-      print('>>> Step 3: Checking if user exists in Users database...');
       final existingUserDoc = await _authRepository.getUserById(user.$id);
 
       if (existingUserDoc == null) {
-        print('>>> ❌ User NOT found in database');
-        print('>>> 🔨 Creating new user record...');
 
         try {
           final newUserDoc = await _authRepository.createUser({
@@ -99,15 +79,12 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
             "archivedDocumentId": null,
           });
 
-          print('>>> ✅ User created: ${newUserDoc.$id}');
           await _storage.write('userDocumentId', newUserDoc.$id);
           
         } catch (createError) {
-          print('>>> ❌ ERROR creating user: $createError');
           throw Exception('Failed to create user in database: $createError');
         }
       } else {
-        print('>>> ✅ User exists: ${existingUserDoc.$id}');
         await _storage.write('userDocumentId', existingUserDoc.$id);
         
         final profilePictureId = existingUserDoc.data['profilePictureId'] as String?;
@@ -117,35 +94,19 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
       }
 
       // Step 4: Store session data
-      print('>>> Step 4: Storing session data...');
       await _storage.write('userId', user.$id);
       await _storage.write('sessionId', session.$id);
       await _storage.write('email', user.email);
       await _storage.write('userName', user.name);
       await _storage.write('role', 'user');
 
-      print('>>> ============================================');
-      print('>>> STORAGE SUMMARY:');
-      print('>>> - userId: ${_storage.read("userId")}');
-      print('>>> - sessionId: ${_storage.read("sessionId")}');
-      print('>>> - email: ${_storage.read("email")}');
-      print('>>> - userName: ${_storage.read("userName")}');
-      print('>>> - role: ${_storage.read("role")}');
-      print('>>> ============================================');
 
       await Future.delayed(const Duration(milliseconds: 500));
       
       Get.offAllNamed(Routes.userHome);
       
-      print('>>> ✅ OAuth flow completed successfully!');
-      print('>>> ============================================');
 
     } catch (e, stackTrace) {
-      print('>>> ============================================');
-      print('>>> ❌ OAUTH CALLBACK ERROR');
-      print('>>> Error: $e');
-      print('>>> Stack trace: $stackTrace');
-      print('>>> ============================================');
 
       _showErrorDialog();
     }
@@ -153,39 +114,30 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
 
   /// IMPROVED: Multiple strategies to establish session
   Future<void> _establishSession() async {
-    print('>>> ============================================');
-    print('>>> ATTEMPTING TO ESTABLISH SESSION');
-    print('>>> ============================================');
 
     // Strategy 1: Wait with retry (works for most cases)
     try {
       await _waitForSessionWithRetry();
-      print('>>> ✅ Session established via retry strategy');
       return;
     } catch (e) {
-      print('>>> ❌ Retry strategy failed: $e');
     }
 
     // Strategy 2: Check if session exists in cookies/storage (Web only)
     if (kIsWeb) {
       try {
-        print('>>> Trying to list existing sessions...');
         final sessions = await _appwriteProvider.account!.listSessions();
         
         if (sessions.sessions.isNotEmpty) {
-          print('>>> ✅ Found ${sessions.sessions.length} existing session(s)');
           // Session exists, should work now
           return;
         }
       } catch (e) {
-        print('>>> Could not list sessions: $e');
       }
     }
 
     // Strategy 3: Force create a new client with proper cookie handling
     if (kIsWeb) {
       try {
-        print('>>> Attempting to reinitialize Appwrite client...');
         
         // Reinitialize with explicit cookie settings
         final newClient = Client()
@@ -198,14 +150,12 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
         final user = await newAccount.get();
         
         if (user != null) {
-          print('>>> ✅ Session established with new client');
           // Update provider to use this client
           _appwriteProvider.client = newClient;
           _appwriteProvider.account = newAccount;
           return;
         }
       } catch (e) {
-        print('>>> New client strategy failed: $e');
       }
     }
 
@@ -220,7 +170,6 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
     
     for (int attempt = 0; attempt < maxAttempts; attempt++) {
       try {
-        print('>>> Waiting for session... Attempt ${attempt + 1}/$maxAttempts');
         
         // Progressive delays: 1s, 2s, 3s, 4s, 5s, 6s, 7s, 8s
         final delay = initialDelay * (attempt + 1);
@@ -230,11 +179,9 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
         final user = await _appwriteProvider.account!.get();
         
         if (user != null) {
-          print('>>> ✅ Session is ready!');
           return;
         }
       } catch (e) {
-        print('>>> ⏳ Session not ready yet (attempt ${attempt + 1}): ${e.toString().substring(0, 100)}...');
         
         if (attempt == maxAttempts - 1) {
           throw Exception('Session timeout after $maxAttempts attempts');

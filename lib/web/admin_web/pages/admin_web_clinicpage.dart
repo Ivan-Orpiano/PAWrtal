@@ -34,12 +34,10 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
     try {
       // CRITICAL FIX: Delete old controller if it exists to prevent stale data
       if (Get.isRegistered<ClinicSettingsController>()) {
-        print('>>> Removing old ClinicSettingsController instance...');
         Get.delete<ClinicSettingsController>(force: true);
       }
 
       // CRITICAL FIX: Always create a fresh instance for current clinic
-      print('>>> Creating new ClinicSettingsController instance...');
       controller = Get.put(
         ClinicSettingsController(
           authRepository: Get.find<AuthRepository>(),
@@ -53,9 +51,7 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
         _initialized = true;
       });
 
-      print('>>> ClinicSettingsController initialized successfully');
     } catch (e) {
-      print('>>> Error initializing: $e');
       setState(() {
         _initialized = false;
       });

@@ -17,7 +17,6 @@ class AuthMiddleware extends GetMiddleware {
 
   @override
   GetPage? onPageCalled(GetPage? page) {
-    print('>>> AUTH MIDDLEWARE: Page called - ${page?.name}');
     
     // Skip validation for public pages
     if (page?.name == Routes.landing ||
@@ -39,24 +38,19 @@ class AuthMiddleware extends GetMiddleware {
       final sessionId = _storage.read('sessionId');
       
       if (sessionId == null) {
-        print('>>> ⚠️ No session ID found');
         return;
       }
 
-      print('>>> Validating session: ${sessionId.substring(0, 8)}...');
 
       // Check with Appwrite if session is still valid
       final appWriteProvider = AppWriteProvider();
       final isValid = await appWriteProvider.isSessionValid();
 
       if (!isValid) {
-        print('>>> ✗ Session invalid - logging out');
         _handleInvalidSession();
       } else {
-        print('>>> ✓ Session valid');
       }
     } catch (e) {
-      print('>>> ✗ Session validation error: $e');
       _handleInvalidSession();
     }
   }

@@ -54,7 +54,6 @@ class EnhancedUserAppointmentController extends GetxController {
         _handleRealtimeUpdate(message);
       });
     } catch (e) {
-      print('Error setting up realtime subscription: $e');
     }
   }
 
@@ -68,7 +67,6 @@ class EnhancedUserAppointmentController extends GetxController {
         _handleReviewUpdate(message);
       });
     } catch (e) {
-      print('Error setting up review subscription: $e');
     }
   }
 
@@ -79,15 +77,11 @@ class EnhancedUserAppointmentController extends GetxController {
 
     if (appointmentId == null) return;
 
-    print('Review update received for appointment: $appointmentId');
-    print('Event type: $eventType');
 
     if (eventType.contains('create')) {
       appointmentReviews[appointmentId] = true;
-      print('Review created for appointment: $appointmentId');
     } else if (eventType.contains('delete')) {
       appointmentReviews[appointmentId] = false;
-      print('Review deleted for appointment: $appointmentId');
     }
 
     appointments.refresh();
@@ -97,18 +91,13 @@ class EnhancedUserAppointmentController extends GetxController {
     final payload = message.payload;
     final eventType = message.events.first;
 
-    print('Realtime update received: $eventType');
-    print('Payload: $payload');
 
     if (eventType.contains('create')) {
       _addOrUpdateAppointment(payload);
-      print('Added new appointment');
     } else if (eventType.contains('update')) {
       _addOrUpdateAppointment(payload);
-      print('Updated appointment');
     } else if (eventType.contains('delete')) {
       appointments.removeWhere((a) => a.documentId == payload['\$id']);
-      print('Deleted appointment');
     }
 
     appointments.refresh();
@@ -135,7 +124,6 @@ class EnhancedUserAppointmentController extends GetxController {
           await authRepository.hasUserReviewedAppointment(appointmentId);
       appointmentReviews[appointmentId] = hasReview;
     } catch (e) {
-      print('Error checking appointment review: $e');
     }
   }
 
@@ -153,16 +141,8 @@ class EnhancedUserAppointmentController extends GetxController {
       appointments.assignAll(result);
 
       // DEBUG: Print appointment times
-      print('>>> ============================================');
-      print('>>> USER APPOINTMENTS FETCHED');
       for (var apt in result.take(3)) {
-        print('>>> Appointment: ${apt.documentId}');
-        print('>>>   DateTime (raw): ${apt.dateTime}');
-        print('>>>   DateTime (ISO): ${apt.dateTime.toIso8601String()}');
-        print('>>>   Formatted Time: ${apt.formattedTime}');
-        print('>>>   Formatted DateTime: ${apt.formattedDateTime}');
       }
-      print('>>> ============================================');
 
       await _fetchRelatedData();
       await _checkAllAppointmentReviews();
@@ -195,7 +175,6 @@ class EnhancedUserAppointmentController extends GetxController {
             clinics[clinicId] = clinic;
           }
         } catch (e) {
-          print('Error fetching clinic $clinicId: $e');
         }
       }
     }
@@ -210,7 +189,6 @@ class EnhancedUserAppointmentController extends GetxController {
             pets[petName] = pet;
           }
         } catch (e) {
-          print('Error fetching pet $petName: $e');
         }
       }
     }
@@ -228,7 +206,6 @@ class EnhancedUserAppointmentController extends GetxController {
           clinics[appointment.clinicId] = clinic;
         }
       } catch (e) {
-        print('Error fetching clinic: $e');
       }
     }
 
@@ -241,7 +218,6 @@ class EnhancedUserAppointmentController extends GetxController {
           pets[appointment.petId] = pet;
         }
       } catch (e) {
-        print('Error fetching pet: $e');
       }
     }
   }
@@ -372,11 +348,9 @@ class EnhancedUserAppointmentController extends GetxController {
             );
 
             await authRepository.createNotification(notification);
-            print('>>> Cancellation notification sent to admin');
           }
         }
       } catch (e) {
-        print('>>> Error creating notification: $e');
       }
 
       Get.snackbar(
@@ -546,16 +520,5 @@ class EnhancedUserAppointmentController extends GetxController {
       orElse: () => throw Exception('Appointment not found'),
     );
 
-    print('>>> ============================================');
-    print('>>> APPOINTMENT TIME DEBUG');
-    print('>>> Appointment ID: $appointmentId');
-    print('>>> DateTime (raw): ${appointment.dateTime}');
-    print('>>> DateTime (UTC): ${appointment.dateTime.toUtc()}');
-    print('>>> DateTime (local): ${appointment.dateTime.toLocal()}');
-    print('>>> DateTime (ISO): ${appointment.dateTime.toIso8601String()}');
-    print('>>> formattedTime: ${appointment.formattedTime}');
-    print('>>> formattedDateTime: ${appointment.formattedDateTime}');
-    print('>>> formattedDate: ${appointment.formattedDate}');
-    print('>>> ============================================');
   }
 }

@@ -148,9 +148,6 @@ class AdminFeedbackController extends GetxController {
       }
 
       // Debug: Print stored values
-      print('Debug - userId: $userId');
-      print('Debug - userRole: $userRole');
-      print('Debug - clinicId: $clinicId');
 
       // For admin/staff, clinicId must be present
       if ((userRole.toLowerCase() == 'admin' ||

@@ -42,7 +42,6 @@ class _WebClinicServicesUpdatedState extends State<WebClinicServicesUpdated> {
         });
       }
     } catch (e) {
-      print("Error loading clinic services: $e");
       setState(() {
         _services = _parseServicesFromClinic();
         _isLoading = false;

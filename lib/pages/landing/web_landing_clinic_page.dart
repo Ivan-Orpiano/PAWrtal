@@ -195,8 +195,6 @@ class _WebLandingClinicPageState extends State<WebLandingClinicPage> {
                             );
                           },
                           errorBuilder: (context, error, stackTrace) {
-                            print(
-                                '>>> Error loading clinic profile picture: $error');
                             return Container(
                               height: 40,
                               width: 40,
@@ -560,17 +558,14 @@ class _WebLandingClinicPageState extends State<WebLandingClinicPage> {
           _isLoadingProfilePicture = false;
         });
 
-        print('>>> Clinic profile picture URL loaded: $profilePicUrl');
       } else {
         // Fallback to clinic.image if no profile picture
         setState(() {
           _clinicProfilePictureUrl = widget.clinic.image;
           _isLoadingProfilePicture = false;
         });
-        print('>>> Using fallback clinic image');
       }
     } catch (e) {
-      print('>>> Error loading clinic profile picture: $e');
       setState(() {
         _clinicProfilePictureUrl = widget.clinic.image;
         _isLoadingProfilePicture = false;

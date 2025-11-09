@@ -185,9 +185,6 @@ class StaffChangePasswordController extends GetxController {
       isLoading.value = true;
       errorMessage.value = '';
 
-      print('>>> ============================================');
-      print('>>> CHANGING STAFF PASSWORD');
-      print('>>> ============================================');
 
       final currentPassword = currentPasswordController.text.trim();
       final newPassword = newPasswordController.text.trim();
@@ -198,8 +195,6 @@ class StaffChangePasswordController extends GetxController {
         throw Exception('User email not found');
       }
 
-      print('>>> Staff email: $userEmail');
-      print('>>> Attempting password change...');
 
       final account = Account(authRepository.appWriteProvider.appwriteClient);
 
@@ -209,8 +204,6 @@ class StaffChangePasswordController extends GetxController {
         oldPassword: currentPassword,
       );
 
-      print('>>> Staff password updated successfully');
-      print('>>> ============================================');
 
       isLoading.value = false;
       errorMessage.value = '';
@@ -220,11 +213,6 @@ class StaffChangePasswordController extends GetxController {
 
       return true;
     } on AppwriteException catch (e) {
-      print('>>> ============================================');
-      print('>>> APPWRITE ERROR: ${e.message}');
-      print('>>> ERROR CODE: ${e.code}');
-      print('>>> ERROR TYPE: ${e.type}');
-      print('>>> ============================================');
 
       isLoading.value = false;
 
@@ -244,9 +232,6 @@ class StaffChangePasswordController extends GetxController {
 
       return false;
     } catch (e) {
-      print('>>> ============================================');
-      print('>>> PASSWORD CHANGE ERROR: $e');
-      print('>>> ============================================');
 
       isLoading.value = false;
       errorMessage.value = 'An unexpected error occurred. Please try again.';

@@ -101,7 +101,6 @@ class _AdminDesktopHomePageState extends State<AdminDesktopHomePage> {
         
         // Safety check
         if (currentIndex >= controller.pages.length) {
-          print('>>> ERROR: Index $currentIndex out of bounds (max: ${controller.pages.length - 1})');
           return const Center(child: Text('Page not found'));
         }
 

@@ -41,28 +41,18 @@ class NotificationService {
 
   Future<void> initializeNotifications() async {
     try {
-      print('>>> ============================================');
-      print('>>> INITIALIZING NOTIFICATION SERVICE');
-      print('>>> ============================================');
 
       // Only initialize FCM on mobile platforms
       if (!kIsWeb) {
-        print('>>> Platform: Mobile - Initializing FCM');
         await _initializeFCM();
       } else {
-        print('>>> Platform: Web - Skipping FCM initialization');
-        print('>>> Web users will only see in-app notifications');
       }
 
       // Initialize local notifications (works on both mobile and web)
       await _initializeLocalNotifications();
 
       _isInitialized = true;
-      print('>>> Notification service initialized successfully');
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> ERROR initializing notifications: $e');
-      print('>>> ============================================');
     }
   }
 
@@ -79,13 +69,11 @@ class NotificationService {
         provisional: false,
       );
 
-      print('>>> FCM Permission status: ${settings.authorizationStatus}');
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized ||
           settings.authorizationStatus == AuthorizationStatus.provisional) {
         // Get FCM token
         _currentFCMToken = await _firebaseMessaging.getToken();
-        print('>>> FCM Token obtained: ${_currentFCMToken?.substring(0, 20)}...');
 
         // Store token locally
         if (_currentFCMToken != null) {
@@ -94,7 +82,6 @@ class NotificationService {
 
         // Listen for token refresh
         _firebaseMessaging.onTokenRefresh.listen((newToken) {
-          print('>>> FCM Token refreshed');
           _currentFCMToken = newToken;
           _storage.write('fcm_token', newToken);
           // TODO: Update token in Appwrite when user is logged in
@@ -103,10 +90,8 @@ class NotificationService {
         // Set up message handlers
         _setupMessageHandlers();
       } else {
-        print('>>> FCM Permission denied by user');
       }
     } catch (e) {
-      print('>>> Error initializing FCM: $e');
     }
   }
 
@@ -126,7 +111,6 @@ class NotificationService {
       onDidReceiveNotificationResponse: _handleNotificationTap,
     );
 
-    print('>>> Local notifications initialized');
   }
 
   void _setupMessageHandlers() {
@@ -143,13 +127,11 @@ class NotificationService {
   Future<void> _checkInitialMessage() async {
     final initialMessage = await _firebaseMessaging.getInitialMessage();
     if (initialMessage != null) {
-      print('>>> App opened from terminated state via notification');
       _handleNotificationData(initialMessage.data);
     }
   }
 
   void _handleNotificationTap(NotificationResponse response) {
-    print('>>> Notification tapped: ${response.payload}');
     
     if (response.payload != null) {
       // Parse payload and navigate
@@ -162,23 +144,15 @@ class NotificationService {
           _navigateToScreen(type, id);
         }
       } catch (e) {
-        print('>>> Error parsing notification payload: $e');
       }
     }
   }
 
   void _handleNotificationTapFromBackground(RemoteMessage message) {
-    print('>>> Background notification tapped');
     _handleNotificationData(message.data);
   }
 
   Future<void> _handleForegroundMessage(RemoteMessage message) async {
-    print('>>> ============================================');
-    print('>>> FOREGROUND MESSAGE RECEIVED');
-    print('>>> Title: ${message.notification?.title}');
-    print('>>> Body: ${message.notification?.body}');
-    print('>>> Data: ${message.data}');
-    print('>>> ============================================');
 
     // Show local notification when app is in foreground
     await _showLocalNotification(
@@ -242,11 +216,9 @@ class NotificationService {
       payload: payload,
     );
 
-    print('>>> Local notification displayed');
   }
 
   void _handleNotificationData(Map<String, dynamic> data) {
-    print('>>> Handling notification data: $data');
     
     final type = data['type'];
     
@@ -264,7 +236,6 @@ class NotificationService {
   }
 
   void _navigateToScreen(String type, String id) {
-    print('>>> Navigating to: $type with ID: $id');
     
     // Use GetX navigation
     switch (type) {
@@ -272,22 +243,18 @@ class NotificationService {
       case 'new_appointment':
         // Navigate to appointments screen
         // Get.toNamed('/appointments', arguments: {'appointmentId': id});
-        print('>>> TODO: Navigate to appointment: $id');
         break;
       case 'message':
         // Navigate to messages screen
         // Get.toNamed('/messages', arguments: {'conversationId': id});
-        print('>>> TODO: Navigate to message: $id');
         break;
       default:
-        print('>>> Unknown notification type: $type');
     }
   }
 
   /// Request notification permissions (call after login)
   Future<bool> requestPermissions() async {
     if (kIsWeb) {
-      print('>>> Web platform: No FCM permissions needed');
       return true;
     }
 
@@ -298,12 +265,10 @@ class NotificationService {
         sound: true,
       );
     
-      print('>>> Permission status: ${settings.authorizationStatus}');
       
       return settings.authorizationStatus == AuthorizationStatus.authorized ||
           settings.authorizationStatus == AuthorizationStatus.provisional;
     } catch (e) {
-      print('>>> Error requesting permissions: $e');
       return false;
     }
   }
@@ -311,7 +276,6 @@ class NotificationService {
   /// Get fresh FCM token (call after login)
   Future<String?> getFreshToken() async {
     if (kIsWeb) {
-      print('>>> Web platform: No FCM token available');
       return null;
     }
 
@@ -322,7 +286,6 @@ class NotificationService {
       }
       return _currentFCMToken;
     } catch (e) {
-      print('>>> Error getting FCM token: $e');
       return null;
     }
   }
@@ -335,9 +298,7 @@ class NotificationService {
       }
       _currentFCMToken = null;
       _storage.remove('fcm_token');
-      print('>>> FCM token cleared');
     } catch (e) {
-      print('>>> Error clearing token: $e');
     }
   }
 

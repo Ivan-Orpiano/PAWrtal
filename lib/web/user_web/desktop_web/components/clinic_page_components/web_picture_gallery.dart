@@ -41,7 +41,6 @@ class _WebPictureGalleryUpdatedState extends State<WebPictureGalleryUpdated> {
         });
       }
     } catch (e) {
-      print("Error loading clinic gallery: $e");
       setState(() {
         _galleryImages = _getDefaultGalleryImages();
         _isLoading = false;

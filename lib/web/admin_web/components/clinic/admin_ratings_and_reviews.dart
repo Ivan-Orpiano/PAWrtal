@@ -97,7 +97,6 @@ class _AdminRatingsAndReviewsState extends State<AdminRatingsAndReviews> {
         isLoading = false;
       });
     } catch (e) {
-      print('Error loading reviews: $e');
       setState(() => isLoading = false);
     }
   }
@@ -162,9 +161,6 @@ class _AdminRatingsAndReviewsState extends State<AdminRatingsAndReviews> {
         appointmentId: review.appointmentId,
         requestedBy: requestedBy, // The admin/staff user ID making the request
         onSuccess: (result) {
-          print('>>> Deletion request created successfully');
-          print('>>> Request ID: ${result['requestId']}');
-          print('>>> Message: ${result['message']}');
 
           // Refresh the reviews list
           _loadReviews();
@@ -182,7 +178,6 @@ class _AdminRatingsAndReviewsState extends State<AdminRatingsAndReviews> {
           }
         },
         onError: (error) {
-          print('>>> Error creating deletion request: $error');
 
           // Show error to user
           if (mounted) {

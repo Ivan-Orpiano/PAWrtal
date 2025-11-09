@@ -30,11 +30,6 @@ class AdminPetCardViewController extends GetxController {
     currentPet.value = pet;
     currentClinicId.value = clinicId;
 
-    print('>>> ============================================');
-    print('>>> ADMIN CARD CONTROLLER: Loading pet data');
-    print('>>> Pet ID: ${pet.petId}');
-    print('>>> Clinic ID: $clinicId');
-    print('>>> ============================================');
 
     // Fetch ALL data immediately in parallel
     await Future.wait([
@@ -43,11 +38,6 @@ class AdminPetCardViewController extends GetxController {
       fetchPetMedicalAppointmentsByClinic(pet.petId, clinicId),
     ]);
 
-    print('>>> ✅ All pet data loaded successfully');
-    print('>>> Medical Records: ${medicalRecords.length}');
-    print('>>> Vaccinations: ${vaccinations.length}');
-    print('>>> Medical Appointments: ${medicalAppointments.length}');
-    print('>>> ============================================');
   }
 
   Future<void> fetchPetMedicalAppointmentsByClinic(
@@ -56,28 +46,16 @@ class AdminPetCardViewController extends GetxController {
   ) async {
     isLoadingMedicalAppointments.value = true;
     try {
-      print('>>> ADMIN CARD: Fetching medical appointments');
-      print('>>> Pet ID: $petId');
-      print('>>> Clinic ID: $clinicId');
-      print('>>> ============================================');
 
       final appointments = await authRepository
           .getPetMedicalAppointmentsByClinic(petId, clinicId);
 
       medicalAppointments.value = appointments;
 
-      print(
-          '>>> ADMIN CARD: ✅ Loaded ${appointments.length} medical appointments');
-      print('>>> (Only from THIS clinic)');
 
       if (appointments.isNotEmpty) {
-        print('>>> First appointment:');
-        print('>>>   Service: ${appointments.first['service']}');
-        print('>>>   Clinic: ${appointments.first['clinicName']}');
-        print('>>>   Date: ${appointments.first['dateTime']}');
       }
     } catch (e) {
-      print('>>> ADMIN CARD: ❌ Error fetching medical appointments: $e');
       medicalAppointments.clear();
     } finally {
       isLoadingMedicalAppointments.value = false;
@@ -87,26 +65,16 @@ class AdminPetCardViewController extends GetxController {
   Future<void> fetchPetMedicalRecords(String petId) async {
     isLoadingMedicalRecords.value = true;
     try {
-      print('>>> ADMIN CARD: Fetching medical records for pet: $petId');
 
       final records = await authRepository.getPetMedicalRecords(petId);
       medicalRecords.value = records;
 
-      print('>>> ADMIN CARD: ✅ Loaded ${records.length} medical records');
 
       if (records.isNotEmpty) {
         for (var record in records) {
-          print('>>> Medical Record:');
-          print('>>>   Record ID: ${record.id}');
-          print('>>>   Appointment ID: ${record.appointmentId}');
-          print('>>>   Service: ${record.service}');
-          print('>>>   Visit Date: ${record.visitDate}');
-          print('>>> ---');
         }
       }
     } catch (e, stackTrace) {
-      print('>>> ADMIN CARD: ❌ Error fetching medical records: $e');
-      print('>>> Stack trace: $stackTrace');
       medicalRecords.clear();
     } finally {
       isLoadingMedicalRecords.value = false;
@@ -116,20 +84,14 @@ class AdminPetCardViewController extends GetxController {
   Future<void> fetchPetVaccinations(String petId) async {
     isLoadingVaccinations.value = true;
     try {
-      print('>>> ADMIN CARD: Fetching vaccinations for pet: $petId');
-      print('>>> (Visible across ALL clinics)');
 
       final vaccins = await authRepository.getPetVaccinations(petId);
       vaccinations.value = vaccins;
 
-      print('>>> ADMIN CARD: ✅ Loaded ${vaccins.length} vaccinations');
 
       if (vaccins.isNotEmpty) {
-        print('>>> First vaccination: ${vaccins.first.vaccineName}');
-        print('>>> Date given: ${vaccins.first.dateGiven}');
       }
     } catch (e) {
-      print('>>> ADMIN CARD: ❌ Error fetching vaccinations: $e');
       vaccinations.clear();
     } finally {
       isLoadingVaccinations.value = false;
@@ -144,94 +106,63 @@ class AdminPetCardViewController extends GetxController {
     }
 
     try {
-      print('>>> ============================================');
-      print('>>> Fetching veterinarian name for vetId: $vetId');
-      print('>>> ============================================');
 
       // STEP 1: Check if this is a clinic admin (by user ID)
-      print('>>> Step 1: Checking if vetId is a clinic admin...');
       final clinicDoc = await authRepository.getClinicByAdminId(vetId);
 
       if (clinicDoc != null) {
         vetNamesCache[vetId] = 'Admin';
-        print('>>> ✅ User is CLINIC ADMIN - returning "Admin"');
-        print('>>> ============================================');
         return 'Admin';
       }
 
       // STEP 2: Try to get staff by USER ID (most common case after admin)
-      print('>>> Step 2: Checking if vetId is a staff user ID...');
       try {
         final staffDoc = await authRepository.getStaffByUserId(vetId);
         if (staffDoc != null) {
           final staffName = staffDoc.name;
           final isDoctor = staffDoc.isDoctor;
 
-          print('>>> ✅ Staff found by USER ID!');
-          print('>>>   Name: $staffName');
-          print('>>>   Is Doctor: $isDoctor');
 
           // CRITICAL: Return "Dr. [Name]" if doctor, otherwise just name
           final displayName = isDoctor ? 'Dr. $staffName' : staffName;
           vetNamesCache[vetId] = displayName;
-          print('>>> ✅ Returning staff name: $displayName');
-          print('>>> ============================================');
           return displayName;
         }
       } catch (e) {
-        print('>>> Not a staff user ID, trying staff document ID...');
       }
 
       // STEP 3: Try to get staff by DOCUMENT ID (fallback)
-      print('>>> Step 3: Checking if vetId is a staff document ID...');
       try {
         final staffDoc = await authRepository.getStaffByDocumentId(vetId);
         if (staffDoc != null) {
           final staffName = staffDoc.name;
           final isDoctor = staffDoc.isDoctor;
 
-          print('>>> ✅ Staff found by DOCUMENT ID!');
-          print('>>>   Name: $staffName');
-          print('>>>   Is Doctor: $isDoctor');
 
           // CRITICAL: Return "Dr. [Name]" if doctor, otherwise just name
           final displayName = isDoctor ? 'Dr. $staffName' : staffName;
           vetNamesCache[vetId] = displayName;
-          print('>>> ✅ Returning staff name: $displayName');
-          print('>>> ============================================');
           return displayName;
         }
       } catch (e) {
-        print('>>> Not a staff document ID either...');
       }
 
       // STEP 4: Get the user document as last resort
-      print('>>> Step 4: Fetching user document as fallback...');
       final userDoc = await authRepository.getUserById(vetId);
 
       if (userDoc == null) {
-        print('>>> ❌ User document not found for vetId: $vetId');
         vetNamesCache[vetId] = 'Unknown';
-        print('>>> ============================================');
         return 'Unknown';
       }
 
       final userName = userDoc.data['name'] ?? 'Unknown';
       final userRole = userDoc.data['role'] ?? '';
 
-      print('>>> User found:');
-      print('>>>   Name: $userName');
-      print('>>>   Role: $userRole');
 
       // Return the user's name
       vetNamesCache[vetId] = userName;
-      print('>>> ============================================');
       return userName;
     } catch (e, stackTrace) {
-      print('>>> ============================================');
-      print('>>> ❌ ERROR fetching veterinarian name: $e');
-      print('>>> Stack trace: $stackTrace');
-      print('>>> ============================================');
       vetNamesCache[vetId] = 'Unknown';
       return 'Unknown';
     }
@@ -258,7 +189,6 @@ class AdminPetCardViewController extends GetxController {
 
       return 'Unknown';
     } catch (e) {
-      print('>>> Error getting veterinarian role: $e');
       return 'Unknown';
     }
   }
@@ -282,76 +212,34 @@ class AdminPetCardViewController extends GetxController {
 
   Future<void> debugVetIdIssue(String vetId, String appointmentId) async {
     try {
-      print('>>> ============================================');
-      print('>>> DEBUGGING VET ID ISSUE');
-      print('>>> VetId from medical record: $vetId');
-      print('>>> Appointment ID: $appointmentId');
-      print('>>> ============================================');
 
       // Step 1: Find the medical record
-      print('>>> Step 1: Finding medical record...');
       final medicalRecord = medicalRecords.firstWhere(
         (record) => record.appointmentId == appointmentId,
         orElse: () => throw Exception('Medical record not found'),
       );
 
-      print('>>> Medical Record Found:');
-      print('>>>   Document ID: ${medicalRecord.id}');
-      print('>>>   VetId stored: ${medicalRecord.vetId}');
-      print('>>>   Service: ${medicalRecord.service}');
-      print('>>>   Diagnosis: ${medicalRecord.diagnosis}');
 
       // Step 2: Get all staff in the clinic
-      print('>>> ');
-      print('>>> Step 2: Fetching all staff in clinic...');
       final allStaff =
           await authRepository.getClinicStaff(currentClinicId.value);
 
-      print('>>> Found ${allStaff.length} staff members in clinic:');
       for (var staff in allStaff) {
-        print('>>> ---');
-        print('>>>   Staff Name: ${staff.name}');
-        print('>>>   Staff Document ID: ${staff.documentId}');
-        print('>>>   Staff User ID: ${staff.userId}');
-        print('>>>   Is Doctor: ${staff.isDoctor}');
-        print('>>>   Is Active: ${staff.isActive}');
-        print(
-            '>>>   Match with vetId? Document: ${staff.documentId == vetId}, User: ${staff.userId == vetId}');
       }
 
       // Step 3: Check if it's the admin
-      print('>>> ');
-      print('>>> Step 3: Checking if vetId is clinic admin...');
       final clinicDoc = await authRepository.getClinicByAdminId(vetId);
       if (clinicDoc != null) {
-        print('>>> ✅ VetId IS the clinic admin!');
-        print('>>>   Clinic: ${clinicDoc.data['clinicName']}');
-        print('>>>   Admin ID: ${clinicDoc.data['adminId']}');
       } else {
-        print('>>> ❌ VetId is NOT the clinic admin');
       }
 
       // Step 4: Try direct user lookup
-      print('>>> ');
-      print('>>> Step 4: Trying direct user lookup...');
       final userDoc = await authRepository.getUserById(vetId);
       if (userDoc != null) {
-        print('>>> ✅ User document found!');
-        print('>>>   Name: ${userDoc.data['name']}');
-        print('>>>   Email: ${userDoc.data['email']}');
-        print('>>>   Role: ${userDoc.data['role']}');
       } else {
-        print('>>> ❌ No user document found with this ID');
       }
 
-      print('>>> ============================================');
-      print('>>> DEBUG COMPLETE');
-      print('>>> ============================================');
     } catch (e, stackTrace) {
-      print('>>> ============================================');
-      print('>>> ERROR IN DEBUG: $e');
-      print('>>> Stack trace: $stackTrace');
-      print('>>> ============================================');
     }
   }
 }

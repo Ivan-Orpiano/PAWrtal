@@ -128,10 +128,6 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
   }
 
   void _initializeData() {
-    print('>>> ============================================');
-    print('>>> SUPER ADMIN EDIT: Initializing data');
-    print('>>> Clinic: ${widget.clinic.clinicName}');
-    print('>>> ============================================');
 
     // Parse services from clinic's services string
     if (widget.clinic.services.isNotEmpty) {
@@ -142,16 +138,13 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
           .toList();
 
       selectedServices = List<String>.from(clinicServices);
-      print('>>> Loaded ${clinicServices.length} services');
     }
 
     // Initialize settings data if available
     if (widget.settings != null) {
       // CRITICAL FIX: Load gallery images as URLs directly (not file IDs)
       galleryImages = List<String>.from(widget.settings!.gallery);
-      print('>>> Loaded ${galleryImages.length} gallery images (as URLs)');
       if (galleryImages.isNotEmpty) {
-        print('>>> First gallery image: ${galleryImages.first}');
       }
 
       // Load operating hours
@@ -166,7 +159,6 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
       // CRITICAL: Load medical services map from settings
       medicalServices =
           Map<String, bool>.from(widget.settings!.medicalServices);
-      print('>>> Loaded ${medicalServices.length} medical service mappings');
 
       // Ensure all selected services have medical status
       for (var service in selectedServices) {
@@ -178,7 +170,6 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
       // CRITICAL FIX: Load dashboard pic as URL directly (not file ID)
       if (widget.settings!.dashboardPic.isNotEmpty) {
         newDashboardImageId = widget.settings!.dashboardPic;
-        print('>>> Dashboard pic loaded: $newDashboardImageId');
       }
     } else {
       operatingHours = _getDefaultOperatingHours();
@@ -189,8 +180,6 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
       }
     }
 
-    print('>>> Initialization complete');
-    print('>>> ============================================');
   }
 
   Map<String, Map<String, dynamic>> _getDefaultOperatingHours() {
@@ -1221,11 +1210,6 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
   }
 
   Widget _buildDashboardImagePreview() {
-    print('>>> ============================================');
-    print('>>> Building dashboard preview');
-    print('>>> newDashboardImageId: $newDashboardImageId');
-    print('>>> settings.dashboardPic: ${widget.settings?.dashboardPic}');
-    print('>>> ============================================');
 
     // Priority 1: New dashboard image (just uploaded)
     if (newDashboardImageId != null && newDashboardImageId!.isNotEmpty) {
@@ -1250,7 +1234,6 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
               );
             },
             errorBuilder: (context, error, stackTrace) {
-              print('>>> ❌ Error loading new dashboard image: $error');
               return Container(
                 color: Colors.grey[200],
                 child: const Center(
@@ -1354,7 +1337,6 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
               );
             },
             errorBuilder: (context, error, stackTrace) {
-              print('>>> ❌ Error loading existing dashboard image: $error');
               return Container(
                 color: Colors.grey[200],
                 child: const Center(
@@ -1505,9 +1487,6 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.first;
 
-        print('>>> ============================================');
-        print('>>> Uploading dashboard image...');
-        print('>>> ============================================');
 
         // Upload dashboard image to storage
         final uploadedFile = await authRepository.uploadImage(
@@ -1521,15 +1500,11 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
           final imageUrl =
               '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/${uploadedFile.$id}/view?project=${AppwriteConstants.projectID}';
           newDashboardImageId = imageUrl;
-          print('>>> Dashboard image URL: $imageUrl');
         });
 
-        print('>>> Dashboard image uploaded: ${uploadedFile.$id}');
-        print('>>> ============================================');
         _showSuccessSnackbar('Dashboard image uploaded successfully');
       }
     } catch (e) {
-      print('>>> ❌ Error uploading dashboard image: $e');
       _showErrorSnackbar('Error uploading dashboard image: ${e.toString()}');
     } finally {
       setState(() {
@@ -1586,9 +1561,6 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
           isLoadingImage = true;
         });
 
-        print('>>> ============================================');
-        print('>>> Uploading ${result.files.length} gallery images...');
-        print('>>> ============================================');
 
         // Upload images to storage
         final uploadedFiles = await authRepository.uploadClinicGalleryImages(
@@ -1601,18 +1573,13 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
             final imageUrl =
                 '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.imageBucketID}/files/${file.$id}/view?project=${AppwriteConstants.projectID}';
             galleryImages.add(imageUrl);
-            print('>>> Added gallery image URL: $imageUrl');
           }
           isLoadingImage = false;
         });
 
-        print('>>> Successfully uploaded ${uploadedFiles.length} images');
-        print('>>> Total gallery count: ${galleryImages.length}');
-        print('>>> ============================================');
         _showSuccessSnackbar('${uploadedFiles.length} images uploaded');
       }
     } catch (e) {
-      print('>>> ❌ Error uploading gallery images: $e');
       setState(() {
         isLoadingImage = false;
       });
@@ -1631,9 +1598,6 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
       galleryImages.removeAt(index);
     });
 
-    print('>>> Gallery image marked for removal: $imageUrl');
-    print('>>> Current gallery count: ${galleryImages.length}');
-    print('>>> Pending removal count: ${removedGalleryImages.length}');
   }
 
   Future<void> _saveAllChanges() async {
@@ -1647,9 +1611,6 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
     });
 
     try {
-      print('>>> ============================================');
-      print('>>> SUPER ADMIN: SAVING CLINIC CHANGES');
-      print('>>> ============================================');
 
       // STEP 1: Handle dashboard image changes
       String finalDashboardImageId = '';
@@ -1662,9 +1623,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
               _extractFileIdFromUrl(widget.settings!.dashboardPic);
           try {
             await authRepository.deleteImage(oldImageId);
-            print('>>> Old dashboard image deleted: $oldImageId');
           } catch (e) {
-            print('>>> Warning: Could not delete old dashboard image: $e');
           }
         }
         finalDashboardImageId = '';
@@ -1681,9 +1640,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
               _extractFileIdFromUrl(widget.settings!.dashboardPic);
           try {
             await authRepository.deleteImage(oldImageId);
-            print('>>> Old dashboard image replaced: $oldImageId');
           } catch (e) {
-            print('>>> Warning: Could not delete old dashboard image: $e');
           }
         }
       } else {
@@ -1691,7 +1648,6 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
         finalDashboardImageId = widget.settings?.dashboardPic ?? '';
       }
 
-      print('>>> Final dashboard image: $finalDashboardImageId');
 
       // STEP 2: Sanitize medical services map
       final sanitizedMedicalServices = <String, bool>{};
@@ -1700,8 +1656,6 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
             medicalServices[service] ?? _isServiceMedicalByDefault(service);
       }
 
-      print('>>> Selected services: $selectedServices');
-      print('>>> Medical services map: $sanitizedMedicalServices');
 
       // STEP 3: Update clinic basic info
       final clinicData = {
@@ -1715,16 +1669,13 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
         'dashboardPic': finalDashboardImageId, // Store as URL
       };
 
-      print('>>> Updating clinic document...');
       await authRepository.updateClinic(
         widget.clinic.documentId!,
         clinicData,
       );
-      print('>>> Clinic document updated');
 
       // STEP 4: Update or create clinic settings
       if (widget.settings != null) {
-        print('>>> Updating existing clinic settings...');
 
         final updatedSettings = widget.settings!.copyWith(
           isOpen: isOpen,
@@ -1741,9 +1692,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
         );
 
         await authRepository.updateClinicSettings(updatedSettings);
-        print('>>> Clinic settings updated');
       } else {
-        print('>>> Creating new clinic settings...');
 
         final newSettings = ClinicSettings(
           clinicId: widget.clinic.documentId!,
@@ -1761,13 +1710,10 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
         );
 
         await authRepository.createClinicSettings(newSettings);
-        print('>>> New clinic settings created');
       }
 
       // STEP 5: Delete removed gallery images from storage
       if (removedGalleryImages.isNotEmpty) {
-        print(
-            '>>> Deleting ${removedGalleryImages.length} removed gallery images...');
 
         // Extract file IDs from URLs
         final fileIdsToDelete = removedGalleryImages
@@ -1775,12 +1721,8 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
             .toList();
 
         await authRepository.deleteClinicGalleryImages(fileIdsToDelete);
-        print('>>> Gallery images deleted');
       }
 
-      print('>>> ============================================');
-      print('>>> SUPER ADMIN: SAVE COMPLETE');
-      print('>>> ============================================');
 
       // _showSuccessSnackbar('Clinic updated successfully');
 
@@ -1789,11 +1731,6 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
         Navigator.pop(context, true);
       }
     } catch (e, stackTrace) {
-      print('>>> ============================================');
-      print('>>> ERROR SAVING CHANGES');
-      print('>>> Error: $e');
-      print('>>> Stack trace: $stackTrace');
-      print('>>> ============================================');
       _showErrorSnackbar('Error saving changes: ${e.toString()}');
     } finally {
       if (mounted) {

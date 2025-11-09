@@ -88,7 +88,6 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
 // ✅ Fetch all data and wait for counts to be available
   Future<void> _fetchHistories() async {
     final controller = Get.find<WebPetsController>();
-    print('>>> Fetching histories for pet: ${widget.pet.petId}');
 
     try {
       // ✅ FETCH ALL THREE IN PARALLEL: vaccinations, medical appointments, AND medical records
@@ -98,16 +97,9 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
         controller.fetchPetMedicalRecordsForAppointments(widget.pet.petId),
       ]);
 
-      print('>>> ✅ All histories fetched successfully');
-      print('>>> Vaccinations: ${controller.vaccinations.length}');
-      print(
-          '>>> Medical Appointments: ${controller.medicalAppointments.length}');
-      print('>>> Medical Records: ${controller.medicalRecords.length}');
 
       // ✅ Counts are now available and UI will show correct numbers
     } catch (e, stackTrace) {
-      print('>>> ❌ Error fetching histories: $e');
-      print('>>> Stack trace: $stackTrace');
     }
   }
 
@@ -672,10 +664,6 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
     final appointmentId = appointment['\$id'];
     final petId = appointment['petId'];
 
-    print('>>> ============================================');
-    print('>>> Checking records for appointment card');
-    print('>>> Appointment ID: $appointmentId');
-    print('>>> Clinic ID: $clinicId');
 
     // Check medical records by appointmentId
     bool hasMedicalRecord = false;
@@ -685,13 +673,11 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
       if (record.appointmentId == appointmentId) {
         hasMedicalRecord = true;
         matchedRecord = record;
-        print('>>> ✅ Medical record found!');
         break;
       }
     }
 
     if (!hasMedicalRecord) {
-      print('>>> Trying fuzzy match...');
       for (var record in controller.medicalRecords) {
         final petMatches = record.petId == petId;
         final dateMatches = record.visitDate.year == dateTime.year &&
@@ -704,7 +690,6 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
         if (petMatches && dateMatches && serviceMatches) {
           hasMedicalRecord = true;
           matchedRecord = record;
-          print('>>> ✅ Fuzzy match found!');
           break;
         }
       }
@@ -1012,7 +997,6 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
       }
       return null;
     } catch (e) {
-      print('>>> Error fetching clinic profile picture ID: $e');
       return null;
     }
   }

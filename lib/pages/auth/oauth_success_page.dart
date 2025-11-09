@@ -9,7 +9,6 @@ class OAuthSuccessPage extends StatelessWidget {
   Widget build(BuildContext context) {
     // Immediately redirect to callback handler
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      print('>>> OAuth Success - Redirecting to callback...');
       Get.offNamed(Routes.oauthCallback);
     });
 

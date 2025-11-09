@@ -82,14 +82,10 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
   void _initializeControllerSync() {
     if (_isDisposed) return;
 
-    print('>>> ============================================');
-    print('>>> SYNCHRONOUS CONTROLLER INITIALIZATION');
-    print('>>> ============================================');
 
     try {
       // CRITICAL FIX: Check if controller exists AND is still valid
       if (Get.isRegistered<WebAppointmentController>()) {
-        print('>>> Controller already registered, checking if valid...');
 
         try {
           _controller = Get.find<WebAppointmentController>();
@@ -97,31 +93,24 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
           // CRITICAL: Verify the controller is actually functional
           // by checking if it has clinic data initialized
           if (_controller!.clinicData.value != null) {
-            print('>>> âœ… Controller is valid and has data, reusing it');
             _initError = null;
             return;
           } else {
-            print('>>> âš ï¸ Controller exists but has no clinic data');
-            print('>>> This might be a stale controller, will recreate');
 
             // Delete the stale controller
             Get.delete<WebAppointmentController>(force: true);
             _controller = null;
           }
         } catch (e) {
-          print('>>> âŒ Error accessing existing controller: $e');
-          print('>>> Will create a new one');
 
           // Try to delete the broken controller
           try {
             Get.delete<WebAppointmentController>(force: true);
           } catch (deleteError) {
-            print('>>> Could not delete broken controller: $deleteError');
           }
           _controller = null;
         }
       } else {
-        print('>>> No controller registered, will create new one');
       }
 
       // Verify dependencies exist
@@ -133,7 +122,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
         throw Exception('UserSessionService not found in GetX');
       }
 
-      print('>>> Creating new controller...');
 
       // Get dependencies
       final authRepository = Get.find<AuthRepository>();
@@ -148,20 +136,14 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
       // Register with GetX IMMEDIATELY (synchronously)
       Get.put<WebAppointmentController>(_controller!, permanent: true);
 
-      print('>>> âœ… Controller registered synchronously');
-      print(
-          '>>> Controller registered: ${Get.isRegistered<WebAppointmentController>()}');
 
       _initError = null;
 
       // NOW fetch data asynchronously (after registration)
       Future.microtask(() async {
         try {
-          print('>>> Starting async data fetch...');
           await _controller!.fetchClinicData();
-          print('>>> âœ… Data fetch complete');
         } catch (e) {
-          print('>>> âŒ Error fetching data: $e');
           if (mounted) {
             setState(() {
               _initError = 'Failed to load data: $e';
@@ -170,13 +152,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
         }
       });
 
-      print('>>> ============================================');
     } catch (e, stackTrace) {
-      print('>>> ============================================');
-      print('>>> âŒ CRITICAL ERROR IN SYNC INITIALIZATION');
-      print('>>> Error: $e');
-      print('>>> Stack trace: $stackTrace');
-      print('>>> ============================================');
 
       _initError = e.toString();
       _controller = null;
@@ -201,19 +177,16 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
 
     // CRITICAL: Add safety checks
     if (_controller == null) {
-      print('>>> Tab change skipped - controller is null');
       return;
     }
 
     if (!Get.isRegistered<WebAppointmentController>()) {
-      print('>>> Tab change skipped - controller not registered');
       return;
     }
 
     try {
       _controller!.setSelectedTab(_tabValues[_tabController.index]);
     } catch (e) {
-      print('>>> Error in tab controller changed: $e');
     }
   }
 
@@ -222,19 +195,16 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
 
     // CRITICAL: Add safety checks
     if (_controller == null) {
-      print('>>> Mobile tab change skipped - controller is null');
       return;
     }
 
     if (!Get.isRegistered<WebAppointmentController>()) {
-      print('>>> Mobile tab change skipped - controller not registered');
       return;
     }
 
     try {
       _controller!.setSelectedTab(_tabValues[_mobileTabController.index]);
     } catch (e) {
-      print('>>> Error in mobile tab controller changed: $e');
     }
   }
 
@@ -249,18 +219,12 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
     _statsScrollController.dispose();
 
     // DON'T call Get.delete() - controller stays alive
-    print('>>> AdminWebAppointments disposed (controller kept alive)');
 
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    print('>>> Building AdminWebAppointments');
-    print('>>> Is Logging Out: $_isLoggingOut');
-    print('>>> Controller: $_controller');
-    print('>>> Registered: ${Get.isRegistered<WebAppointmentController>()}');
-    print('>>> Error: $_initError');
 
     // ✅ CRITICAL: If logging out, show loading screen immediately
     if (_isLoggingOut) {
@@ -401,7 +365,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
         ),
       );
     } catch (e) {
-      print('>>> Build error caught: $e');
       return Scaffold(
         backgroundColor: const Color.fromARGB(255, 245, 245, 245),
         body: Center(
@@ -432,7 +395,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
       if (_controller == null) return const SizedBox.shrink();
       return const WebAppointmentStats();
     } catch (e) {
-      print('>>> Error building stats: $e');
       return const SizedBox.shrink();
     }
   }
@@ -443,7 +405,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
       if (_controller == null) return const SizedBox.shrink();
       return _buildMobileStats();
     } catch (e) {
-      print('>>> Error building mobile stats: $e');
       return const SizedBox.shrink();
     }
   }
@@ -455,7 +416,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
       if (_controller == null) return const SizedBox.shrink();
       return _buildSearchAndFilterBar(isMobile, isTablet);
     } catch (e) {
-      print('>>> Error building search bar: $e');
       return const SizedBox.shrink();
     }
   }
@@ -466,7 +426,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
       if (_controller == null) return const SizedBox.shrink();
       return _buildTabBar(isMobile, isTablet);
     } catch (e) {
-      print('>>> Error building tab bar: $e');
       return const SizedBox.shrink();
     }
   }
@@ -496,7 +455,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
       }
       return _buildTabContent(isMobile);
     } catch (e) {
-      print('>>> Error building tab content: $e');
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

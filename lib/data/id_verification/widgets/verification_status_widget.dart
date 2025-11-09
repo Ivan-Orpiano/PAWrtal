@@ -49,7 +49,6 @@ class _VerificationStatusWidgetState extends State<VerificationStatusWidget> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading verification status: $e');
       setState(() => _isLoading = false);
     }
   }

@@ -25,7 +25,6 @@ class ArgosService {
       },
     );
 
-    print('>>> ARGOS Verification URL generated: $uri');
     return uri.toString();
   }
 
@@ -45,18 +44,14 @@ class ArgosService {
         },
       );
 
-      print('>>> ARGOS GET Submission Response: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body) as Map<String, dynamic>;
-        print('>>> Submission data: $data');
         return data;
       } else {
-        print('>>> Error getting submission: ${response.body}');
         return null;
       }
     } catch (e) {
-      print('>>> Exception getting submission: $e');
       return null;
     }
   }
@@ -101,7 +96,6 @@ class ArgosService {
         'rawData': data,
       };
     } catch (e) {
-      print('>>> Error parsing webhook: $e');
       return {'success': false, 'error': e.toString()};
     }
   }

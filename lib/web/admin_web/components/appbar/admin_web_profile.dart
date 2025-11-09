@@ -55,17 +55,12 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
       if (staffProfilePictureId.isNotEmpty) {
         final cleanedId = _extractFileIdFromUrl(staffProfilePictureId);
         if (cleanedId != staffProfilePictureId) {
-          print('>>> Cleaned staff profile picture ID from storage');
-          print('>>> Original: $staffProfilePictureId');
-          print('>>> Cleaned: $cleanedId');
           staffProfilePictureId = cleanedId;
           storage.write("staffProfilePictureId", cleanedId);
         }
       }
 
       _cachedProfilePictureId = staffProfilePictureId;
-      print(
-          '>>> INIT: Loaded staff profile picture from storage: $_cachedProfilePictureId');
     } else {
       // ADMIN: Load clinic data
       _cachedClinicName = storage.read("clinicName") as String? ?? 'Clinic';
@@ -77,23 +72,18 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
       if (clinicProfilePictureId.isNotEmpty) {
         final cleanedId = _extractFileIdFromUrl(clinicProfilePictureId);
         if (cleanedId != clinicProfilePictureId) {
-          print('>>> Cleaned clinic profile picture ID from storage');
-          print('>>> Original: $clinicProfilePictureId');
-          print('>>> Cleaned: $cleanedId');
           clinicProfilePictureId = cleanedId;
           storage.write("clinicProfilePictureId", cleanedId);
         }
       }
 
       _cachedProfilePictureId = clinicProfilePictureId;
-      print('>>> INIT: Loaded clinic data from storage');
     }
   }
 
   Future<void> _initializeProfileData() async {
     // CRITICAL: Check if we're logging out
     if (_isLoggingOut) {
-      print('>>> Skipping profile initialization - logout in progress');
       return;
     }
 
@@ -101,19 +91,12 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
       final userRole = storage.read("role") as String? ?? "admin";
       final isStaff = userRole == 'staff';
 
-      print('>>> ============================================');
-      print('>>> INITIALIZING PROFILE DATA');
-      print('>>> User Role: $userRole');
-      print('>>> Is Staff: $isStaff');
-      print('>>> ============================================');
 
       if (isStaff) {
         // STAFF: Fetch staff data from database
         final staffId = storage.read("staffId") as String?;
-        print('>>> Staff ID from storage: $staffId');
 
         if (staffId != null && staffId.isNotEmpty) {
-          print('>>> Fetching staff data from database...');
 
           final staff = await _authRepository.getStaffByDocumentId(staffId);
 
@@ -122,11 +105,6 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
             final staffEmail = staff.email.isNotEmpty ? staff.email : 'N/A';
             final staffName = staff.name;
 
-            print('>>> Staff Data Retrieved:');
-            print('>>>   Name: $staffName');
-            print('>>>   Email: $staffEmail');
-            print('>>>   Image ID: $staffProfilePictureId');
-            print('>>>   Image ID Length: ${staffProfilePictureId.length}');
 
             // CRITICAL: Check if still mounted and not logging out
             if (mounted && !_isLoggingOut) {
@@ -140,21 +118,16 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
               storage.write('email', staffEmail);
               storage.write('name', staffName);
 
-              print('>>> Staff profile initialized successfully');
-              print('>>> Updated storage with fresh data');
             }
           } else {
-            print('>>> ERROR: Staff document not found');
             _isInitialized = true;
           }
         } else {
-          print('>>> ERROR: No staff ID in storage');
           _isInitialized = true;
         }
       } else {
         // ADMIN: Fetch clinic data from database
         final clinicId = storage.read("clinicId") as String?;
-        print('>>> Clinic ID from storage: $clinicId');
 
         if (clinicId == null || clinicId.isEmpty) {
           _isInitialized = true;
@@ -166,9 +139,6 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
           final newClinicName = clinicDoc.data['clinicName'] ?? 'Clinic';
           final newProfilePictureId = clinicDoc.data['profilePictureId'] ?? '';
 
-          print('>>> Clinic Data Retrieved:');
-          print('>>>   Name: $newClinicName');
-          print('>>>   Profile Picture ID: $newProfilePictureId');
 
           // CRITICAL: Check if still mounted and not logging out
           if (mounted && !_isLoggingOut) {
@@ -186,15 +156,7 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
         }
       }
 
-      print('>>> ============================================');
-      print('>>> PROFILE DATA INITIALIZATION COMPLETE');
-      print('>>> Cached Profile Picture ID: $_cachedProfilePictureId');
-      print('>>> ============================================');
     } catch (e, stackTrace) {
-      print('>>> ============================================');
-      print('>>> ERROR INITIALIZING PROFILE DATA: $e');
-      print('>>> Stack trace: $stackTrace');
-      print('>>> ============================================');
       if (mounted && !_isLoggingOut) {
         _isInitialized = true;
       }
@@ -204,7 +166,6 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
   Future<void> _refreshClinicDataInBackground() async {
     // CRITICAL: Don't refresh if logging out
     if (_isLoggingOut) {
-      print('>>> Skipping profile refresh - logout in progress');
       return;
     }
 
@@ -212,25 +173,17 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
       final userRole = storage.read("role") as String? ?? "admin";
       final isStaff = userRole == 'staff';
 
-      print('>>> ============================================');
-      print('>>> REFRESHING PROFILE DATA IN BACKGROUND');
-      print('>>> User Role: $userRole');
-      print('>>> ============================================');
 
       if (isStaff) {
         // STAFF: Refresh staff data
         final staffId = storage.read("staffId") as String?;
         if (staffId != null && staffId.isNotEmpty) {
-          print('>>> Refreshing staff data for: $staffId');
 
           final staff = await _authRepository.getStaffByDocumentId(staffId);
           if (staff != null && !_isLoggingOut) {
             final staffProfilePictureId = staff.image;
             final staffEmail = staff.email.isNotEmpty ? staff.email : 'N/A';
 
-            print('>>> Refreshed Staff Data:');
-            print('>>>   Image ID: $staffProfilePictureId');
-            print('>>>   Email: $staffEmail');
 
             if (mounted && !_isLoggingOut) {
               setState(() {
@@ -240,7 +193,6 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
               storage.write('staffProfilePictureId', staffProfilePictureId);
               storage.write('email', staffEmail);
 
-              print('>>> Staff data refreshed successfully');
             }
           }
         }
@@ -265,9 +217,7 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
         }
       }
 
-      print('>>> ============================================');
     } catch (e) {
-      print('>>> Error refreshing profile data: $e');
     }
   }
 
@@ -328,9 +278,6 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
               onPressed: () async {
                 Navigator.of(context).pop();
 
-                print('>>> ============================================');
-                print('>>> LOGOUT INITIATED FROM ADMIN PROFILE');
-                print('>>> ============================================');
 
                 // ✅ CRITICAL: Set logout flag IMMEDIATELY
                 setState(() {
@@ -361,7 +308,6 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
                   // Call the logout helper
                   await LogoutHelper.logout();
                 } catch (e) {
-                  print('>>> ERROR during logout: $e');
 
                   if (context.mounted) {
                     Navigator.of(context).pop();
@@ -401,8 +347,6 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
       final currentContext = Get.context;
 
       if (currentContext == null) {
-        print(
-            '>>> ⚠️ No active BuildContext found — cannot notify appointments page');
         return;
       }
 
@@ -416,13 +360,9 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
           ancestorState.widget is AdminWebAppointments &&
           (ancestorState as dynamic)._setLoggingOut != null) {
         (ancestorState as dynamic)._setLoggingOut(true);
-        print('>>> ✅ AdminWebAppointments page notified of logout');
       } else {
-        print('>>> ⚠️ AdminWebAppointments state not found in the widget tree');
       }
     } catch (e, stackTrace) {
-      print('>>> ❌ Error notifying AdminWebAppointments page: $e');
-      print('>>> Stack trace: $stackTrace');
     }
   }
 
@@ -436,10 +376,8 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
     String? profilePictureId;
     if (isStaff) {
       profilePictureId = storage.read("staffProfilePictureId") as String?;
-      print('>>> Staff profile picture ID in overlay: $profilePictureId');
     } else {
       profilePictureId = storage.read("clinicProfilePictureId") as String?;
-      print('>>> Admin profile picture ID in overlay: $profilePictureId');
     }
 
     return OverlayEntry(
@@ -575,27 +513,16 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
   }
 
   Widget _buildProfileAvatar(String? profilePictureId, bool isStaff) {
-    print('>>> ============================================');
-    print('>>> BUILDING PROFILE AVATAR');
-    print('>>> Profile Picture ID: $profilePictureId');
-    print('>>> Is Staff: $isStaff');
-    print(
-        '>>> ID Empty: ${profilePictureId == null || profilePictureId.isEmpty}');
 
     // Clean the profile picture ID
     if (profilePictureId != null && profilePictureId.isNotEmpty) {
       final cleanedId = _extractFileIdFromUrl(profilePictureId);
-      print('>>> Original ID: $profilePictureId');
-      print('>>> Cleaned ID: $cleanedId');
       profilePictureId = cleanedId;
     }
 
-    print('>>> Final Profile Picture ID: $profilePictureId');
-    print('>>> ============================================');
 
     if (profilePictureId != null && profilePictureId.isNotEmpty) {
       final imageUrl = _getProfilePictureUrl(profilePictureId);
-      print('>>> Generated Image URL: $imageUrl');
 
       return CircleAvatar(
         radius: 20,
@@ -608,11 +535,8 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
             fit: BoxFit.cover,
             loadingBuilder: (context, child, loadingProgress) {
               if (loadingProgress == null) {
-                print('>>> Image loaded successfully');
                 return child;
               }
-              print(
-                  '>>> Loading image... ${loadingProgress.cumulativeBytesLoaded}/${loadingProgress.expectedTotalBytes}');
               return Center(
                 child: CircularProgressIndicator(
                   value: loadingProgress.expectedTotalBytes != null
@@ -625,13 +549,6 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
               );
             },
             errorBuilder: (context, error, stackTrace) {
-              print('>>> ============================================');
-              print('>>> ERROR LOADING IMAGE');
-              print('>>> Error: $error');
-              print('>>> Profile Picture ID: $profilePictureId');
-              print('>>> URL: $imageUrl');
-              print('>>> Stack trace: $stackTrace');
-              print('>>> ============================================');
 
               return _buildDefaultAvatar(isStaff);
             },
@@ -640,7 +557,6 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
       );
     }
 
-    print('>>> No profile picture ID, showing default avatar');
     return _buildDefaultAvatar(isStaff);
   }
 
@@ -657,7 +573,6 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
         return pathSegments[filesIndex + 1];
       }
     } catch (e) {
-      print('>>> Error extracting file ID from URL: $e');
     }
 
     return urlOrId;
@@ -724,21 +639,11 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
     final userRole = storage.read("role") as String? ?? "user";
     final isStaff = userRole == 'staff';
 
-    print('>>> ============================================');
-    print('>>> BUILDING ADMIN WEB PROFILE');
-    print('>>> User Name: $userName');
-    print('>>> User Role: $userRole');
-    print('>>> Is Staff: $isStaff');
-    print('>>> Cached Profile Picture ID: $_cachedProfilePictureId');
-    print('>>> Is Initialized: $_isInitialized');
-    print('>>> Is Logging Out: $_isLoggingOut');
-    print('>>> ============================================');
 
     // Use the cached profile picture ID that was loaded/initialized
     String? profilePictureId;
     if (_cachedProfilePictureId.isNotEmpty) {
       profilePictureId = _cachedProfilePictureId;
-      print('>>> Using cached profile picture: $profilePictureId');
     }
 
     return Padding(

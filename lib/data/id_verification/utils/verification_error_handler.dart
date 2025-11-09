@@ -10,7 +10,6 @@ class VerificationErrorHandler {
     required dynamic error,
     String? customMessage,
   }) {
-    print('>>> Verification Error: $error');
 
     String title = 'Verification Error';
     String message = customMessage ?? _getErrorMessage(error);
@@ -91,7 +90,6 @@ class VerificationErrorHandler {
     required BuildContext context,
     required dynamic error,
   }) {
-    print('>>> Appwrite Error: $error');
 
     String message = 'Failed to save verification data. Please try again.';
 

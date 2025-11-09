@@ -64,11 +64,6 @@ class _WebMapsState extends State<WebMaps> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.selectedFilter != widget.selectedFilter ||
         oldWidget.searchQuery != widget.searchQuery) {
-      print('>>> ============================================');
-      print('>>> FILTER CHANGED IN WEB MAPS');
-      print('>>> Selected Filter: ${widget.selectedFilter}');
-      print('>>> Search Query: ${widget.searchQuery}');
-      print('>>> ============================================');
       _applyFilters();
     }
   }
@@ -98,7 +93,6 @@ class _WebMapsState extends State<WebMaps> {
         });
       }
     } catch (e) {
-      print("Error fetching user location: $e");
       setState(() {
         userLocation = sanJoseDelMonteBounds.center;
       });
@@ -138,7 +132,6 @@ class _WebMapsState extends State<WebMaps> {
         _applyFilters();
       }
     } catch (e) {
-      print("Error fetching clinics data: $e");
       if (mounted) {
         setState(() {
           error = "Failed to load clinics data";
@@ -149,13 +142,6 @@ class _WebMapsState extends State<WebMaps> {
   }
 
   void _applyFilters() {
-    print('>>> ============================================');
-    print('>>> APPLYING FILTERS IN WEB MAPS');
-    print('>>> All clinics count: ${allClinics.length}');
-    print('>>> Filter: ${widget.selectedFilter}');
-    print('>>> Search: ${widget.searchQuery}');
-    print('>>> Has rating stats: ${widget.ratingStatsCache != null}');
-    print('>>> ============================================');
 
     var filtered = List<Clinic>.from(allClinics);
 
@@ -173,17 +159,14 @@ class _WebMapsState extends State<WebMaps> {
                 .contains(widget.searchQuery.toLowerCase()) ||
             services.toLowerCase().contains(widget.searchQuery.toLowerCase());
       }).toList();
-      print('>>> After search filter: ${filtered.length} clinics');
     }
 
     // Apply status filter with closed dates support
     switch (widget.selectedFilter) {
       case 'Open':
-        print('>>> Filtering for OPEN clinics...');
         filtered = filtered.where((clinic) {
           final settings = clinicSettingsMap[clinic.documentId ?? ''];
           if (settings == null) {
-            print('>>>   ${clinic.clinicName}: No settings - excluded');
             return false;
           }
 
@@ -195,24 +178,15 @@ class _WebMapsState extends State<WebMaps> {
           final isOpen = settings.isOpen;
           final isOpenNow = settings.isOpenNow();
 
-          print('>>>   ${clinic.clinicName}:');
-          print('>>>     - isOpen flag: $isOpen');
-          print('>>>     - isOpenNow: $isOpenNow');
-          print('>>>     - isTodayClosedDate: $isTodayClosedDate');
-          print(
-              '>>>     - Result: ${isOpen && isOpenNow && !isTodayClosedDate}');
 
           return isOpen && isOpenNow && !isTodayClosedDate;
         }).toList();
         break;
 
       case 'Closed':
-        print('>>> Filtering for CLOSED clinics...');
         filtered = filtered.where((clinic) {
           final settings = clinicSettingsMap[clinic.documentId ?? ''];
           if (settings == null) {
-            print(
-                '>>>   ${clinic.clinicName}: No settings - included as closed');
             return true;
           }
 
@@ -224,20 +198,14 @@ class _WebMapsState extends State<WebMaps> {
           final isOpen = settings.isOpen;
           final isOpenNow = settings.isOpenNow();
 
-          print('>>>   ${clinic.clinicName}:');
-          print('>>>     - isOpen flag: $isOpen');
-          print('>>>     - isOpenNow: $isOpenNow');
-          print('>>>     - isTodayClosedDate: $isTodayClosedDate');
 
           final isClosed = !isOpen || !isOpenNow || isTodayClosedDate;
-          print('>>>     - Result (is closed): $isClosed');
 
           return isClosed;
         }).toList();
         break;
 
       case 'Popular':
-        print('>>> Filtering for POPULAR clinics...');
 
         if (widget.ratingStatsCache != null) {
           // Sort by review count (descending) and rating (descending)
@@ -265,29 +233,21 @@ class _WebMapsState extends State<WebMaps> {
             final hasReviews = (stats?.totalReviews ?? 0) > 0;
 
             if (hasReviews) {
-              print(
-                  '>>>   ${clinic.clinicName}: ${stats?.totalReviews} reviews, ${stats?.averageRating} rating - included');
             } else {
-              print('>>>   ${clinic.clinicName}: No reviews - excluded');
             }
 
             return hasReviews;
           }).toList();
 
-          print('>>> Found ${filtered.length} popular clinics with reviews');
         } else {
-          print(
-              '>>> WARNING: No rating stats cache provided - showing all clinics');
         }
         break;
 
       case 'All':
       default:
-        print('>>> Showing ALL clinics...');
         break;
     }
 
-    print('>>> After status filter: ${filtered.length} clinics');
 
     // Only include clinics that have location data set
     final beforeLocationFilter = filtered.length;
@@ -296,32 +256,22 @@ class _WebMapsState extends State<WebMaps> {
       final hasLocation = settings?.location != null;
 
       if (!hasLocation) {
-        print('>>>   ${clinic.clinicName}: No location data - excluded');
       }
 
       return hasLocation;
     }).toList();
 
-    print(
-        '>>> After location filter: ${filtered.length} clinics (removed ${beforeLocationFilter - filtered.length} without location)');
 
     setState(() {
       filteredClinics = filtered;
     });
 
-    print('>>> ============================================');
-    print('>>> FILTER COMPLETE');
-    print('>>> Final filtered clinics: ${filteredClinics.length}');
     for (var clinic in filteredClinics) {
       final stats = widget.ratingStatsCache?[clinic.documentId ?? ''];
       if (stats != null) {
-        print(
-            '>>>   - ${clinic.clinicName} (${stats.totalReviews} reviews, ${stats.averageRating.toStringAsFixed(1)} rating)');
       } else {
-        print('>>>   - ${clinic.clinicName}');
       }
     }
-    print('>>> ============================================');
   }
 
   Future<Position?> _getCurrentUserLocation() async {
@@ -340,7 +290,6 @@ class _WebMapsState extends State<WebMaps> {
         desiredAccuracy: LocationAccuracy.high,
       );
     } catch (e) {
-      print("Error getting current location: $e");
       return null;
     }
   }
@@ -361,11 +310,6 @@ class _WebMapsState extends State<WebMaps> {
     Clinic? nearest;
     double shortestDistance = double.infinity;
 
-    print('>>> ============================================');
-    print('>>> FINDING NEAREST OPEN CLINIC');
-    print('>>> User location: $userLocation');
-    print('>>> Total filtered clinics: ${filteredClinics.length}');
-    print('>>> ============================================');
 
     for (final clinic in filteredClinics) {
       final settings = clinicSettingsMap[clinic.documentId ?? ''];
@@ -382,10 +326,6 @@ class _WebMapsState extends State<WebMaps> {
             settings.isOpen && settings.isOpenNow() && !isTodayClosedDate;
 
         if (!isOpenAndAvailable) {
-          print('>>> ${clinic.clinicName}: SKIPPED (not open/available)');
-          print('>>>   - isOpen: ${settings.isOpen}');
-          print('>>>   - isOpenNow: ${settings.isOpenNow()}');
-          print('>>>   - isTodayClosedDate: $isTodayClosedDate');
           continue; // Skip this clinic
         }
 
@@ -393,14 +333,12 @@ class _WebMapsState extends State<WebMaps> {
             LatLng(settings.location!['lat']!, settings.location!['lng']!);
         final dist = calculateDistance(userLocation!, clinicLocation);
 
-        print('>>> ${clinic.clinicName}: ${dist.toStringAsFixed(2)} km (OPEN)');
 
         if (dist < shortestDistance) {
           shortestDistance = dist;
           nearest = clinic;
         }
       } else {
-        print('>>> ${clinic.clinicName}: SKIPPED (no location data)');
       }
     }
 
@@ -411,24 +349,15 @@ class _WebMapsState extends State<WebMaps> {
             LatLng(settings!.location!['lat']!, settings.location!['lng']!);
 
         if (isWithinBounds(nearestLocation)) {
-          print('>>> ============================================');
-          print('>>> NEAREST OPEN CLINIC FOUND: ${nearest.clinicName}');
-          print('>>> Distance: ${shortestDistance.toStringAsFixed(2)} km');
-          print('>>> Moving map to location: $nearestLocation');
-          print('>>> ============================================');
 
           _mapController.move(nearestLocation, 17);
           fetchRoute(nearestLocation);
         } else {
-          print('>>> Nearest clinic is out of bounds');
           _showNoNearestClinicMessage(
               'Nearest open clinic is outside the service area');
         }
       }
     } else {
-      print('>>> ============================================');
-      print('>>> NO OPEN CLINICS FOUND');
-      print('>>> ============================================');
       _showNoNearestClinicMessage('No open clinics available nearby');
     }
   }
@@ -436,11 +365,6 @@ class _WebMapsState extends State<WebMaps> {
   List<Marker> getMarkers() {
     if (userLocation == null) return [];
 
-    print('>>> ============================================');
-    print('>>> GENERATING MARKERS');
-    print('>>> User location: $userLocation');
-    print('>>> Filtered clinics: ${filteredClinics.length}');
-    print('>>> ============================================');
 
     final markers = <Marker>[];
 
@@ -448,7 +372,6 @@ class _WebMapsState extends State<WebMaps> {
       final settings = clinicSettingsMap[clinic.documentId ?? ''];
 
       if (settings?.location == null) {
-        print('>>>   ${clinic.clinicName}: No location - skipped');
         continue;
       }
 
@@ -456,7 +379,6 @@ class _WebMapsState extends State<WebMaps> {
           LatLng(settings!.location!['lat']!, settings.location!['lng']!);
 
       if (!isWithinBounds(location)) {
-        print('>>>   ${clinic.clinicName}: Out of bounds - skipped');
         continue;
       }
 
@@ -473,19 +395,14 @@ class _WebMapsState extends State<WebMaps> {
 
       if (isTodayClosedDate) {
         markerColor = Colors.red; // Closed date - always red
-        print('>>>   ${clinic.clinicName}: CLOSED DATE - Red marker');
       } else if (!settings.isOpen) {
         markerColor = Colors.red; // Not accepting appointments
-        print('>>>   ${clinic.clinicName}: NOT OPEN - Red marker');
       } else if (settings.isOpenNow()) {
         markerColor = Colors.green; // Open now
-        print('>>>   ${clinic.clinicName}: OPEN NOW - Green marker');
       } else if (settings.isOpenToday()) {
         markerColor = Colors.orange; // Open today but not right now
-        print('>>>   ${clinic.clinicName}: OPEN TODAY - Orange marker');
       } else {
         markerColor = Colors.red; // Closed today by schedule
-        print('>>>   ${clinic.clinicName}: CLOSED TODAY - Red marker');
       }
 
       markers.add(Marker(
@@ -554,9 +471,6 @@ class _WebMapsState extends State<WebMaps> {
       ));
     }
 
-    print('>>> ============================================');
-    print('>>> MARKERS GENERATED: ${markers.length}');
-    print('>>> ============================================');
 
     return markers;
   }
@@ -595,7 +509,6 @@ class _WebMapsState extends State<WebMaps> {
         }
       }
     } catch (e) {
-      print("Error fetching route: $e");
     }
   }
 
