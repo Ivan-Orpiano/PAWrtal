@@ -1,5 +1,6 @@
 import 'package:capstone_app/mobile/admin/controllers/admin_messaging_controller.dart';
 import 'package:capstone_app/data/models/conversation_starter_model.dart';
+import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -536,11 +537,10 @@ class _ConversationStartersPageState extends State<ConversationStartersPage> {
                       onPressed: () {
                         if (triggerController.text.trim().isEmpty ||
                             responseController.text.trim().isEmpty) {
-                          Get.snackbar(
-                            'Error',
-                            'Please fill in all fields',
-                            backgroundColor: Colors.red,
-                            colorText: Colors.white,
+                          SnackbarHelper.showError(
+                            context: context,
+                            title: "Error",
+                            message: "Please fill in all fields",
                           );
                           return;
                         }

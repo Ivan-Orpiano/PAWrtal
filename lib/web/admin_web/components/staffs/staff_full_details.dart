@@ -145,7 +145,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
         final bytes = await result.readAsBytes();
         if (bytes.length > 5 * 1024 * 1024) {
           SnackbarHelper.showError(
-            context: context,
+            context: Get.context,
             title: "Image Too Large",
             message: "Image size must be less than 5MB",
           );
@@ -159,7 +159,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
       }
     } catch (e) {
       SnackbarHelper.showError(
-        context: context,
+        context: Get.context,
         title: "Error",
         message: "Failed to pick image",
       );
@@ -294,7 +294,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
           }
         } catch (e) {
           SnackbarHelper.showWarning(
-            context: context,
+            context: Get.context,
             title: "Warning",
             message: "Failed to upload new image, other changes will be saved",
           );
@@ -340,13 +340,13 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
       Navigator.of(context).pop();
 
       SnackbarHelper.showSuccess(
-        context: context,
+        context: Get.context,
         title: "Success",
         message: "${widget.staffName}'s details updated successfully",
       );
     } catch (e) {
       SnackbarHelper.showError(
-        context: context,
+        context: Get.context,
         title: "Error",
         message: "Failed to update staff details",
       );
