@@ -62,7 +62,6 @@ class WebAppointmentController extends GetxController {
   void onInit() {
     super.onInit();
 
-
     // Initialize fresh
     fetchClinicData();
 
@@ -80,7 +79,6 @@ class WebAppointmentController extends GetxController {
 
   Future<void> fetchClinicData() async {
     try {
-
       isLoading.value = true;
 
       // CRITICAL: Clear ALL old data first
@@ -92,7 +90,6 @@ class WebAppointmentController extends GetxController {
       petImagesCache.clear();
       pendingVitals.clear();
 
-
       final user = await authRepository.getUser();
       if (user == null) {
         return;
@@ -102,7 +99,6 @@ class WebAppointmentController extends GetxController {
       final userRole = storage.read('role') as String?;
       final storedClinicId = storage.read('clinicId') as String?;
 
-
       String? clinicId;
 
       if (userRole == 'staff') {
@@ -111,18 +107,14 @@ class WebAppointmentController extends GetxController {
         final clinicDoc = await authRepository.getClinicByAdminId(user.$id);
         if (clinicDoc != null) {
           clinicId = clinicDoc.$id;
-        } else {
-        }
-      } else {
-      }
+        } else {}
+      } else {}
 
       if (clinicId != null && clinicId.isNotEmpty) {
-
         final clinicDoc = await authRepository.getClinicById(clinicId);
         if (clinicDoc != null) {
           clinicData.value = Clinic.fromMap(clinicDoc.data);
           clinicData.value!.documentId = clinicDoc.$id;
-
 
           // Close old subscriptions before creating new ones
           await _appointmentSubscription?.close();
@@ -133,11 +125,8 @@ class WebAppointmentController extends GetxController {
 
           // Initialize new real-time updates
           await _initializeRealTimeUpdates();
-
-        } else {
-        }
-      } else {
-      }
+        } else {}
+      } else {}
     } catch (e) {
       Get.snackbar("Error", "Failed to load clinic data: $e");
     } finally {
@@ -150,7 +139,6 @@ class WebAppointmentController extends GetxController {
       if (clinicData.value?.documentId == null) {
         return;
       }
-
 
       // CRITICAL: Close old subscription first
       await _appointmentSubscription?.close();
@@ -166,7 +154,6 @@ class WebAppointmentController extends GetxController {
       _setupFallbackPolling();
 
       isRealTimeConnected.value = true;
-
     } catch (e) {
       _setupFallbackPolling(interval: 15);
     }
@@ -177,7 +164,6 @@ class WebAppointmentController extends GetxController {
       // Close old subscription
       await _appointmentSubscription?.close();
       _appointmentSubscription = null;
-
 
       final realtime = Realtime(authRepository.client);
 
@@ -202,7 +188,6 @@ class WebAppointmentController extends GetxController {
           _setupFallbackPolling(interval: 10);
         },
       );
-
     } catch (e) {
       rethrow;
     }
@@ -210,7 +195,6 @@ class WebAppointmentController extends GetxController {
 
   void _handleAppointmentRealTimeUpdate(RealtimeMessage response) {
     try {
-
       final payload = response.payload;
       final appointmentClinicId = payload['clinicId'];
 
@@ -233,8 +217,7 @@ class WebAppointmentController extends GetxController {
       if (response.events.any((event) => event.contains('.create'))) {
         _showNewAppointmentNotification(appointment);
       }
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   void _handleNewAppointment(Appointment appointment) {
@@ -295,7 +278,6 @@ class WebAppointmentController extends GetxController {
     }
 
     try {
-
       // CRITICAL: Clear old appointments first
       appointments.clear();
       filteredAppointments.clear();
@@ -308,7 +290,6 @@ class WebAppointmentController extends GetxController {
       final result = await authRepository
           .getClinicAppointments(clinicData.value!.documentId!);
 
-
       appointments.assignAll(result);
 
       // Fetch related data for these appointments
@@ -316,7 +297,6 @@ class WebAppointmentController extends GetxController {
 
       // Update filtered view
       updateFilteredAppointments();
-
     } catch (e) {
       Get.snackbar("Error", "Failed to load appointments: $e");
     }
@@ -361,7 +341,6 @@ class WebAppointmentController extends GetxController {
       // Only fetch if not already cached
       if (!petsCache.containsKey(petCacheKey) && petIdentifier.isNotEmpty) {
         try {
-
           // Fetch pet using the new method that includes userId
           final fetchedPet = await _fetchPetByUserAndId(userId, petIdentifier);
 
@@ -405,8 +384,7 @@ class WebAppointmentController extends GetxController {
       }
     }
 
-    for (var entry in petsCache.entries) {
-    }
+    for (var entry in petsCache.entries) {}
   }
 
   /// NEW HELPER METHOD: Fetch pet by both userId and petId
@@ -706,8 +684,7 @@ class WebAppointmentController extends GetxController {
       );
 
       await authRepository.createNotification(notification);
-    } catch (e) {
-    }
+    } catch (e) {}
 
     await _sendAppointmentStatusNotification(appointment, 'accepted');
 
@@ -747,8 +724,7 @@ class WebAppointmentController extends GetxController {
         );
 
         await authRepository.createNotification(notification);
-      } catch (e) {
-      }
+      } catch (e) {}
 
       await _sendAppointmentStatusNotification(
         updatedAppointment,
@@ -819,15 +795,12 @@ class WebAppointmentController extends GetxController {
     DateTime? nextAppointmentDate,
   }) async {
     try {
-
       // CRITICAL: Check if we have pending vitals stored locally
       Map<String, dynamic>? finalVitals = vitals;
       if (pendingVitals.containsKey(appointment.documentId)) {
         finalVitals = pendingVitals[appointment.documentId];
       } else if (vitals != null) {
-      } else {
-      }
-
+      } else {}
 
       // Step 1: Update appointment status
       final updatedAppointment = appointment.copyWith(
@@ -850,7 +823,6 @@ class WebAppointmentController extends GetxController {
         int? heartRate;
 
         if (finalVitals != null && finalVitals.isNotEmpty) {
-
           if (finalVitals.containsKey('temperature') &&
               finalVitals['temperature'] != null) {
             try {
@@ -858,8 +830,7 @@ class WebAppointmentController extends GetxController {
               temperature = tempValue is double
                   ? tempValue
                   : double.parse(tempValue.toString());
-            } catch (e) {
-            }
+            } catch (e) {}
           }
 
           if (finalVitals.containsKey('weight') &&
@@ -869,8 +840,7 @@ class WebAppointmentController extends GetxController {
               weight = weightValue is double
                   ? weightValue
                   : double.parse(weightValue.toString());
-            } catch (e) {
-            }
+            } catch (e) {}
           }
 
           if (finalVitals.containsKey('bloodPressure') &&
@@ -884,8 +854,7 @@ class WebAppointmentController extends GetxController {
               final hrValue = finalVitals['heartRate'];
               heartRate =
                   hrValue is int ? hrValue : int.parse(hrValue.toString());
-            } catch (e) {
-            }
+            } catch (e) {}
           }
         }
 
@@ -907,7 +876,6 @@ class WebAppointmentController extends GetxController {
           attachments: appointment.attachments,
         );
 
-
         await authRepository.createMedicalRecord(medicalRecord);
 
         // Clear pending vitals after successful save
@@ -927,8 +895,7 @@ class WebAppointmentController extends GetxController {
         );
 
         await authRepository.createNotification(notification);
-      } catch (e) {
-      }
+      } catch (e) {}
 
       // Step 4: Send status notification
       await _sendAppointmentStatusNotification(updatedAppointment, 'completed');
@@ -938,7 +905,6 @@ class WebAppointmentController extends GetxController {
         appointment: updatedAppointment,
         messageType: 'completed',
       );
-
 
       // Use Future.microtask to ensure we're not in the middle of a build
       Future.microtask(() {
@@ -955,7 +921,6 @@ class WebAppointmentController extends GetxController {
         }
       });
     } catch (e) {
-
       // Use Future.microtask for error snackbar
       Future.microtask(() {
         if (Get.isRegistered<WebAppointmentController>()) {
@@ -991,7 +956,6 @@ class WebAppointmentController extends GetxController {
     Map<String, dynamic> vitals,
   ) async {
     try {
-
       // CRITICAL FIX: Check if we're still registered and in valid state
       if (!Get.isRegistered<WebAppointmentController>()) {
         return;
@@ -1000,7 +964,6 @@ class WebAppointmentController extends GetxController {
       // Store vitals in memory with appointment ID as key
       pendingVitals[appointment.documentId!] =
           Map<String, dynamic>.from(vitals);
-
 
       // CRITICAL FIX: Schedule snackbar for next frame to avoid state conflicts
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1017,24 +980,22 @@ class WebAppointmentController extends GetxController {
               margin: const EdgeInsets.all(16),
             );
           }
-        } catch (e) {
-        }
+        } catch (e) {}
       });
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   Future<void> markNoShow(Appointment appointment) async {
-  // Check if appointment is in the future
-  if (appointment.dateTime.isAfter(DateTime.now())) {
-    Get.snackbar("Error", "Cannot mark as no-show for future appointments");
-    return;
-  }
+    // Check if appointment is in the future
+    if (appointment.dateTime.isAfter(DateTime.now())) {
+      Get.snackbar("Error", "Cannot mark as no-show for future appointments");
+      return;
+    }
 
-  // Otherwise, mark it as no-show if the appointment is in the past
-  await _updateAppointmentStatus(appointment, 'no_show');
-  Get.snackbar("Info", "Appointment marked as No Show");
-}
+    // Otherwise, mark it as no-show if the appointment is in the past
+    await _updateAppointmentStatus(appointment, 'no_show');
+    Get.snackbar("Info", "Appointment marked as No Show");
+  }
 
   // Check if a time slot is available
   Future<bool> checkTimeSlotAvailability(
@@ -1178,7 +1139,6 @@ class WebAppointmentController extends GetxController {
     String? vetNotes,
   }) async {
     try {
-
       // Step 1: Update appointment status - ONLY workflow fields
       final updatedAppointment = appointment.copyWith(
         status: 'completed',
@@ -1590,39 +1550,48 @@ class WebAppointmentController extends GetxController {
     String? declineReason,
   }) async {
     try {
+      print('>>> ═══════════════════════════════════════════');
+      print('>>> 🔔 SENDING APPOINTMENT NOTIFICATION');
+      print('>>> Status: $status');
+      print('>>> ═══════════════════════════════════════════');
 
-      // Get user details
+      // STEP 1: Get user document
       final userDoc = await authRepository.getUserById(appointment.userId);
       if (userDoc == null) {
+        print('>>> ❌ User not found, skipping notification');
         return;
       }
+
+      print('>>> ✅ User document found: ${userDoc.$id}');
 
       final userName = userDoc.data['name'] ?? 'User';
       final userEmail = userDoc.data['email'] ?? '';
 
-      // Get pet name
-      final petName = getPetName(appointment.petId);
+      // CRITICAL FIX: Read preferences DIRECTLY from the user document
+      // Don't call getPreferencesForUser() - just read from the document we already have!
+      final pushEnabled =
+          userDoc.data['pushNotificationsEnabled'] as bool? ?? true;
+      final emailEnabled =
+          userDoc.data['emailNotificationsEnabled'] as bool? ?? true;
 
-      // Get clinic name
+      print('>>> 📋 USER NOTIFICATION PREFERENCES (from document):');
+      print('>>>   Push Notifications: $pushEnabled');
+      print('>>>   Email Notifications: $emailEnabled');
+      print('>>> ───────────────────────────────────────────');
+
+      // Get pet and clinic info
+      final petName = getPetName(appointment.petId);
       final clinicName = clinicData.value?.clinicName ?? 'Unknown Clinic';
 
       // Check if AppwriteProvider is registered
       if (!Get.isRegistered<AppWriteProvider>()) {
+        print('>>> ⚠️ AppwriteProvider not registered, skipping notification');
         return;
       }
 
-      // NEW: Get user's notification preferences
-      final notificationPrefsService =
-          Get.find<NotificationPreferencesService>();
-      final userDocId = userDoc.data['\$id'] ?? appointment.userId;
-      final userPreferences =
-          await notificationPrefsService.getPreferencesForUser(userDocId);
-
-
-      // Use AppwriteProvider to send notifications
       final appwriteProvider = Get.find<AppWriteProvider>();
 
-      // Prepare notification data
+      // Prepare notification content
       String pushTitle;
       String pushBody;
 
@@ -1649,48 +1618,68 @@ class WebAppointmentController extends GetxController {
           pushBody = 'Your appointment for $petName has been updated.';
       }
 
-      // 1. Send push notification ONLY if user has it enabled
-      if (userPreferences.pushNotificationsEnabled) {
-        await appwriteProvider.sendPushNotification(
-          title: pushTitle,
-          body: pushBody,
-          userIds: [appointment.userId],
-          data: {
-            'type': 'appointment',
-            'status': status,
-            'appointmentId': appointment.documentId!,
-            'petName': petName,
-            'clinicName': clinicName,
-          },
-        );
+      // STEP 2: Send push notification (only if enabled)
+      if (pushEnabled) {
+        print('>>> ✅ Sending push notification (enabled)...');
+        try {
+          await appwriteProvider.sendPushNotification(
+            title: pushTitle,
+            body: pushBody,
+            userIds: [appointment.userId],
+            data: {
+              'type': 'appointment',
+              'status': status,
+              'appointmentId': appointment.documentId!,
+              'petName': petName,
+              'clinicName': clinicName,
+            },
+          );
+          print('>>> ✅ Push notification sent');
+        } catch (e) {
+          print('>>> ❌ Error sending push: $e');
+        }
       } else {
+        print('>>> ⏭️  SKIPPED push notification (disabled by user)');
       }
 
-      // 2. Send email ONLY if user has it enabled (only for accepted/declined)
+      // STEP 3: Send email (only if enabled and status is accepted/declined)
       if (status == 'accepted' || status == 'declined') {
-        if (userPreferences.emailNotificationsEnabled) {
-          await appwriteProvider.sendEmail(
-            to: userEmail,
-            subject: status == 'accepted'
-                ? 'Appointment Confirmed - PAWrtal'
-                : 'Appointment Update - PAWrtal',
-            htmlContent: appwriteProvider.buildEmailTemplate(
-              userName: userName,
-              petName: petName,
-              clinicName: clinicName,
-              service: appointment.service,
-              appointmentDateTime: appointment.dateTime,
-              status: status,
-              declineReason: declineReason,
-            ),
-            userId: appointment.userId,
-          );
+        if (emailEnabled) {
+          print('>>> ✅ Sending email notification (enabled)...');
+          try {
+            await appwriteProvider.sendEmail(
+              to: userEmail,
+              subject: status == 'accepted'
+                  ? 'Appointment Confirmed - PAWrtal'
+                  : 'Appointment Update - PAWrtal',
+              htmlContent: appwriteProvider.buildEmailTemplate(
+                userName: userName,
+                petName: petName,
+                clinicName: clinicName,
+                service: appointment.service,
+                appointmentDateTime: appointment.dateTime,
+                status: status,
+                declineReason: declineReason,
+              ),
+              userId: appointment.userId,
+            );
+            print('>>> ✅ Email sent');
+          } catch (e) {
+            print('>>> ❌ Error sending email: $e');
+          }
         } else {
+          print('>>> ⏭️  SKIPPED email notification (disabled by user)');
         }
       }
 
+      print('>>> ═══════════════════════════════════════════');
+      print('>>> ✅ NOTIFICATION PROCESSING COMPLETE');
+      print('>>> ═══════════════════════════════════════════');
     } catch (e) {
-      // Don't fail the operation if notification fails
+      print('>>> ═══════════════════════════════════════════');
+      print('>>> ❌ ERROR: $e');
+      print('>>> ═══════════════════════════════════════════');
+      // Don't fail the appointment operation if notification fails
     }
   }
 
@@ -1702,8 +1691,7 @@ class WebAppointmentController extends GetxController {
     Map<String, dynamic>? vitals, // ADDED: Vitals parameter
   }) async {
     try {
-      if (vitals != null) {
-      }
+      if (vitals != null) {}
 
       // CRITICAL: Extract individual vital values
       double? temperature;
@@ -1712,7 +1700,6 @@ class WebAppointmentController extends GetxController {
       int? heartRate;
 
       if (vitals != null && vitals.isNotEmpty) {
-
         if (vitals.containsKey('temperature') &&
             vitals['temperature'] != null) {
           try {
@@ -1721,6 +1708,7 @@ class WebAppointmentController extends GetxController {
                 ? tempValue
                 : double.parse(tempValue.toString());
           } catch (e) {
+            print('>>> ❌ ERROR sending notification: $e');
           }
         }
 
@@ -1730,8 +1718,7 @@ class WebAppointmentController extends GetxController {
             weight = weightValue is double
                 ? weightValue
                 : double.parse(weightValue.toString());
-          } catch (e) {
-          }
+          } catch (e) {}
         }
 
         if (vitals.containsKey('bloodPressure') &&
@@ -1744,8 +1731,7 @@ class WebAppointmentController extends GetxController {
             final hrValue = vitals['heartRate'];
             heartRate =
                 hrValue is int ? hrValue : int.parse(hrValue.toString());
-          } catch (e) {
-          }
+          } catch (e) {}
         }
       }
 
@@ -1781,7 +1767,6 @@ class WebAppointmentController extends GetxController {
           heartRate: heartRate,
           attachments: appointment.attachments,
         );
-
 
         await authRepository.createMedicalRecord(medicalRecord);
 
@@ -1820,8 +1805,7 @@ class WebAppointmentController extends GetxController {
         );
 
         await authRepository.createNotification(notification);
-      } catch (e) {
-      }
+      } catch (e) {}
 
       await _sendAppointmentStatusNotification(updatedAppointment, 'completed');
 
@@ -1829,7 +1813,6 @@ class WebAppointmentController extends GetxController {
         appointment: updatedAppointment,
         messageType: 'completed',
       );
-
 
       Get.snackbar(
         "Success",
@@ -1945,20 +1928,14 @@ class WebAppointmentController extends GetxController {
 
   /// Debug method to verify pet fetching
   Future<void> debugPetFetching() async {
-
     for (var appointment in appointments.take(5)) {
-
       // Try to fetch directly
       try {
         final petDoc = await authRepository.getPetById(appointment.petId);
         if (petDoc != null) {
-        } else {
-        }
-      } catch (e) {
-      }
-
+        } else {}
+      } catch (e) {}
     }
-
   }
 
   /// Get pet profile picture URL using composite key (userId + petId)
@@ -2002,7 +1979,6 @@ class WebAppointmentController extends GetxController {
     try {
       final cacheKey = '${userId}_$petId';
 
-
       // Fetch pet using the user-specific method
       final pet = await _fetchPetByUserAndId(userId, petId);
 
@@ -2033,7 +2009,6 @@ class WebAppointmentController extends GetxController {
         return petProfilePictures[cacheKey];
       }
 
-
       // Use the new helper method
       final pet = await _fetchPetByUserAndId(userId, petId);
 
@@ -2063,7 +2038,6 @@ class WebAppointmentController extends GetxController {
 
   /// Preload pet images for visible appointments
   Future<void> preloadPetImages() async {
-
     final visibleAppointments = filteredAppointments.take(20).toList();
 
     for (var appointment in visibleAppointments) {
@@ -2076,10 +2050,8 @@ class WebAppointmentController extends GetxController {
 
       // Fetch in background (don't await)
       getPetImageByUserId(appointment.petId, appointment.userId)
-          .catchError((e) {
-      });
+          .catchError((e) {});
     }
-
   }
 
   Future<void> _sendAutomatedAppointmentMessage({
@@ -2088,7 +2060,6 @@ class WebAppointmentController extends GetxController {
     String? declineReason,
   }) async {
     try {
-
       // Step 1: Get or create conversation
       final conversation = await authRepository.getOrCreateConversation(
         appointment.userId,
@@ -2100,7 +2071,6 @@ class WebAppointmentController extends GetxController {
         // The appointment action already succeeded
         return;
       }
-
 
       // Step 2: Build the automated message based on type
       String messageText;
@@ -2174,7 +2144,6 @@ For more details, please check your appointments.
 ''';
       }
 
-
       // Step 3: Send the automated message
       // CRITICAL: Use clinic ID as sender (not admin user ID)
 
@@ -2192,7 +2161,6 @@ For more details, please check your appointments.
       };
 
       await authRepository.appWriteProvider.createMessage(messageData);
-
     } catch (e) {
       // Don't rethrow - the appointment action already succeeded
       // Just log the error
@@ -2211,12 +2179,10 @@ For more details, please check your appointments.
 
   Future<void> debugPetData(String appointmentId) async {
     try {
-
       final appointment = appointments.firstWhere(
         (a) => a.documentId == appointmentId,
         orElse: () => throw Exception('Appointment not found'),
       );
-
 
       // Fetch user's pets
       final userPets = await authRepository.getUserPets(appointment.userId);
@@ -2226,18 +2192,14 @@ For more details, please check your appointments.
       }
 
       // Check cache
-      if (petProfilePictures.containsKey(appointment.petId)) {
-      }
-
-    } catch (e) {
-    }
+      if (petProfilePictures.containsKey(appointment.petId)) {}
+    } catch (e) {}
   }
 
   /// Get medical record by appointment ID
   Future<MedicalRecord?> getMedicalRecordByAppointmentId(
       String appointmentId) async {
     try {
-
       // Get all medical records for the clinic
       final allRecords = await authRepository
           .getClinicMedicalRecords(clinicData.value!.documentId!);
@@ -2248,8 +2210,7 @@ For more details, please check your appointments.
       );
 
       if (matchingRecord != null) {
-      } else {
-      }
+      } else {}
 
       return matchingRecord;
     } catch (e) {
@@ -2262,7 +2223,6 @@ For more details, please check your appointments.
     String? notes,
   }) async {
     try {
-
       // Update appointment to completed
       final updatedAppointment = appointment.copyWith(
         status: 'completed',
@@ -2284,8 +2244,7 @@ For more details, please check your appointments.
         );
 
         await authRepository.createNotification(notification);
-      } catch (e) {
-      }
+      } catch (e) {}
 
       // Send status notification
       await _sendAppointmentStatusNotification(updatedAppointment, 'completed');
@@ -2295,7 +2254,6 @@ For more details, please check your appointments.
         appointment: updatedAppointment,
         messageType: 'completed',
       );
-
 
       Get.snackbar(
         "Success",
@@ -2342,7 +2300,6 @@ For more details, please check your appointments.
         return petImagesCache[petId];
       }
 
-
       final petData = await authRepository.getPetWithImage(petId);
 
       if (petData != null) {
@@ -2367,7 +2324,6 @@ For more details, please check your appointments.
   }
 
   void cleanupOnLogout() {
-
     // Cancel all subscriptions
     _appointmentSubscription?.close();
     _appointmentSubscription = null;
@@ -2396,6 +2352,5 @@ For more details, please check your appointments.
 
     // Reset connection status
     isRealTimeConnected.value = false;
-
   }
 }

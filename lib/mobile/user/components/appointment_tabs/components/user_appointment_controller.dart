@@ -53,8 +53,7 @@ class EnhancedUserAppointmentController extends GetxController {
           authRepository.subscribeToUserAppointments(userId).listen((message) {
         _handleRealtimeUpdate(message);
       });
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   void _setupReviewSubscription() {
@@ -66,8 +65,7 @@ class EnhancedUserAppointmentController extends GetxController {
           authRepository.subscribeToClinicReviews('').listen((message) {
         _handleReviewUpdate(message);
       });
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   void _handleReviewUpdate(RealtimeMessage message) {
@@ -76,7 +74,6 @@ class EnhancedUserAppointmentController extends GetxController {
     final appointmentId = payload['appointmentId'] as String?;
 
     if (appointmentId == null) return;
-
 
     if (eventType.contains('create')) {
       appointmentReviews[appointmentId] = true;
@@ -90,7 +87,6 @@ class EnhancedUserAppointmentController extends GetxController {
   void _handleRealtimeUpdate(RealtimeMessage message) {
     final payload = message.payload;
     final eventType = message.events.first;
-
 
     if (eventType.contains('create')) {
       _addOrUpdateAppointment(payload);
@@ -123,8 +119,7 @@ class EnhancedUserAppointmentController extends GetxController {
       final hasReview =
           await authRepository.hasUserReviewedAppointment(appointmentId);
       appointmentReviews[appointmentId] = hasReview;
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   Future<void> fetchAppointments() async {
@@ -141,8 +136,7 @@ class EnhancedUserAppointmentController extends GetxController {
       appointments.assignAll(result);
 
       // DEBUG: Print appointment times
-      for (var apt in result.take(3)) {
-      }
+      for (var apt in result.take(3)) {}
 
       await _fetchRelatedData();
       await _checkAllAppointmentReviews();
@@ -174,8 +168,7 @@ class EnhancedUserAppointmentController extends GetxController {
             clinic.documentId = clinicDoc.$id;
             clinics[clinicId] = clinic;
           }
-        } catch (e) {
-        }
+        } catch (e) {}
       }
     }
 
@@ -188,8 +181,7 @@ class EnhancedUserAppointmentController extends GetxController {
             pet.documentId = petDoc.$id;
             pets[petName] = pet;
           }
-        } catch (e) {
-        }
+        } catch (e) {}
       }
     }
   }
@@ -205,8 +197,7 @@ class EnhancedUserAppointmentController extends GetxController {
           clinic.documentId = clinicDoc.$id;
           clinics[appointment.clinicId] = clinic;
         }
-      } catch (e) {
-      }
+      } catch (e) {}
     }
 
     if (!pets.containsKey(appointment.petId) && appointment.petId.isNotEmpty) {
@@ -217,8 +208,7 @@ class EnhancedUserAppointmentController extends GetxController {
           pet.documentId = petDoc.$id;
           pets[appointment.petId] = pet;
         }
-      } catch (e) {
-      }
+      } catch (e) {}
     }
   }
 
@@ -323,6 +313,20 @@ class EnhancedUserAppointmentController extends GetxController {
         (a) => a.documentId == appointmentId,
       );
 
+      // ✅ ADD THIS CHECK - Verify cancellation is still allowed
+      if (!canCancelAppointment(appointment)) {
+        Get.snackbar(
+          "Cannot Cancel",
+          "This appointment is less than 1 hour away and cannot be cancelled.",
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.shade50,
+          colorText: Colors.red.shade700,
+          icon: const Icon(Icons.block, color: Colors.red),
+          duration: const Duration(seconds: 3),
+        );
+        return;
+      }
+
       await authRepository.updateFullAppointment(appointmentId, {
         'status': 'cancelled',
         'cancellationReason': cancellationReason,
@@ -351,6 +355,7 @@ class EnhancedUserAppointmentController extends GetxController {
           }
         }
       } catch (e) {
+        print('Failed to send notification: $e');
       }
 
       Get.snackbar(
@@ -447,17 +452,34 @@ class EnhancedUserAppointmentController extends GetxController {
   }
 
   bool canCancelAppointment(Appointment appointment) {
-    if (appointment.status == 'pending') {
-      return true;
-    }
-
-    if (appointment.status == 'accepted') {
-      return appointment.dateTime
-          .isAfter(DateTime.now().add(const Duration(hours: 2)));
-    }
-
-    return false;
+  if (appointment.status == 'pending') {
+    return true;
   }
+
+  if (appointment.status == 'accepted') {
+    // Convert both times to local timezone for comparison
+    final now = DateTime.now();
+    
+    // Convert the appointment time to local time (if it's in UTC)
+    final appointmentLocal = appointment.dateTime.toLocal();
+    
+    // Calculate one hour before the appointment in local time
+    final oneHourBeforeAppointment = appointment.dateTime.subtract(const Duration(hours: 1));
+
+    print('🔍 Checking cancellation:');
+    print('   Current time (local): $now');
+    print('   Appointment time (UTC): ${appointment.dateTime}');
+    print('   Appointment time (local): ${appointment.dateTime}');
+    print('   One hour before (local): $oneHourBeforeAppointment');
+    print('   Can cancel: ${now.isBefore(oneHourBeforeAppointment)}');
+
+    // Can cancel if current time is before the time 1 hour before the appointment
+    return now.toLocal().isBefore(oneHourBeforeAppointment);
+  }
+
+  return false;
+}
+
 
   bool needsCancellationReason(Appointment appointment) {
     return appointment.status == 'accepted';
@@ -519,6 +541,5 @@ class EnhancedUserAppointmentController extends GetxController {
       (a) => a.documentId == appointmentId,
       orElse: () => throw Exception('Appointment not found'),
     );
-
   }
 }

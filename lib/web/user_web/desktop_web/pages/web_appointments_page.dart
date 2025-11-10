@@ -1206,8 +1206,8 @@ class _EnhancedWebAppointmentsPageState
                           "Date",
                           DateFormat('EEEE, MMMM dd, yyyy')
                               .format(appointment.dateTime)),
-                      _buildDialogDetailRow(
-                          Icons.access_time, "Time", appointment.formattedTime),
+                      _buildDialogDetailRow(Icons.access_time, "Time",
+                          DateFormat('hh:mm a').format(appointment.dateTime)),
                     ]),
 
                     // REMOVED: Medical record section from appointment
@@ -1519,6 +1519,20 @@ class _EnhancedWebAppointmentsPageState
   void _showCancelDialog(Appointment appointment) {
     final controller = Get.find<EnhancedUserAppointmentController>();
 
+    if (!controller.canCancelAppointment(appointment)) {
+      print('   ❌ BLOCKING: Cannot cancel (less than 1 hour)');
+      Get.snackbar(
+        "Cannot Cancel",
+        "This appointment is less than 1 hour away and cannot be cancelled. Please contact the clinic directly.",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade50,
+        colorText: Colors.red.shade700,
+        icon: const Icon(Icons.block, color: Colors.red),
+        duration: const Duration(seconds: 4),
+      );
+      return;
+    }
+
     if (appointment.status == 'pending') {
       _showPendingCancelDialog(appointment, controller);
       return;
@@ -1618,6 +1632,19 @@ class _EnhancedWebAppointmentsPageState
     Appointment appointment,
     EnhancedUserAppointmentController controller,
   ) {
+    if (!controller.canCancelAppointment(appointment)) {
+      Get.snackbar(
+        "Cannot Cancel",
+        "This appointment is less than 1 hour away and cannot be cancelled. Please contact the clinic directly.",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade50,
+        colorText: Colors.red.shade700,
+        icon: const Icon(Icons.block, color: Colors.red),
+        duration: const Duration(seconds: 4),
+      );
+      return;
+    }
+
     String selectedReason = '';
     final customReasonController = TextEditingController();
 
@@ -1804,7 +1831,7 @@ class _EnhancedWebAppointmentsPageState
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'You can cancel up to 2 hours before your appointment time.',
+                              'You can cancel up to 1 hour before your appointment time.',
                               style: TextStyle(
                                 fontSize: 11,
                                 color: Colors.blue.shade700,
@@ -2485,8 +2512,7 @@ class _EnhancedWebAppointmentsPageState
           final uploadedFiles =
               await Get.find<AuthRepository>().uploadReviewImages(images);
           imageIds = uploadedFiles.map((file) => file.$id).toList();
-        } catch (e) {
-        }
+        } catch (e) {}
       }
 
       // Get pet name
