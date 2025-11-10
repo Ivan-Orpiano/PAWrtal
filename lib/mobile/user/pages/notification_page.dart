@@ -1,5 +1,6 @@
 import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/notification/services/in_app_notification_service.dart';
+import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -80,14 +81,19 @@ class _NotificationPageState extends State<NotificationPage> {
                 icon: const Icon(Icons.done_all, color: Colors.white),
                 onPressed: () async {
                   await _notificationService.markAllAsRead();
-                  Get.snackbar(
-                    'Success',
-                    'All notifications marked as read',
-                    snackPosition: SnackPosition.BOTTOM,
-                    backgroundColor: Colors.green,
-                    colorText: Colors.white,
-                    duration: const Duration(seconds: 2),
+                  SnackbarHelper.showSuccess(
+                    context: Get.context!,
+                    title: "Success",
+                    message: "All notifications marked as read",
                   );
+                  // Get.snackbar(
+                  //   'Success',
+                  //   'All notifications marked as read',
+                  //   snackPosition: SnackPosition.BOTTOM,
+                  //   backgroundColor: Colors.green,
+                  //   colorText: Colors.white,
+                  //   duration: const Duration(seconds: 2),
+                  // );
                 },
                 tooltip: 'Mark all as read',
               );
@@ -414,14 +420,19 @@ class _NotificationPageState extends State<NotificationPage> {
               onTap: () async {
                 Navigator.pop(context);
                 await _notificationService.markAllAsRead();
-                Get.snackbar(
-                  'Success',
-                  'All notifications marked as read',
-                  snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: Colors.green,
-                  colorText: Colors.white,
-                  duration: const Duration(seconds: 2),
+                SnackbarHelper.showSuccess(
+                  context: Get.context!,
+                  title: "Success",
+                  message: "All notifications marked as read",
                 );
+                // Get.snackbar(
+                //   'Success',
+                //   'All notifications marked as read',
+                //   snackPosition: SnackPosition.BOTTOM,
+                //   backgroundColor: Colors.green,
+                //   colorText: Colors.white,
+                //   duration: const Duration(seconds: 2),
+                // );
               },
             ),
             ListTile(
@@ -460,14 +471,19 @@ class _NotificationPageState extends State<NotificationPage> {
 
                 if (confirm == true) {
                   await _notificationService.deleteAll();
-                  Get.snackbar(
-                    'Success',
-                    'All notifications deleted',
-                    snackPosition: SnackPosition.BOTTOM,
-                    backgroundColor: Colors.green,
-                    colorText: Colors.white,
-                    duration: const Duration(seconds: 2),
+                  SnackbarHelper.showSuccess(
+                    context: Get.context!,
+                    title: "Success",
+                    message: "All notifications deleted",
                   );
+                  // Get.snackbar(
+                  //   'Success',
+                  //   'All notifications deleted',
+                  //   snackPosition: SnackPosition.BOTTOM,
+                  //   backgroundColor: Colors.green,
+                  //   colorText: Colors.white,
+                  //   duration: const Duration(seconds: 2),
+                  // );
                 }
               },
             ),

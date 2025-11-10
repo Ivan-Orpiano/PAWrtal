@@ -4,6 +4,7 @@ import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/mobile/user/components/appointment_tabs/components/mobile_rating_dialog.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/mobile/user/components/appointment_tabs/components/user_appointment_controller.dart';
+import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -549,15 +550,21 @@ class _EnhancedAppointmentDetailsPageState
   void _showCancelDialog(
       BuildContext context, EnhancedUserAppointmentController controller) {
     if (!controller.canCancelAppointment(widget.appointment)) {
-      Get.snackbar(
-        "Cannot Cancel",
-        "This appointment is less than 1 hour away and cannot be cancelled. Please contact the clinic directly.",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.shade50,
-        colorText: Colors.red.shade700,
-        icon: const Icon(Icons.block, color: Colors.red),
-        duration: const Duration(seconds: 4),
+      SnackbarHelper.showError(
+        context: Get.context!,
+        title: "Cannot Cancel",
+        message:
+            "This appointment is less than 1 hour away and cannot be cancelled. Please contact the clinic directly.",
       );
+      // Get.snackbar(
+      //   "Cannot Cancel",
+      //   "This appointment is less than 1 hour away and cannot be cancelled. Please contact the clinic directly.",
+      //   snackPosition: SnackPosition.BOTTOM,
+      //   backgroundColor: Colors.red.shade50,
+      //   colorText: Colors.red.shade700,
+      //   icon: const Icon(Icons.block, color: Colors.red),
+      //   duration: const Duration(seconds: 4),
+      // );
       return;
     }
     if (widget.appointment.status == 'pending') {
@@ -657,15 +664,21 @@ class _EnhancedAppointmentDetailsPageState
   void _showAcceptedCancelDialog(
       BuildContext context, EnhancedUserAppointmentController controller) {
     if (!controller.canCancelAppointment(widget.appointment)) {
-      Get.snackbar(
-        "Cannot Cancel",
-        "This appointment is less than 1 hour away and cannot be cancelled. Please contact the clinic directly.",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.shade50,
-        colorText: Colors.red.shade700,
-        icon: const Icon(Icons.block, color: Colors.red),
-        duration: const Duration(seconds: 4),
+      SnackbarHelper.showError(
+        context: Get.context!,
+        title: "Cannot Cancel",
+        message:
+            "This appointment is less than 1 hour away and cannot be cancelled. Please contact the clinic directly.",
       );
+      // Get.snackbar(
+      //   "Cannot Cancel",
+      //   "This appointment is less than 1 hour away and cannot be cancelled. Please contact the clinic directly.",
+      //   snackPosition: SnackPosition.BOTTOM,
+      //   backgroundColor: Colors.red.shade50,
+      //   colorText: Colors.red.shade700,
+      //   icon: const Icon(Icons.block, color: Colors.red),
+      //   duration: const Duration(seconds: 4),
+      // );
       return;
     }
 

@@ -1,5 +1,6 @@
 import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/notification/services/in_app_notification_service.dart';
+import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -142,17 +143,23 @@ class _AdminWebNotifState extends State<AdminWebNotif> {
                 return TextButton.icon(
                   onPressed: () async {
                     await _notificationService.markAllAsRead();
-                    Get.snackbar(
-                      'Success',
-                      'All notifications marked as read',
-                      snackPosition: SnackPosition.TOP,
-                      duration: const Duration(seconds: 2),
+                    SnackbarHelper.showSuccess(
+                      context: Get.context!,
+                      title: "Success",
+                      message: "All notifications marked as read",
                     );
+                    // Get.snackbar(
+                    //   'Success',
+                    //   'All notifications marked as read',
+                    //   snackPosition: SnackPosition.TOP,
+                    //   duration: const Duration(seconds: 2),
+                    // );
                   },
                   icon: const Icon(Icons.done_all, size: 16),
                   label: const Text('Mark all read'),
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   ),
                 );
               }),
@@ -161,7 +168,8 @@ class _AdminWebNotifState extends State<AdminWebNotif> {
                 onPressed: () {
                   _showSettingsDialog();
                 },
-                icon: Icon(Icons.settings_outlined, size: 20, color: Colors.grey[700]),
+                icon: Icon(Icons.settings_outlined,
+                    size: 20, color: Colors.grey[700]),
                 tooltip: "Notification Settings",
                 padding: const EdgeInsets.all(8),
               ),
@@ -252,7 +260,8 @@ class _AdminWebNotifState extends State<AdminWebNotif> {
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Delete Notification'),
-            content: const Text('Are you sure you want to delete this notification?'),
+            content: const Text(
+                'Are you sure you want to delete this notification?'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
@@ -261,7 +270,8 @@ class _AdminWebNotifState extends State<AdminWebNotif> {
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(true),
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                child: const Text('Delete', style: TextStyle(color: Colors.white)),
+                child:
+                    const Text('Delete', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -349,11 +359,14 @@ class _AdminWebNotifState extends State<AdminWebNotif> {
                               color: Colors.grey[500],
                             ),
                           ),
-                          if (notification.priority == NotificationPriority.high ||
-                              notification.priority == NotificationPriority.urgent) ...[
+                          if (notification.priority ==
+                                  NotificationPriority.high ||
+                              notification.priority ==
+                                  NotificationPriority.urgent) ...[
                             const SizedBox(width: 12),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
                                 color: Colors.orange.withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(4),
@@ -440,7 +453,7 @@ class _AdminWebNotifState extends State<AdminWebNotif> {
               subtitle: const Text('Delete all notifications'),
               onTap: () async {
                 Navigator.of(context).pop();
-                
+
                 final confirm = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(
@@ -455,8 +468,10 @@ class _AdminWebNotifState extends State<AdminWebNotif> {
                       ),
                       ElevatedButton(
                         onPressed: () => Navigator.of(context).pop(true),
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                        child: const Text('Delete All', style: TextStyle(color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red),
+                        child: const Text('Delete All',
+                            style: TextStyle(color: Colors.white)),
                       ),
                     ],
                   ),
@@ -465,12 +480,17 @@ class _AdminWebNotifState extends State<AdminWebNotif> {
                 if (confirm == true) {
                   await _notificationService.deleteAll();
                   _closePopup();
-                  Get.snackbar(
-                    'Success',
-                    'All notifications deleted',
-                    snackPosition: SnackPosition.TOP,
-                    duration: const Duration(seconds: 2),
+                  SnackbarHelper.showSuccess(
+                    context: Get.context!,
+                    title: "Success",
+                    message: "All notifications deleted",
                   );
+                  // Get.snackbar(
+                  //   'Success',
+                  //   'All notifications deleted',
+                  //   snackPosition: SnackPosition.TOP,
+                  //   duration: const Duration(seconds: 2),
+                  // );
                 }
               },
             ),
