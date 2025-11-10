@@ -1550,19 +1550,13 @@ class WebAppointmentController extends GetxController {
     String? declineReason,
   }) async {
     try {
-      print('>>> ═══════════════════════════════════════════');
-      print('>>> 🔔 SENDING APPOINTMENT NOTIFICATION');
-      print('>>> Status: $status');
-      print('>>> ═══════════════════════════════════════════');
 
       // STEP 1: Get user document
       final userDoc = await authRepository.getUserById(appointment.userId);
       if (userDoc == null) {
-        print('>>> ❌ User not found, skipping notification');
         return;
       }
 
-      print('>>> ✅ User document found: ${userDoc.$id}');
 
       final userName = userDoc.data['name'] ?? 'User';
       final userEmail = userDoc.data['email'] ?? '';
@@ -1574,10 +1568,6 @@ class WebAppointmentController extends GetxController {
       final emailEnabled =
           userDoc.data['emailNotificationsEnabled'] as bool? ?? true;
 
-      print('>>> 📋 USER NOTIFICATION PREFERENCES (from document):');
-      print('>>>   Push Notifications: $pushEnabled');
-      print('>>>   Email Notifications: $emailEnabled');
-      print('>>> ───────────────────────────────────────────');
 
       // Get pet and clinic info
       final petName = getPetName(appointment.petId);
@@ -1585,7 +1575,6 @@ class WebAppointmentController extends GetxController {
 
       // Check if AppwriteProvider is registered
       if (!Get.isRegistered<AppWriteProvider>()) {
-        print('>>> ⚠️ AppwriteProvider not registered, skipping notification');
         return;
       }
 
@@ -1620,7 +1609,6 @@ class WebAppointmentController extends GetxController {
 
       // STEP 2: Send push notification (only if enabled)
       if (pushEnabled) {
-        print('>>> ✅ Sending push notification (enabled)...');
         try {
           await appwriteProvider.sendPushNotification(
             title: pushTitle,
@@ -1634,18 +1622,14 @@ class WebAppointmentController extends GetxController {
               'clinicName': clinicName,
             },
           );
-          print('>>> ✅ Push notification sent');
         } catch (e) {
-          print('>>> ❌ Error sending push: $e');
         }
       } else {
-        print('>>> ⏭️  SKIPPED push notification (disabled by user)');
       }
 
       // STEP 3: Send email (only if enabled and status is accepted/declined)
       if (status == 'accepted' || status == 'declined') {
         if (emailEnabled) {
-          print('>>> ✅ Sending email notification (enabled)...');
           try {
             await appwriteProvider.sendEmail(
               to: userEmail,
@@ -1663,22 +1647,13 @@ class WebAppointmentController extends GetxController {
               ),
               userId: appointment.userId,
             );
-            print('>>> ✅ Email sent');
           } catch (e) {
-            print('>>> ❌ Error sending email: $e');
           }
         } else {
-          print('>>> ⏭️  SKIPPED email notification (disabled by user)');
         }
       }
 
-      print('>>> ═══════════════════════════════════════════');
-      print('>>> ✅ NOTIFICATION PROCESSING COMPLETE');
-      print('>>> ═══════════════════════════════════════════');
     } catch (e) {
-      print('>>> ═══════════════════════════════════════════');
-      print('>>> ❌ ERROR: $e');
-      print('>>> ═══════════════════════════════════════════');
       // Don't fail the appointment operation if notification fails
     }
   }
@@ -1708,7 +1683,6 @@ class WebAppointmentController extends GetxController {
                 ? tempValue
                 : double.parse(tempValue.toString());
           } catch (e) {
-            print('>>> ❌ ERROR sending notification: $e');
           }
         }
 

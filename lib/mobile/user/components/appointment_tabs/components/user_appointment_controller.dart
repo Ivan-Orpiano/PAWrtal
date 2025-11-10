@@ -355,7 +355,6 @@ class EnhancedUserAppointmentController extends GetxController {
           }
         }
       } catch (e) {
-        print('Failed to send notification: $e');
       }
 
       Get.snackbar(
@@ -466,12 +465,6 @@ class EnhancedUserAppointmentController extends GetxController {
     // Calculate one hour before the appointment in local time
     final oneHourBeforeAppointment = appointment.dateTime.subtract(const Duration(hours: 1));
 
-    print('🔍 Checking cancellation:');
-    print('   Current time (local): $now');
-    print('   Appointment time (UTC): ${appointment.dateTime}');
-    print('   Appointment time (local): ${appointment.dateTime}');
-    print('   One hour before (local): $oneHourBeforeAppointment');
-    print('   Can cancel: ${now.isBefore(oneHourBeforeAppointment)}');
 
     // Can cancel if current time is before the time 1 hour before the appointment
     return now.toLocal().isBefore(oneHourBeforeAppointment);

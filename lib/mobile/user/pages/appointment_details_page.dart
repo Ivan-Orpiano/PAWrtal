@@ -549,7 +549,6 @@ class _EnhancedAppointmentDetailsPageState
   void _showCancelDialog(
       BuildContext context, EnhancedUserAppointmentController controller) {
     if (!controller.canCancelAppointment(widget.appointment)) {
-      print('   ❌ BLOCKING: Cannot cancel (less than 1 hour)');
       Get.snackbar(
         "Cannot Cancel",
         "This appointment is less than 1 hour away and cannot be cancelled. Please contact the clinic directly.",

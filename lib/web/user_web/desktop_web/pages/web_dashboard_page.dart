@@ -88,7 +88,6 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
         _fetchClinicsData(forceRefresh: true);
       }
     }, onError: (error) {
-      print('Realtime subscription error: $error');
     });
 
     _settingsSubscription = authRepository
@@ -100,7 +99,6 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
         _fetchClinicsData(forceRefresh: true);
       }
     }, onError: (error) {
-      print('Settings subscription error: $error');
     });
   }
 
@@ -228,7 +226,6 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
         });
       }
     } catch (e, stackTrace) {
-      print('Error fetching clinics: $e\n$stackTrace');
       if (mounted) {
         setState(() {
           error = "Failed to load clinics data";

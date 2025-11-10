@@ -1520,7 +1520,6 @@ class _EnhancedWebAppointmentsPageState
     final controller = Get.find<EnhancedUserAppointmentController>();
 
     if (!controller.canCancelAppointment(appointment)) {
-      print('   ❌ BLOCKING: Cannot cancel (less than 1 hour)');
       Get.snackbar(
         "Cannot Cancel",
         "This appointment is less than 1 hour away and cannot be cancelled. Please contact the clinic directly.",
