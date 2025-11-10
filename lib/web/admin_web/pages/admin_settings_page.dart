@@ -2011,21 +2011,22 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          Text(
-                            'Screenshots or files (Max 5 files, helpful for bug reports)',
-                            style: TextStyle(
-                                color: Colors.grey[600], fontSize: 12),
+                        Text(
+                            'Screenshots or images (Max 5 images, 5MB each)',
+                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Images: Max 5MB (JPG, PNG, GIF)',
+                            'Allowed formats: JPG, PNG, GIF, WEBP',
                             style: TextStyle(
-                                color: Colors.grey[600], fontSize: 12),
+                              color: Colors.grey[600], 
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                           Text(
-                            'Videos: Max 25MB (MP4, MOV, AVI)',
-                            style: TextStyle(
-                                color: Colors.grey[600], fontSize: 12),
+                            'Maximum file size: 5MB per image',
+                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
                           ),
                           const SizedBox(height: 16),
                           if (feedbackController.selectedFiles.isEmpty)
@@ -2056,12 +2057,14 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                                       ),
                                     ),
                                     const SizedBox(height: 4),
-                                    Text(
-                                      'Images (JPG, PNG, GIF) or Videos (MP4, MOV, AVI)',
-                                      style: TextStyle(
-                                          color: Colors.grey[500],
-                                          fontSize: 12),
-                                    ),
+                                Text(
+                                  'Images only: JPG, PNG, GIF, WEBP (Max 5MB each)',
+                                  style: TextStyle(
+                                    color: Colors.grey[500], 
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
                                   ],
                                 ),
                               ),

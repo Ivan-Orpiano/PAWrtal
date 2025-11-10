@@ -33,84 +33,89 @@ class AdminFeedbackController extends GetxController {
   }
 
   String getFileIcon(String? extension) {
-    if (extension == null) return '📄';
-    switch (extension.toLowerCase()) {
-      case 'jpg':
-      case 'jpeg':
-      case 'png':
-      case 'gif':
-        return '🖼️';
-      case 'mp4':
-      case 'mov':
-      case 'avi':
-      case 'mkv':
-        return '🎥';
-      case 'pdf':
-        return '📕';
-      case 'doc':
-      case 'docx':
-        return '📝';
-      case 'txt':
-        return '📄';
-      default:
-        return '📎';
+  if (extension == null) return '🖼️';
+  switch (extension.toLowerCase()) {
+    case 'jpg':
+    case 'jpeg':
+    case 'png':
+    case 'gif':
+    case 'webp':
+      return '🖼️';
+    default:
+      return '🖼️'; 
     }
   }
 
-  Future<void> pickFiles() async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        allowMultiple: true,
-        type: FileType.custom,
-        allowedExtensions: [
-          'jpg',
-          'jpeg',
-          'png',
-          'gif',
-          'mp4',
-          'mov',
-          'avi',
-          'mkv',
-          'pdf',
-          'doc',
-          'docx'
-        ],
-      );
+Future<void> pickFiles() async {
+  try {
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      type: FileType.custom,
+      allowedExtensions: [
+        'jpg',
+        'jpeg',
+        'png',
+        'gif',
+        'webp',  // Added webp support
+        // REMOVED: Video extensions (mp4, mov, avi, mkv)
+        // REMOVED: Document extensions (pdf, doc, docx)
+      ],
+    );
 
-      if (result != null) {
-        for (var file in result.files) {
-          // Validate file size
-          final isImage = ['jpg', 'jpeg', 'png', 'gif']
-              .contains(file.extension?.toLowerCase());
-          final isVideo = ['mp4', 'mov', 'avi', 'mkv']
-              .contains(file.extension?.toLowerCase());
+    if (result != null) {
+      for (var file in result.files) {
+        // Validate that file is an image (double-check)
+        final isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp']
+            .contains(file.extension?.toLowerCase());
 
-          if (isImage && file.size > 5 * 1024 * 1024) {
-            Get.snackbar('Error', 'Image ${file.name} exceeds 5MB limit',
-                backgroundColor: Colors.red);
-            continue;
-          }
+        if (!isImage) {
+          Get.snackbar(
+            'Invalid File Type', 
+            '${file.name} is not an image. Only JPG, PNG, GIF, and WEBP images are allowed.',
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+            icon: const Icon(Icons.error_outline, color: Colors.white),
+          );
+          continue;
+        }
 
-          if (isVideo && file.size > 25 * 1024 * 1024) {
-            Get.snackbar('Error', 'Video ${file.name} exceeds 25MB limit',
-                backgroundColor: Colors.red);
-            continue;
-          }
+        // Validate file size (5MB limit for images)
+        if (file.size > 5 * 1024 * 1024) {
+          Get.snackbar(
+            'File Too Large', 
+            'Image ${file.name} exceeds 5MB limit',
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+            icon: const Icon(Icons.error_outline, color: Colors.white),
+          );
+          continue;
+        }
 
-          if (selectedFiles.length < 5) {
-            selectedFiles.add(file);
-          } else {
-            Get.snackbar('Limit', 'Maximum 5 files allowed',
-                backgroundColor: Colors.orange);
-            break;
-          }
+        // Check if we haven't reached the limit
+        if (selectedFiles.length < 5) {
+          selectedFiles.add(file);
+        } else {
+          Get.snackbar(
+            'Limit Reached', 
+            'Maximum 5 images allowed',
+            backgroundColor: Colors.orange,
+            colorText: Colors.white,
+            icon: const Icon(Icons.info_outline, color: Colors.white),
+          );
+          break;
         }
       }
-    } catch (e) {
-      Get.snackbar('Error', 'Error picking files: $e',
-          backgroundColor: Colors.red);
     }
+  } catch (e) {
+    Get.snackbar(
+      'Error', 
+      'Error picking files: $e',
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+      icon: const Icon(Icons.error_outline, color: Colors.white),
+    );
   }
+}
 
   void removeFile(PlatformFile file) {
     selectedFiles.remove(file);

@@ -3648,62 +3648,55 @@ class AppWriteProvider {
     }
   }
 
-  /// Upload feedback attachments (images and videos)
   Future<List<models.File>> uploadFeedbackAttachments(
-    List<PlatformFile> files,
-  ) async {
-    final List<models.File> uploadedFiles = [];
+  List<PlatformFile> files,
+) async {
+  final List<models.File> uploadedFiles = [];
 
-    for (int i = 0; i < files.length; i++) {
-      try {
-        final file = files[i];
-        final extension = file.extension ?? 'jpg';
-        String fileName =
-            "${DateTime.now().millisecondsSinceEpoch}_feedback_$i.$extension";
-
-        // Validate file size
-        final isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp']
-            .contains(extension.toLowerCase());
-        final isVideo =
-            ['mp4', 'mov', 'avi', 'mkv'].contains(extension.toLowerCase());
-
-        if (isImage && file.size > 5 * 1024 * 1024) {
-          continue;
-        }
-
-        if (isVideo && file.size > 25 * 1024 * 1024) {
-          continue;
-        }
-
-        InputFile inputFile;
-
-        if (file.bytes != null) {
-          inputFile = InputFile.fromBytes(
-            bytes: file.bytes!,
-            filename: fileName,
-          );
-        } else if (file.path != null) {
-          inputFile = InputFile.fromPath(
-            path: file.path!,
-            filename: fileName,
-          );
-        } else {
-          continue;
-        }
-
-        final response = await storage!.createFile(
-          bucketId: AppwriteConstants.feedbackAttachmentsBucketID,
-          fileId: ID.unique(),
-          file: inputFile,
-        );
-
-        uploadedFiles.add(response);
-      } catch (e) {
+  for (int i = 0; i < files.length; i++) {
+    try {
+      final file = files[i];
+      final extension = file.extension ?? 'jpg';
+      // CRITICAL: Validate that only images are allowed
+      final allowedImageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+      if (!allowedImageExtensions.contains(extension.toLowerCase())) {
+      
+        continue; // Skip non-image files
       }
-    }
+      String fileName =
+          "${DateTime.now().millisecondsSinceEpoch}_feedback_$i.$extension";
 
-    return uploadedFiles;
+      // Validate file size (5MB for images only)
+      if (file.size > 5 * 1024 * 1024) {
+        continue;
+      }
+      InputFile inputFile;
+      if (file.bytes != null) {
+        inputFile = InputFile.fromBytes(
+          bytes: file.bytes!,
+          filename: fileName,
+        );
+      } else if (file.path != null) {
+        inputFile = InputFile.fromPath(
+          path: file.path!,
+          filename: fileName,
+        );
+      } else {
+        continue;
+      }
+      final response = await storage!.createFile(
+        bucketId: AppwriteConstants.feedbackAttachmentsBucketID,
+        fileId: ID.unique(),
+        file: inputFile,
+      );
+      uploadedFiles.add(response);
+    } catch (e) {
+    }
   }
+
+  print('>>> 📊 Total images uploaded: ${uploadedFiles.length}/${files.length}');
+  return uploadedFiles;
+}
 
   /// Delete feedback attachments
   Future<void> deleteFeedbackAttachments(List<String> fileIds) async {

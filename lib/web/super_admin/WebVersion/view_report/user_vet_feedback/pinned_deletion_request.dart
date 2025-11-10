@@ -11,6 +11,7 @@ import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_vet_fee
 import 'package:get/get.dart';
 import 'vet_deletion_request_controller.dart';
 import 'dart:async';
+import 'package:flutter/scheduler.dart';
 
 class PinnedDeletionRequest extends StatefulWidget {
   const PinnedDeletionRequest({super.key});
@@ -25,31 +26,32 @@ class _PinnedDeletionRequestState extends State<PinnedDeletionRequest> {
   late final VetDeletionRequestController _controller;
   Timer? _refreshTimer;
 
-  @override
-  void initState() {
-    super.initState();
-    // Get existing controller or create new one
-    if (Get.isRegistered<VetDeletionRequestController>()) {
-      _controller = Get.find<VetDeletionRequestController>();
-    } else {
-      _controller = Get.put(
-        VetDeletionRequestController(
-          authRepository: Get.find<AuthRepository>(),
-        ),
-      );
-    }
-
-    // Auto-refresh every 2 seconds
-    _refreshTimer = Timer.periodic(const Duration(seconds: 40), (timer) {
-      if (mounted) {
-        _controller.loadAllDeletionRequests();
-      }
-    });
-
-    // Initial load
-    _controller.loadAllDeletionRequests();
+ @override
+void initState() {
+  super.initState();
+  
+  if (Get.isRegistered<VetDeletionRequestController>()) {
+    _controller = Get.find<VetDeletionRequestController>();
+  } else {
+    _controller = Get.put(
+      VetDeletionRequestController(
+        authRepository: Get.find<AuthRepository>(),
+      ),
+    );
   }
+  
+  // FIXED: Load data after the first frame is built
+   SchedulerBinding.instance.addPostFrameCallback((_) {
+    _controller.loadAllDeletionRequests();
+  });
 
+  // Auto-refresh every 40 seconds
+  _refreshTimer = Timer.periodic(const Duration(seconds: 40), (timer) {
+    if (mounted) {
+      _controller.loadAllDeletionRequests();
+    }
+  });
+}
   @override
   void dispose() {
     _refreshTimer?.cancel();

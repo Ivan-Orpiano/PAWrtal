@@ -528,9 +528,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
       });
     }
 Widget _buildRequestCard(FeedbackDeletionRequest request) {
-  return Obx(() {
-    final clinicName =
-        _controller.clinicNamesCache[request.clinicId] ?? 'Loading...';
+    final clinicName = _controller.clinicNamesCache[request.clinicId] ?? 'Loading...';
     final isMobile = _isMobile(context);
     final isPinned = request.isPinned;
 
@@ -962,7 +960,6 @@ Widget _buildRequestCard(FeedbackDeletionRequest request) {
         );
       },
     );
-  });
 }
   Widget _buildStatusChip(String status) {
     final isMobile = _isMobile(context);
