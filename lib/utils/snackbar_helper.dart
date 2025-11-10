@@ -87,146 +87,120 @@ class SnackbarHelper {
 
     overlayEntry = OverlayEntry(
       builder: (BuildContext context) {
-        // FIXED: Wrap in Material and MediaQuery to provide proper context
-        return Material(
-          color: Colors.transparent,
-          child: MediaQuery(
-            data: MediaQueryData.fromView(View.of(context)),
-            child: Directionality(
-              textDirection: TextDirection.ltr,
-              // ✅ CRITICAL: Wrap entire Stack to ignore pointer events except on snackbar
-              child: IgnorePointer(
-                ignoring: true, // Ignore all pointer events by default
-                child: Stack(
-                  children: [
-                    // FIXED: Use Align instead of Positioned to avoid constraint conflicts
-                    Align(
-                        alignment: Alignment.topRight,
-                        child: Padding(
-                          padding: EdgeInsets.only(
-                            top: top,
-                            right: right,
-                            left: left ?? 0,
-                          ),
-                          child: TweenAnimationBuilder<double>(
-                            duration: const Duration(milliseconds: 500),
-                            tween: Tween(begin: 0.0, end: 1.0),
-                            curve: Curves.easeOutBack,
-                            builder: (context, value, child) {
-                              return Transform.translate(
-                                offset: Offset(0, -20 * (1 - value)),
-                                child: Opacity(
-                                  opacity: value.clamp(0.0,
-                                      1.0), // ✅ CRITICAL FIX: Clamp opacity to prevent assertion error
-                                  child: child,
-                                ),
-                              );
-                            },
-                            child: IgnorePointer(
-                              ignoring:
-                                  false, // ✅ Re-enable pointer events ONLY for the snackbar
-                              child: GestureDetector(
-                                onHorizontalDragEnd: (details) {
-                                  if (details.velocity.pixelsPerSecond.dx
-                                          .abs() >
-                                      500) {
-                                    try {
-                                      overlayEntry.remove();
-                                    } catch (e) {
-                                      // Already removed
-                                    }
-                                  }
-                                },
-                                child: ConstrainedBox(
-                                  constraints:
-                                      BoxConstraints(maxWidth: maxWidth),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 20, vertical: 16),
-                                    decoration: BoxDecoration(
-                                      color: backgroundColor,
-                                      borderRadius: BorderRadius.circular(12),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color:
-                                              backgroundColor.withOpacity(0.3),
-                                          spreadRadius: 2,
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ],
-                                    ),
-                                    child: IntrinsicWidth(
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            icon,
-                                            color: Colors.white,
-                                            size: 28,
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Flexible(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Text(
-                                                  title,
-                                                  style: const TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.white,
-                                                    decoration:
-                                                        TextDecoration.none,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  message,
-                                                  style: const TextStyle(
-                                                    fontSize: 14,
-                                                    color: Colors.white,
-                                                    height: 1.4,
-                                                    decoration:
-                                                        TextDecoration.none,
-                                                  ),
-                                                  maxLines: 3,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          GestureDetector(
-                                            onTap: () {
-                                              try {
-                                                overlayEntry.remove();
-                                              } catch (e) {
-                                                // Already removed
-                                              }
-                                            },
-                                            child: Container(
-                                              padding: const EdgeInsets.all(2),
-                                              child: const Icon(
-                                                Icons.close,
-                                                color: Colors.white70,
-                                                size: 20,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
+        // ✅ SOLUTION 2: Remove Stack completely, use CompositedTransformFollower approach
+        // or simple Positioned widget that doesn't block the entire screen
+        return Positioned(
+          top: top,
+          right: right,
+          child: Material(
+            color: Colors.transparent,
+            child: MediaQuery(
+              data: MediaQueryData.fromView(View.of(context)),
+              child: Directionality(
+                textDirection: TextDirection.ltr,
+                child: TweenAnimationBuilder<double>(
+                  duration: const Duration(milliseconds: 500),
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  curve: Curves.easeOutBack,
+                  builder: (context, value, child) {
+                    return Transform.translate(
+                      offset: Offset(0, -20 * (1 - value)),
+                      child: Opacity(
+                        opacity: value.clamp(0.0, 1.0),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: GestureDetector(
+                    onHorizontalDragEnd: (details) {
+                      if (details.velocity.pixelsPerSecond.dx.abs() > 500) {
+                        try {
+                          overlayEntry.remove();
+                        } catch (e) {
+                          // Already removed
+                        }
+                      }
+                    },
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: maxWidth),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 16),
+                        decoration: BoxDecoration(
+                          color: backgroundColor,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: backgroundColor.withOpacity(0.3),
+                              spreadRadius: 2,
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: IntrinsicWidth(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                icon,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                              const SizedBox(width: 12),
+                              Flexible(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      title,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                        decoration: TextDecoration.none,
                                       ),
                                     ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      message,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.white,
+                                        height: 1.4,
+                                        decoration: TextDecoration.none,
+                                      ),
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () {
+                                  try {
+                                    overlayEntry.remove();
+                                  } catch (e) {
+                                    // Already removed
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  child: const Icon(
+                                    Icons.close,
+                                    color: Colors.white70,
+                                    size: 20,
                                   ),
                                 ),
                               ),
-                            ),
+                            ],
                           ),
-                        ))
-                  ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
