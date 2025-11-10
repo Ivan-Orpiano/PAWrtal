@@ -77,7 +77,8 @@ class UnifiedVerificationGuard {
           ),
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxWidth: isWeb ? 500 : double.infinity,
+              maxWidth: isWeb ? 550 : double.infinity,
+              maxHeight: MediaQuery.of(context).size.height * 0.85,
             ),
             child: SingleChildScrollView(
               child: Padding(
@@ -126,7 +127,7 @@ class UnifiedVerificationGuard {
                     
                     const SizedBox(height: 24),
                     
-                    // Info box
+                    // Online Verification Option
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -139,17 +140,19 @@ class UnifiedVerificationGuard {
                           Row(
                             children: [
                               const Icon(
-                                Icons.info_outline,
+                                Icons.phone_android,
                                 size: 20,
                                 color: Color(0xFF1976D2),
                               ),
                               const SizedBox(width: 8),
-                              Text(
-                                'Verification Process:',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: isWeb ? 15 : 14,
-                                  color: const Color(0xFF1976D2),
+                              Expanded(
+                                child: Text(
+                                  'Option 1: Online Verification',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: isWeb ? 15 : 14,
+                                    color: const Color(0xFF1976D2),
+                                  ),
                                 ),
                               ),
                             ],
@@ -158,6 +161,88 @@ class UnifiedVerificationGuard {
                           _buildBulletPoint('Provide a valid government ID (Driver\'s License, National ID, Passport)', isWeb),
                           _buildBulletPoint('Take facial recognition for verification', isWeb),
                           _buildBulletPoint('Wait for approval (usually instant)', isWeb),
+                        ],
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Divider with "OR"
+                    Row(
+                      children: [
+                        const Expanded(child: Divider()),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'OR',
+                            style: TextStyle(
+                              fontSize: isWeb ? 14 : 13,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                        const Expanded(child: Divider()),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // In-Person Verification Option
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF3E0),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color(0xFFFF9800).withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.local_hospital,
+                                size: 20,
+                                color: Color(0xFFFF9800),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Option 2: In-Person Verification',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: isWeb ? 15 : 14,
+                                    color: const Color(0xFFFF9800),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          _buildBulletPoint(
+                            'Visit any veterinary clinic registered in the PAWrtal system',
+                            isWeb,
+                            color: const Color(0xFFFF9800),
+                          ),
+                          _buildBulletPoint(
+                            'Ask the clinic admin to verify your account',
+                            isWeb,
+                            color: const Color(0xFFFF9800),
+                          ),
+                          _buildBulletPoint(
+                            'The clinic will verify that you are a real and legitimate user',
+                            isWeb,
+                            color: const Color(0xFFFF9800),
+                          ),
+                          _buildBulletPoint(
+                            'Your account will be verified immediately after approval',
+                            isWeb,
+                            color: const Color(0xFFFF9800),
+                          ),
                         ],
                       ),
                     ),
@@ -241,7 +326,7 @@ class UnifiedVerificationGuard {
     );
   }
 
-  Widget _buildBulletPoint(String text, bool isWeb) {
+  Widget _buildBulletPoint(String text, bool isWeb, {Color color = const Color(0xFF1976D2)}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -251,8 +336,8 @@ class UnifiedVerificationGuard {
             margin: const EdgeInsets.only(top: 6),
             width: 6,
             height: 6,
-            decoration: const BoxDecoration(
-              color: Color(0xFF1976D2),
+            decoration: BoxDecoration(
+              color: color,
               shape: BoxShape.circle,
             ),
           ),
