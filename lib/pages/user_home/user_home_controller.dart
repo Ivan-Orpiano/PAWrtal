@@ -4,6 +4,7 @@ import 'package:capstone_app/pages/routes/app_pages.dart';
 import 'package:capstone_app/utils/custom_snack_bar.dart';
 import 'package:capstone_app/utils/full_screen_dialog_loader.dart';
 import 'package:capstone_app/utils/logout_helper.dart'; // ADD THIS IMPORT
+import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
@@ -26,7 +27,7 @@ class UserHomeController extends GetxController {
         await _getStorage.erase();
         Get.offAllNamed(Routes.login);
         
-        CustomSnackBar.showErrorSnackBar(
+        SnackbarHelper.showError(
           context: Get.overlayContext,
           title: "Logged Out",
           message: "You have been signed out locally"
@@ -49,10 +50,10 @@ class UserHomeController extends GetxController {
         FullScreenDialogLoader.cancelDialog();
         if (error is AppwriteException) {
           final message = error.response ?? "An error occurred";
-          CustomSnackBar.showErrorSnackBar(
+          SnackbarHelper.showError(
               context: Get.overlayContext, title: "Error", message: message);
         } else {
-          CustomSnackBar.showErrorSnackBar(
+          SnackbarHelper.showError(
               context: Get.overlayContext,
               title: "Error",
               message: "Something went wrong");
@@ -60,7 +61,7 @@ class UserHomeController extends GetxController {
       });
     } catch (e) {
       FullScreenDialogLoader.cancelDialog();
-      CustomSnackBar.showErrorSnackBar(
+      SnackbarHelper.showError(
           context: Get.overlayContext,
           title: "Error",
           message: "Something went wrong");

@@ -2,6 +2,7 @@ import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/notification/services/in_app_notification_service.dart';
 import 'package:capstone_app/pages/routes/app_pages.dart';
+import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:capstone_app/utils/web_error_handler.dart';
 import 'package:capstone_app/utils/web_loading_helper.dart';
 import 'package:flutter/material.dart';
@@ -245,10 +246,15 @@ class WebLoginController extends GetxController {
 
         emailForPasswordResetController.clear();
 
-        WebErrorHandler.handleSuccess(
-          result['message'] ??
-              'Password reset link sent to your email. Please check your inbox.',
-        );
+        SnackbarHelper.showSuccess(
+          context: Get.overlayContext,
+          title: "Success",
+          message: "Password reset link sent to your email. Please check your inbox.");
+
+        // WebErrorHandler.handleSuccess(
+        //   result['message'] ??
+        //       'Password reset link sent to your email. Please check your inbox.',
+        // );
       } else {
 
         WebErrorHandler.handleError(
@@ -269,15 +275,27 @@ class WebLoginController extends GetxController {
       case "admin":
       case "staff":
         Get.offAllNamed(Routes.adminHome);
-        WebErrorHandler.handleSuccess('Login successful');
+        SnackbarHelper.showSuccess(
+          context: Get.overlayContext,
+          title: "Success",
+          message: "Login Successful");
+        // WebErrorHandler.handleSuccess('Login successful');
         break;
       case "developer":
         Get.offAllNamed(Routes.superAdminHome);
-        WebErrorHandler.handleSuccess('Login successful');
+        SnackbarHelper.showSuccess(
+          context: Get.overlayContext,
+          title: "Success",
+          message: "Login Successful");
+        // WebErrorHandler.handleSuccess('Login successful');
         break;
       case "user":
         Get.offAllNamed(Routes.userHome);
-        WebErrorHandler.handleSuccess('Login successful');
+        SnackbarHelper.showSuccess(
+          context: Get.overlayContext,
+          title: "Success",
+          message: "Login Successful");
+        // WebErrorHandler.handleSuccess('Login successful');
         break;
       default:
         WebErrorHandler.handleError('No account detected');

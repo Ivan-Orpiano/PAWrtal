@@ -7,6 +7,7 @@ import 'package:capstone_app/mobile/user/components/pets_components/pets_control
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:capstone_app/utils/custom_snack_bar.dart';
 import 'package:capstone_app/utils/full_screen_dialog_loader.dart';
+import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:capstone_app/web/user_web/controllers/web_pets_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -123,7 +124,7 @@ class PetCreationController extends GetxController {
       clearForm();
 
       FullScreenDialogLoader.cancelDialog();
-      CustomSnackBar.showSuccessSnackBar(
+      SnackbarHelper.showSuccess(
         context: Get.overlayContext,
         title: "Success",
         message: "Pet created successfully",
@@ -139,7 +140,7 @@ class PetCreationController extends GetxController {
       }
     } catch (e) {
       FullScreenDialogLoader.cancelDialog();
-      CustomSnackBar.showErrorSnackBar(
+      SnackbarHelper.showError(
         context: Get.overlayContext,
         title: "Error",
         message: "Failed to create pet: $e",
@@ -204,7 +205,7 @@ class PetCreationController extends GetxController {
       }
 
       FullScreenDialogLoader.cancelDialog();
-      CustomSnackBar.showSuccessSnackBar(
+      SnackbarHelper.showSuccess(
         context: Get.overlayContext,
         title: "Success",
         message: "Pet updated successfully",
@@ -220,7 +221,7 @@ class PetCreationController extends GetxController {
       }
     } catch (e) {
       FullScreenDialogLoader.cancelDialog();
-      CustomSnackBar.showErrorSnackBar(
+      SnackbarHelper.showError(
         context: Get.overlayContext,
         title: "Error",
         message: "Failed to update pet: $e",

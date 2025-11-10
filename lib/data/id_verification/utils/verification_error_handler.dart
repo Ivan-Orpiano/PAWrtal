@@ -1,3 +1,4 @@
+import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:capstone_app/utils/custom_snack_bar.dart';
 import 'package:get/get.dart';
@@ -14,7 +15,7 @@ class VerificationErrorHandler {
     String title = 'Verification Error';
     String message = customMessage ?? _getErrorMessage(error);
 
-    CustomSnackBar.showErrorSnackBar(
+    SnackbarHelper.showError(
       context: Get.overlayContext ?? context,
       title: title,
       message: message,
@@ -23,7 +24,7 @@ class VerificationErrorHandler {
 
   /// Handle network errors specifically
   static void handleNetworkError(BuildContext context) {
-    CustomSnackBar.showErrorSnackBar(
+    SnackbarHelper.showError(
       context: Get.overlayContext ?? context,
       title: 'Connection Error',
       message: 'Please check your internet connection and try again.',
@@ -32,7 +33,7 @@ class VerificationErrorHandler {
 
   /// Handle timeout errors
   static void handleTimeoutError(BuildContext context) {
-    CustomSnackBar.showErrorSnackBar(
+    SnackbarHelper.showError(
       context: Get.overlayContext ?? context,
       title: 'Request Timeout',
       message: 'The verification process took too long. Please try again.',
@@ -78,7 +79,7 @@ class VerificationErrorHandler {
             errorMessage ?? 'An unexpected error occurred. Please try again.';
     }
 
-    CustomSnackBar.showErrorSnackBar(
+    SnackbarHelper.showError(
       context: Get.overlayContext ?? context,
       title: title,
       message: message,
@@ -102,7 +103,7 @@ class VerificationErrorHandler {
           'Verification record not found. Please start a new verification.';
     }
 
-    CustomSnackBar.showErrorSnackBar(
+    SnackbarHelper.showError(
       context: Get.overlayContext ?? context,
       title: 'Database Error',
       message: message,

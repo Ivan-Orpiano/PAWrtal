@@ -4,6 +4,7 @@ import 'package:capstone_app/notification/services/in_app_notification_service.d
 import 'package:capstone_app/pages/routes/app_pages.dart';
 import 'package:capstone_app/utils/custom_snack_bar.dart';
 import 'package:capstone_app/utils/full_screen_dialog_loader.dart';
+import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -293,10 +294,10 @@ class LoginController extends GetxController {
 
 
       FullScreenDialogLoader.cancelDialog();
-      CustomSnackBar.showSuccessSnackBar(
+      SnackbarHelper.showSuccess(
           context: Get.overlayContext,
           title: "Success",
-          message: "Login Success");
+          message: "Login Successful");
 
       clearTextEditingControllers();
 

@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:get/get.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
@@ -53,7 +54,7 @@ class WebPetsController extends GetxController {
     try {
       final userId = session.userId;
       if (userId.isEmpty) {
-        WebSnackBarService.showError(
+        SnackbarHelper.showError(
           title: "Error",
           message: "User not logged in. Please log in to view your pets.",
         );
@@ -62,7 +63,7 @@ class WebPetsController extends GetxController {
       final petDocs = await authRepository.getUserPets(userId);
       pets.value = petDocs.map((doc) => Pet.fromMap(doc.data)).toList();
     } catch (e) {
-      WebSnackBarService.showError(
+      SnackbarHelper.showError(
         title: "Error",
         message: "Failed to fetch pets: $e",
       );
@@ -77,7 +78,7 @@ class WebPetsController extends GetxController {
       final records = await authRepository.getPetMedicalRecords(petId);
       medicalRecords.value = records;
     } catch (e) {
-      WebSnackBarService.showError(
+      SnackbarHelper.showError(
         title: "Error",
         message: "Failed to fetch medical history: $e",
       );
@@ -99,7 +100,7 @@ class WebPetsController extends GetxController {
       if (vaccins.isNotEmpty) {
       }
     } catch (e) {
-      WebSnackBarService.showError(
+      SnackbarHelper.showError(
         title: "Error",
         message: "Failed to fetch vaccination history: $e",
       );
@@ -129,7 +130,7 @@ class WebPetsController extends GetxController {
       if (appointments.isNotEmpty) {
       }
     } catch (e) {
-      WebSnackBarService.showError(
+      SnackbarHelper.showError(
         title: "Error",
         message: "Failed to fetch medical appointments: $e",
       );
@@ -220,7 +221,7 @@ class WebPetsController extends GetxController {
         }
       }
     } catch (e, stackTrace) {
-      WebSnackBarService.showError(
+      SnackbarHelper.showError(
         title: "Error",
         message: "Failed to fetch medical records: $e",
       );
@@ -248,7 +249,7 @@ class WebPetsController extends GetxController {
             // Only show warning if it's not a "file not found" error
             if (!imageError.toString().contains('storage_file_not_found') &&
                 !imageError.toString().contains('404')) {
-              WebSnackBarService.showWarning(
+              SnackbarHelper.showWarning(
                 title: "Warning",
                 message:
                     "Pet image could not be deleted, but pet record will be removed.",
@@ -275,12 +276,12 @@ class WebPetsController extends GetxController {
           ? "${pet.name} has been deleted successfully"
           : "${pet.name} has been deleted (image was already removed)";
 
-      WebSnackBarService.showSuccess(
+      SnackbarHelper.showSuccess(
         title: "Success",
         message: message,
       );
     } catch (e) {
-      WebSnackBarService.showError(
+      SnackbarHelper.showError(
         title: "Error",
         message:
             "Failed to delete pet: ${e.toString().replaceAll('AppwriteException: ', '')}",

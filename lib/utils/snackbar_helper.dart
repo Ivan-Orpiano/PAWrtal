@@ -80,7 +80,6 @@ class SnackbarHelper {
     // Get overlay context
     final overlayContext = Get.overlayContext;
     if (overlayContext == null) {
-      print('⚠️ No overlay context available');
       return;
     }
 
@@ -240,7 +239,6 @@ class SnackbarHelper {
       final overlay = Overlay.of(overlayContext);
       overlay.insert(overlayEntry);
     } catch (e) {
-      print('⚠️ Error inserting overlay: $e');
       return;
     }
 

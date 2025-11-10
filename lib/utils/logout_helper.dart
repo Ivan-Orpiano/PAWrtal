@@ -1,6 +1,7 @@
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/mobile/user/controllers/user_messaging_controller.dart';
 import 'package:capstone_app/pages/routes/app_pages.dart';
+import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/admin_web_appointment_controller.dart';
 import 'package:capstone_app/web/admin_web/components/dashboard/admin_dashboard_controller.dart'; // NEW: Import dashboard controller
@@ -130,14 +131,19 @@ class LogoutHelper {
 
 
       // Show success message
-      Get.snackbar(
-        'Logged Out',
-        'You have been successfully logged out',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2),
+      SnackbarHelper.showSuccess(
+        context: Get.overlayContext,
+        title: "Logged Out",
+        message: "You have been successfully logged out"
       );
+      // Get.snackbar(
+      //   'Logged Out',
+      //   'You have been successfully logged out',
+      //   snackPosition: SnackPosition.TOP,
+      //   backgroundColor: Colors.green,
+      //   colorText: Colors.white,
+      //   duration: const Duration(seconds: 2),
+      // );
     } catch (e) {
 
       // Close loading dialog if open

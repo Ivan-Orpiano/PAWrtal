@@ -5,6 +5,7 @@ import 'package:capstone_app/pages/routes/app_pages.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:capstone_app/utils/custom_snack_bar.dart';
 import 'package:capstone_app/utils/full_screen_dialog_loader.dart';
+import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -90,7 +91,7 @@ class CreateStaffController extends GetxController {
     if (image != null) {
       imagePath.value = image.path;
     } else {
-      CustomSnackBar.showErrorSnackBar(
+      SnackbarHelper.showError(
         context: Get.overlayContext,
         title: "Error",
         message: "Image selection cancelled",
@@ -141,7 +142,7 @@ class CreateStaffController extends GetxController {
         });
 
         FullScreenDialogLoader.cancelDialog();
-        CustomSnackBar.showSuccessSnackBar(
+        SnackbarHelper.showSuccess(
           context: Get.overlayContext,
           title: "Success",
           message: "Staff created successfully",
@@ -155,7 +156,7 @@ class CreateStaffController extends GetxController {
       // ensure document ID is provided for updating
       if (documentId == null || documentId.isEmpty) {
         FullScreenDialogLoader.cancelDialog();
-        CustomSnackBar.showErrorSnackBar(
+        SnackbarHelper.showError(
           context: Get.overlayContext,
           title: "Error",
           message: "Document ID is missing",
@@ -173,7 +174,7 @@ class CreateStaffController extends GetxController {
       });
 
       FullScreenDialogLoader.cancelDialog();
-      CustomSnackBar.showSuccessSnackBar(
+      SnackbarHelper.showSuccess(
         context: Get.overlayContext,
         title: "Success",
         message: "Staff updated successfully",
@@ -183,7 +184,7 @@ class CreateStaffController extends GetxController {
       Get.offNamedUntil(Routes.adminHome, (route) => route.isFirst);
     } catch (e) {
       FullScreenDialogLoader.cancelDialog();
-      CustomSnackBar.showErrorSnackBar(
+      SnackbarHelper.showError(
         context: Get.overlayContext,
         title: "Error",
         message: "Failed to update staff: $e",
