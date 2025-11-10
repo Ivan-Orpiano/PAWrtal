@@ -1724,13 +1724,20 @@ class WebAppointmentController extends GetxController {
         return;
       }
 
+
       final userName = userDoc.data['name'] ?? 'User';
       final userEmail = userDoc.data['email'] ?? '';
 
-      // Get pet name
-      final petName = getPetName(appointment.petId);
+      // CRITICAL FIX: Read preferences DIRECTLY from the user document
+      // Don't call getPreferencesForUser() - just read from the document we already have!
+      final pushEnabled =
+          userDoc.data['pushNotificationsEnabled'] as bool? ?? true;
+      final emailEnabled =
+          userDoc.data['emailNotificationsEnabled'] as bool? ?? true;
 
-      // Get clinic name
+
+      // Get pet and clinic info
+      final petName = getPetName(appointment.petId);
       final clinicName = clinicData.value?.clinicName ?? 'Unknown Clinic';
 
       // Check if AppwriteProvider is registered
@@ -1748,7 +1755,7 @@ class WebAppointmentController extends GetxController {
       // Use AppwriteProvider to send notifications
       final appwriteProvider = Get.find<AppWriteProvider>();
 
-      // Prepare notification data
+      // Prepare notification content
       String pushTitle;
       String pushBody;
 
@@ -1791,7 +1798,7 @@ class WebAppointmentController extends GetxController {
         );
       } else {}
 
-      // 2. Send email ONLY if user has it enabled (only for accepted/declined)
+      // STEP 3: Send email (only if enabled and status is accepted/declined)
       if (status == 'accepted' || status == 'declined') {
         if (userPreferences.emailNotificationsEnabled) {
           await appwriteProvider.sendEmail(
@@ -1813,7 +1820,7 @@ class WebAppointmentController extends GetxController {
         } else {}
       }
     } catch (e) {
-      // Don't fail the operation if notification fails
+      // Don't fail the appointment operation if notification fails
     }
   }
 

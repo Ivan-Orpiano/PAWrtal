@@ -199,15 +199,17 @@ class Appointment {
 
   bool get isToday {
     final now = DateTime.now();
-    return dateTime.year == now.year &&
-        dateTime.month == now.month &&
-        dateTime.day == now.day;
+    final localDate = dateTime.toLocal(); // Convert to local time
+    return localDate.year == now.year &&
+        localDate.month == now.month &&
+        localDate.day == now.day;
   }
 
   bool get isPast {
     final now = DateTime.now();
+    final localDate = dateTime.toLocal(); // Convert to local time
     final appointmentDate =
-        DateTime(dateTime.year, dateTime.month, dateTime.day);
+        DateTime(localDate.year, localDate.month, localDate.day);
     final today = DateTime(now.year, now.month, now.day);
     return appointmentDate.isBefore(today);
   }
@@ -228,8 +230,9 @@ class Appointment {
 
   // Helper method to format time in 12-hour format
   String get formattedTime {
-    final hour = dateTime.hour;
-    final minute = dateTime.minute;
+    final localDateTime = dateTime.toLocal();
+    final hour = localDateTime.hour;
+    final minute = localDateTime.minute;
     final period = hour >= 12 ? 'PM' : 'AM';
     final displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
 
@@ -238,6 +241,7 @@ class Appointment {
 
   // Helper method to format date and time together
   String get formattedDateTime {
+    final localDateTime = dateTime.toLocal();
     final months = [
       'Jan',
       'Feb',
@@ -252,15 +256,16 @@ class Appointment {
       'Nov',
       'Dec'
     ];
-    final month = months[dateTime.month - 1];
-    final day = dateTime.day;
-    final year = dateTime.year;
+    final month = months[localDateTime.month - 1];
+    final day = localDateTime.day;
+    final year = localDateTime.year;
 
     return '$month $day, $year at $formattedTime';
   }
 
   // Helper method to format just the date
   String get formattedDate {
+    final localDateTime = dateTime.toLocal();
     final months = [
       'Jan',
       'Feb',
@@ -275,9 +280,9 @@ class Appointment {
       'Nov',
       'Dec'
     ];
-    final month = months[dateTime.month - 1];
-    final day = dateTime.day;
-    final year = dateTime.year;
+    final month = months[localDateTime.month - 1];
+    final day = localDateTime.day;
+    final year = localDateTime.year;
 
     return '$month $day, $year';
   }

@@ -212,8 +212,11 @@ class _EnhancedAppointmentDetailsPageState
                         "Date",
                         DateFormat('EEEE, MMMM dd, yyyy')
                             .format(widget.appointment.dateTime)),
-                    _buildDetailRow(Icons.access_time, "Time",
-                        widget.appointment.formattedTime),
+                    _buildDetailRow(
+                        Icons.access_time,
+                        "Time",
+                        DateFormat('hh:mm a')
+                            .format(widget.appointment.dateTime)),
                   ]),
 
                   const SizedBox(height: 20),
@@ -545,6 +548,18 @@ class _EnhancedAppointmentDetailsPageState
 
   void _showCancelDialog(
       BuildContext context, EnhancedUserAppointmentController controller) {
+    if (!controller.canCancelAppointment(widget.appointment)) {
+      Get.snackbar(
+        "Cannot Cancel",
+        "This appointment is less than 1 hour away and cannot be cancelled. Please contact the clinic directly.",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade50,
+        colorText: Colors.red.shade700,
+        icon: const Icon(Icons.block, color: Colors.red),
+        duration: const Duration(seconds: 4),
+      );
+      return;
+    }
     if (widget.appointment.status == 'pending') {
       _showPendingCancelDialog(context, controller);
       return;
@@ -641,6 +656,19 @@ class _EnhancedAppointmentDetailsPageState
 
   void _showAcceptedCancelDialog(
       BuildContext context, EnhancedUserAppointmentController controller) {
+    if (!controller.canCancelAppointment(widget.appointment)) {
+      Get.snackbar(
+        "Cannot Cancel",
+        "This appointment is less than 1 hour away and cannot be cancelled. Please contact the clinic directly.",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade50,
+        colorText: Colors.red.shade700,
+        icon: const Icon(Icons.block, color: Colors.red),
+        duration: const Duration(seconds: 4),
+      );
+      return;
+    }
+
     String selectedReason = '';
     final customReasonController = TextEditingController();
 
@@ -828,7 +856,7 @@ class _EnhancedAppointmentDetailsPageState
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'You can cancel up to 2 hours before your appointment time.',
+                              'You can cancel up to 1 hour before your appointment time.',
                               style: TextStyle(
                                 fontSize: 10,
                                 color: Colors.blue.shade700,

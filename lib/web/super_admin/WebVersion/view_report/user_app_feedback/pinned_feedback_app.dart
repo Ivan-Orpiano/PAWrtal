@@ -34,8 +34,6 @@ class _PinnedFeedbackPageState extends State<PinnedFeedbackPage> {
     controller = Get.find<WebFeedbackController>();
     _setupRealtimeUpdates();
     ever(controller.pinnedFeedbackIds, (pinnedIds) {
-    print('>>> 🔔 PinnedFeedbackIds changed! New count: ${pinnedIds.length}');
-    print('>>> 🔔 Pinned IDs: $pinnedIds');
     
     // Force UI update when pinned IDs change
     if (mounted) {
@@ -62,14 +60,11 @@ class _PinnedFeedbackPageState extends State<PinnedFeedbackPage> {
             if (mounted) {
               setState(() {
                 // This will cause pinnedFeedback getter to recalculate
-                print('>>> ✅ PinnedFeedbackPage UI refreshed');
               });
             }  
           }, onError: (error) {
             });
-                print('>>> ✅ Real-time subscription active for Pinned Feedback');
             } catch (e) {
-                  print('>>> ❌ Error setting up real-time updates: $e');
         }
       }
 
@@ -771,7 +766,6 @@ class _PinnedFeedbackPageState extends State<PinnedFeedbackPage> {
                   final allFeedbackCount = controller.allFeedback.length; // Trigger dependency
                   final pinnedCount = controller.pinnedFeedbackIds.length; // Trigger dependency
                   
-                  print('>>> 🔄 Rebuilding pinned list - Loading: $isLoading, Total: $allFeedbackCount, Pinned: $pinnedCount');
                   
                   if (isLoading) {
                     return const Center(child: CircularProgressIndicator());
@@ -815,7 +809,6 @@ class _PinnedFeedbackPageState extends State<PinnedFeedbackPage> {
                       final feedback = pinnedItems[index];
                       
                       // Log each item being displayed
-                      print('>>> 📍 Displaying pinned item ${index + 1}: ${feedback.subject}');
                       
                       if (isMobile) {
                         return _buildMobileFeedbackCard(feedback);

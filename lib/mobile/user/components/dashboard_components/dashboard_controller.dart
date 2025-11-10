@@ -81,7 +81,6 @@ class DashboardController extends GetxController {
 
       applyFilters();
     } catch (e) {
-      print('Error fetching clinics: $e');
     } finally {
       isLoading.value = false;
     }
