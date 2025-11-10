@@ -60,20 +60,16 @@ class InAppNotificationService extends GetxService {
         _currentUserId = userId;
       }
 
-
       // Load initial notifications
       await fetchNotifications();
 
       // Setup real-time subscription
       _setupRealtimeSubscription();
-
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   /// Clear all service data (for logout or account switch)
   void _clearService() {
-
     // Cancel subscription
     _notificationSubscription?.cancel();
     _notificationSubscription = null;
@@ -98,24 +94,19 @@ class InAppNotificationService extends GetxService {
       // Cancel existing subscription if any
       _notificationSubscription?.cancel();
 
-
       _notificationSubscription =
           authRepository.subscribeToUserNotifications(userId).listen(
         (message) {
           _handleRealtimeUpdate(message);
         },
-        onError: (error) {
-        },
+        onError: (error) {},
         cancelOnError: false,
       );
-
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   void _handleRealtimeUpdate(RealtimeMessage message) {
     try {
-
       final payload = message.payload;
       final notificationId = payload['\$id'] as String?;
 
@@ -141,12 +132,10 @@ class InAppNotificationService extends GetxService {
           _handleDeletedNotification(notification);
         }
       }
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   void _handleNewNotification(AppNotification notification) {
-
     // CRITICAL FIX: Mark as processed to prevent duplicates
     if (notification.documentId != null) {
       _processedNotificationIds.add(notification.documentId!);
@@ -172,7 +161,6 @@ class InAppNotificationService extends GetxService {
   }
 
   void _handleUpdatedNotification(AppNotification notification) {
-
     final index = notifications.indexWhere(
       (n) => n.documentId == notification.documentId,
     );
@@ -193,7 +181,6 @@ class InAppNotificationService extends GetxService {
   }
 
   void _handleDeletedNotification(AppNotification notification) {
-
     final wasUnread = notification.isUnread;
     notifications.removeWhere((n) => n.documentId == notification.documentId);
 
@@ -217,11 +204,11 @@ class InAppNotificationService extends GetxService {
       Get.snackbar(
         notification.title,
         notification.message,
-        duration: const Duration(seconds: 4),
-        backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+        duration: const Duration(seconds: 3),
+        backgroundColor: const Color(0xFF3B82F6),
         colorText: Colors.white,
         snackPosition: SnackPosition.TOP,
-        margin: const EdgeInsets.all(16),
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         borderRadius: 12,
         icon: Icon(
           _getNotificationIcon(notification.type),
@@ -231,8 +218,7 @@ class InAppNotificationService extends GetxService {
           handleNotificationTap(notification);
         },
       );
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   IconData _getNotificationIcon(NotificationType type) {
@@ -279,7 +265,6 @@ class InAppNotificationService extends GetxService {
         return;
       }
 
-
       final docs = await authRepository.getUserNotifications(userId);
 
       // Clear existing data first
@@ -300,7 +285,6 @@ class InAppNotificationService extends GetxService {
 
       // Update unread count
       unreadCount.value = notifications.where((n) => n.isUnread).length;
-
     } catch (e) {
     } finally {
       isLoading.value = false;
@@ -311,8 +295,7 @@ class InAppNotificationService extends GetxService {
   Future<void> markAsRead(String notificationId) async {
     try {
       await authRepository.markNotificationAsRead(notificationId);
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   /// Mark all notifications as read
@@ -322,16 +305,14 @@ class InAppNotificationService extends GetxService {
       if (userId.isEmpty) return;
 
       await authRepository.markAllNotificationsAsRead(userId);
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   /// Delete a notification
   Future<void> deleteNotification(String notificationId) async {
     try {
       await authRepository.deleteNotification(notificationId);
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   /// Delete all notifications
@@ -341,13 +322,11 @@ class InAppNotificationService extends GetxService {
       if (userId.isEmpty) return;
 
       await authRepository.deleteAllNotifications(userId);
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   /// Handle notification tap - FIXED: No navigation, just mark as read
   void handleNotificationTap(AppNotification notification) {
-
     // Mark as read
     if (notification.isUnread && notification.documentId != null) {
       markAsRead(notification.documentId!);

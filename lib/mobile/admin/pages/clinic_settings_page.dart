@@ -229,26 +229,26 @@ class _ClinicSettingsPageState extends State<ClinicSettingsPage>
                 step: 1,
               ),
               const SizedBox(height: 16),
-              Obx(() => SwitchListTile(
-                    title: Text(
-                      'Auto-accept Appointments',
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey[800],
-                      ),
-                    ),
-                    subtitle: Text(
-                      'Automatically approve new appointments',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    value: controller.autoAccept.value,
-                    onChanged: (value) => controller.autoAccept.value = value,
-                    activeColor: const Color(0xFF608BC1),
-                    contentPadding: EdgeInsets.zero,
-                  )),
+              // Obx(() => SwitchListTile(
+              //       title: Text(
+              //         'Auto-accept Appointments',
+              //         style: GoogleFonts.inter(
+              //           fontWeight: FontWeight.w500,
+              //           color: Colors.grey[800],
+              //         ),
+              //       ),
+              //       subtitle: Text(
+              //         'Automatically approve new appointments',
+              //         style: GoogleFonts.inter(
+              //           fontSize: 12,
+              //           color: Colors.grey[600],
+              //         ),
+              //       ),
+              //       value: controller.autoAccept.value,
+              //       onChanged: (value) => controller.autoAccept.value = value,
+              //       activeColor: const Color(0xFF608BC1),
+              //       contentPadding: EdgeInsets.zero,
+              //     )),
             ],
           ),
 

@@ -1090,33 +1090,33 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                     border: OutlineInputBorder(),
                   ),
                 ),
-                const SizedBox(height: 20),
-                Container(
-                  padding: EdgeInsets.all(isMobile ? 10 : 12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey[300]!),
-                  ),
-                  child: Column(
-                    children: [
-                      Obx(() => SwitchListTile(
-                            title: Text("Auto-accept Appointments",
-                                style: TextStyle(fontSize: isMobile ? 13 : 14)),
-                            subtitle: Text(
-                                "Automatically approve new appointment requests",
-                                style: TextStyle(fontSize: isMobile ? 11 : 12)),
-                            value: controller.autoAcceptAppointments.value,
-                            contentPadding: EdgeInsets.zero,
-                            onChanged: (value) {
-                              controller.autoAcceptAppointments.value = value;
-                            },
-                            activeColor:
-                                const Color.fromARGB(255, 81, 115, 153),
-                          )),
-                    ],
-                  ),
-                ),
+                const SizedBox(height: 8),
+                // Container(
+                //   padding: EdgeInsets.all(isMobile ? 10 : 12),
+                //   decoration: BoxDecoration(
+                //     color: Colors.grey[50],
+                //     borderRadius: BorderRadius.circular(8),
+                //     border: Border.all(color: Colors.grey[300]!),
+                //   ),
+                //   child: Column(
+                //     children: [
+                //       Obx(() => SwitchListTile(
+                //             title: Text("Auto-accept Appointments",
+                //                 style: TextStyle(fontSize: isMobile ? 13 : 14)),
+                //             subtitle: Text(
+                //                 "Automatically approve new appointment requests",
+                //                 style: TextStyle(fontSize: isMobile ? 11 : 12)),
+                //             value: controller.autoAcceptAppointments.value,
+                //             contentPadding: EdgeInsets.zero,
+                //             onChanged: (value) {
+                //               controller.autoAcceptAppointments.value = value;
+                //             },
+                //             activeColor:
+                //                 const Color.fromARGB(255, 81, 115, 153),
+                //           )),
+                //     ],
+                //   ),
+                // ),
                 const SizedBox(height: 20),
                 Row(
                   children: [
