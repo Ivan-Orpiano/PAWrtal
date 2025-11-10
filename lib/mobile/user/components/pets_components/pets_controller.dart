@@ -1,3 +1,4 @@
+import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:get/get.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
@@ -26,7 +27,7 @@ class PetsController extends GetxController {
       final petDocs = await authRepository.getUserPets(userId);
       pets.value = petDocs.map((doc) => Pet.fromMap(doc.data)).toList();
     } catch (e) {
-      CustomSnackBar.showErrorSnackBar(
+      SnackbarHelper.showError(
         context: Get.overlayContext,
         title: "Error",
         message: "Failed to fetch pets: $e",

@@ -1,5 +1,6 @@
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/mobile/user/components/pets_components/pet_creation_controller.dart';
+import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:capstone_app/web/user_web/services/web_image_picker_service.dart';
 import 'package:capstone_app/web/user_web/services/web_snack_bar_service.dart';
 import 'package:flutter/material.dart';
@@ -91,7 +92,7 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
         }
       }
     } catch (e) {
-      WebSnackBarService.showError(
+      SnackbarHelper.showError(
         title: "Error",
         message: "Failed to pick image: $e",
       );

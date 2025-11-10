@@ -1,3 +1,4 @@
+import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
@@ -87,7 +88,7 @@ class AdminHomeController extends GetxController with StateMixin<List<Staff>> {
       await authRepository.deleteImage(staff.image);
 
       FullScreenDialogLoader.cancelDialog();
-      CustomSnackBar.showSuccessSnackBar(
+      SnackbarHelper.showSuccess(
         context: Get.context,
         title: "Success",
         message: "Staff deleted",
@@ -96,7 +97,7 @@ class AdminHomeController extends GetxController with StateMixin<List<Staff>> {
       getStaff();
     } catch (e) {
       FullScreenDialogLoader.cancelDialog();
-      CustomSnackBar.showErrorSnackBar(
+      SnackbarHelper.showError(
         context: Get.context,
         title: "Error",
         message: e.toString(),
