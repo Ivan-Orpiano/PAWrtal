@@ -856,29 +856,29 @@ class _EnhancedAppointmentDetailsPageState
                       maxLength: 200,
                     ),
                     const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.info_outline,
-                              color: Colors.blue.shade700, size: 14),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'You can cancel up to 1 hour before your appointment time.',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.blue.shade700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    // Container(
+                    //   padding: const EdgeInsets.all(10),
+                    //   decoration: BoxDecoration(
+                    //     color: Colors.blue.shade50,
+                    //     borderRadius: BorderRadius.circular(8),
+                    //   ),
+                    //   child: Row(
+                    //     children: [
+                    //       Icon(Icons.info_outline,
+                    //           color: Colors.blue.shade700, size: 14),
+                    //       const SizedBox(width: 8),
+                    //       Expanded(
+                    //         child: Text(
+                    //           'You can cancel up to 1 hour before your appointment time.',
+                    //           style: TextStyle(
+                    //             fontSize: 10,
+                    //             color: Colors.blue.shade700,
+                    //           ),
+                    //         ),
+                    //       ),
+                    //     ],
+                    //   ),
+                    // ),
                     const SizedBox(height: 20),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
