@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:capstone_app/web/admin_web/components/staffs/staff_full_details.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -177,14 +178,11 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
       if (result['success'] == true) {
         await _loadClinicAndStaff();
         if (mounted) {
-          Get.snackbar(
-            'Success',
-            'Staff account created successfully! $name has been added.${isDoctor ? ' (Licensed Veterinarian)' : ''}',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: vetGreen,
-            colorText: Colors.white,
-            duration: const Duration(seconds: 4),
-            icon: const Icon(Icons.check_circle, color: Colors.white),
+          SnackbarHelper.showSuccess(
+            context: Get.context!,
+            title: "Success",
+            message:
+                "Staff account created successfully! $name has been added.${isDoctor ? ' (Licensed Veterinarian)' : ''}",
           );
         }
       }

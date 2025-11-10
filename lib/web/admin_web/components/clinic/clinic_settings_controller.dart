@@ -3,6 +3,7 @@ import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
+import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -158,7 +159,6 @@ class ClinicSettingsController extends GetxController {
 
   Future<void> initializeData() async {
     try {
-
       isLoading.value = true;
 
       // CRITICAL: Clear all cached data first
@@ -173,7 +173,6 @@ class ClinicSettingsController extends GetxController {
       // Fetch fresh data
       await fetchClinicData();
       await fetchClinicSettings();
-
     } catch (e) {
       _showSnackBar("Failed to load clinic data: $e", isError: true);
     } finally {
@@ -183,12 +182,10 @@ class ClinicSettingsController extends GetxController {
 
   Future<void> fetchClinicData() async {
     try {
-
       final user = await authRepository.getUser();
       if (user == null) {
         return;
       }
-
 
       final storage = GetStorage();
 
@@ -205,13 +202,10 @@ class ClinicSettingsController extends GetxController {
         final clinicDoc = await authRepository.getClinicByAdminId(user.$id);
         if (clinicDoc != null) {
           clinicId = clinicDoc.$id;
-        } else {
-        }
-      } else {
-      }
+        } else {}
+      } else {}
 
       if (clinicId != null && clinicId.isNotEmpty) {
-
         // CRITICAL FIX: Clear old data before fetching new
         clinic.value = null;
 
@@ -220,13 +214,9 @@ class ClinicSettingsController extends GetxController {
           clinic.value = Clinic.fromMap(clinicDoc.data);
           clinic.value!.documentId = clinicDoc.$id;
 
-
           _populateClinicFields();
-        } else {
-        }
-      } else {
-      }
-
+        } else {}
+      } else {}
     } catch (e) {
       rethrow;
     }
@@ -234,7 +224,6 @@ class ClinicSettingsController extends GetxController {
 
   Future<void> fetchClinicSettings() async {
     try {
-
       if (clinic.value?.documentId == null) {
         clinicSettings.value = null;
         return;
@@ -249,13 +238,11 @@ class ClinicSettingsController extends GetxController {
         // CRITICAL: Create fresh settings object
         clinicSettings.value = settings;
 
-
         // Populate form fields
         _populateSettingsFields();
       } else {
         await createDefaultSettings();
       }
-
     } catch (e) {
       clinicSettings.value = null;
       _showSnackBar("Failed to load clinic settings: $e", isError: true);
@@ -300,7 +287,6 @@ class ClinicSettingsController extends GetxController {
     }
 
     try {
-
       _ensureControllersInitialized();
 
       clinicNameController.text = clinic.value!.clinicName;
@@ -311,9 +297,7 @@ class ClinicSettingsController extends GetxController {
 
       // NEW: Load clinic profile picture URL
       _loadClinicProfilePictureUrl();
-
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   void _populateSettingsFields() {
@@ -322,7 +306,6 @@ class ClinicSettingsController extends GetxController {
     }
 
     try {
-
       _ensureControllersInitialized();
 
       final settings = clinicSettings.value!;
@@ -358,9 +341,7 @@ class ClinicSettingsController extends GetxController {
       specialInstructionsController.text = settings.specialInstructions;
       tempDashboardPic.value = settings.dashboardPic;
       dashboardPicChanged.value = false;
-
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   // NEW: Add a closed date
@@ -570,18 +551,14 @@ class ClinicSettingsController extends GetxController {
     try {
       isSaving.value = true;
 
-      // CRITICAL: Ensure medicalServices is properly formatted
       final sanitizedMedicalServices = Map<String, bool>.from(medicalServices);
 
-      // Ensure all selected services have a medical status entry
       for (var service in selectedServices) {
         if (!sanitizedMedicalServices.containsKey(service)) {
-          // Default to false if not specified
           sanitizedMedicalServices[service] =
               _isServiceMedicalByDefault(service);
         }
       }
-
 
       final updatedSettings = clinicSettings.value!.copyWith(
         isOpen: isClinicOpen.value,
@@ -589,7 +566,7 @@ class ClinicSettingsController extends GetxController {
         appointmentDuration: appointmentDuration.value,
         maxAdvanceBooking: maxAdvanceBooking.value,
         services: selectedServices.toList(),
-        medicalServices: sanitizedMedicalServices, // Use sanitized map
+        medicalServices: sanitizedMedicalServices,
         gallery: galleryImages.toList(),
         operatingHours: Map<String, Map<String, dynamic>>.from(operatingHours),
         location: selectedLocation.value,
@@ -800,6 +777,7 @@ class ClinicSettingsController extends GetxController {
               newImageUrls.add(imageUrl);
             }
           } catch (e) {
+            // Continue processing other images
           }
         }
 
@@ -863,16 +841,21 @@ class ClinicSettingsController extends GetxController {
   Color get clinicStatusColor => isClinicOpen.value ? Colors.green : Colors.red;
 
   void _showSnackBar(String message, {bool isError = false}) {
-    Get.snackbar(
-      isError ? "Error" : "Success",
-      message,
-      snackPosition: SnackPosition.TOP,
-      backgroundColor: isError ? Colors.red[600] : Colors.green[600],
-      colorText: Colors.white,
-      duration: const Duration(seconds: 3),
-      margin: const EdgeInsets.all(16),
-      borderRadius: 8,
-    );
+    if (Get.context == null) return;
+
+    if (isError) {
+      SnackbarHelper.showError(
+        context: Get.context!,
+        title: "Error",
+        message: message,
+      );
+    } else {
+      SnackbarHelper.showSuccess(
+        context: Get.context!,
+        title: "Success",
+        message: message,
+      );
+    }
   }
 
   @override
@@ -892,7 +875,6 @@ class ClinicSettingsController extends GetxController {
   }
 
   Future<void> refreshData() async {
-
     // Clear all cached data
     clinic.value = null;
     clinicSettings.value = null;
