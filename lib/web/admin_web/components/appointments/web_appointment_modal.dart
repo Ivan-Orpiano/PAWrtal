@@ -1,6 +1,7 @@
 import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/models/user_model.dart';
+import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/admin_web_appointment_controller.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/admin_pet_card_view.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/dialogs/model_record_view_dialog.dart';
@@ -301,15 +302,12 @@ class WebAppointmentModal extends StatelessWidget {
       Pet? pet;
       String? clinicId;
 
-      // NEW
-
       // Get clinic ID from appointment
       clinicId = appointment.clinicId;
 
       // Try fetching by userId to get all user's pets
       final userPets =
           await controller.authRepository.getUserPets(appointment.userId);
-
 
       // Find the pet by matching petId, name, or document ID
       final petDoc = userPets.firstWhereOrNull(
@@ -318,7 +316,6 @@ class WebAppointmentModal extends StatelessWidget {
           final matchesName = doc.data['name'] == appointment.petId;
           final matchesDocId = doc.$id == appointment.petId;
 
-
           return matchesPetId || matchesName || matchesDocId;
         },
       );
@@ -326,30 +323,26 @@ class WebAppointmentModal extends StatelessWidget {
       if (petDoc != null) {
         pet = Pet.fromMap(petDoc.data);
         pet.documentId = petDoc.$id;
-      } else {
       }
 
       // Close loading indicator
       Get.back();
 
       if (pet == null) {
-        Get.snackbar(
-          'Error',
-          'Could not load pet information. Pet ID: ${appointment.petId}',
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 3),
+        SnackbarHelper.showError(
+          context: Get.context!,
+          title: "Pet Not Found",
+          message:
+              "Could not load pet information. The pet may have been deleted.",
         );
         return;
       }
 
       if (clinicId == null || clinicId.isEmpty) {
-        Get.snackbar(
-          'Error',
-          'Clinic information not available for this appointment',
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 3),
+        SnackbarHelper.showError(
+          context: Get.context!,
+          title: "Clinic Error",
+          message: "Clinic information not available for this appointment.",
         );
         return;
       }
@@ -365,7 +358,7 @@ class WebAppointmentModal extends StatelessWidget {
         context: Get.context!,
         builder: (context) => AdminPetCardView(
           pet: pet!,
-          clinicId: clinicId!, // PASS CLINIC ID
+          clinicId: clinicId!,
         ),
       );
 
@@ -376,18 +369,15 @@ class WebAppointmentModal extends StatelessWidget {
         builder: (context) => WebAppointmentModal(appointment: appointment),
       );
     } catch (e, stackTrace) {
-
       // Close loading indicator if still open
       if (Get.isDialogOpen ?? false) {
         Get.back();
       }
 
-      Get.snackbar(
-        'Error',
-        'Failed to load pet information: ${e.toString()}',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 3),
+      SnackbarHelper.showError(
+        context: Get.context!,
+        title: "Error",
+        message: "Failed to load pet information. Please try again.",
       );
     }
   }
@@ -744,7 +734,6 @@ class WebAppointmentModal extends StatelessWidget {
     );
 
     try {
-
       // Get the medical record for this appointment
       final medicalRecord = await controller.getMedicalRecordByAppointmentId(
         appointment.documentId!,
@@ -754,18 +743,14 @@ class WebAppointmentModal extends StatelessWidget {
       Get.back();
 
       if (medicalRecord == null) {
-
-        Get.snackbar(
-          'No Medical Record',
-          'No medical record found for this appointment. This may be an older record or the service may not have created a medical record.',
-          backgroundColor: Colors.orange,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 4),
-          icon: const Icon(Icons.warning, color: Colors.white),
+        SnackbarHelper.showWarning(
+          context: Get.context!,
+          title: "No Medical Record",
+          message:
+              "No medical record found for this appointment. This may be an older record or the service may not have created a medical record.",
         );
         return;
       }
-
 
       // Get pet and owner names
       final petName = controller.getPetName(appointment.petId);
@@ -779,20 +764,16 @@ class WebAppointmentModal extends StatelessWidget {
           ownerName: ownerName,
         ),
       );
-
     } catch (e, stackTrace) {
-
       // Close loading indicator if still open
       if (Get.isDialogOpen ?? false) {
         Get.back();
       }
 
-      Get.snackbar(
-        'Error',
-        'Failed to load medical record: ${e.toString()}',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 3),
+      SnackbarHelper.showError(
+        context: Get.context!,
+        title: "Error",
+        message: "Failed to load medical record. Please try again.",
       );
     }
   }
@@ -1483,7 +1464,6 @@ class WebAppointmentModal extends StatelessWidget {
     );
 
     try {
-
       // Get user document
       final userDoc =
           await controller.authRepository.getUserById(appointment.userId);
@@ -1492,16 +1472,14 @@ class WebAppointmentModal extends StatelessWidget {
       Get.back();
 
       if (userDoc == null) {
-        Get.snackbar(
-          'Error',
-          'Could not load owner information',
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 3),
+        SnackbarHelper.showError(
+          context: Get.context!,
+          title: "Owner Not Found",
+          message:
+              "Could not load owner information. The user may have been deleted.",
         );
         return;
       }
-
 
       // Convert to User model
       final owner = User.fromMap(userDoc.data);
@@ -1525,18 +1503,15 @@ class WebAppointmentModal extends StatelessWidget {
         builder: (context) => WebAppointmentModal(appointment: appointment),
       );
     } catch (e, stackTrace) {
-
       // Close loading indicator if still open
       if (Get.isDialogOpen ?? false) {
         Get.back();
       }
 
-      Get.snackbar(
-        'Error',
-        'Failed to load owner information: ${e.toString()}',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 3),
+      SnackbarHelper.showError(
+        context: Get.context!,
+        title: "Error",
+        message: "Failed to load owner information. Please try again.",
       );
     }
   }

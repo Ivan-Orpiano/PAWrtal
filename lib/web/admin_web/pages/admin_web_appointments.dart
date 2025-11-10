@@ -1,5 +1,6 @@
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/logout_helper.dart';
+import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/appointment_view_mode.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/admin_web_appointment_controller.dart';
@@ -82,11 +83,9 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
   void _initializeControllerSync() {
     if (_isDisposed) return;
 
-
     try {
       // CRITICAL FIX: Check if controller exists AND is still valid
       if (Get.isRegistered<WebAppointmentController>()) {
-
         try {
           _controller = Get.find<WebAppointmentController>();
 
@@ -96,22 +95,18 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
             _initError = null;
             return;
           } else {
-
             // Delete the stale controller
             Get.delete<WebAppointmentController>(force: true);
             _controller = null;
           }
         } catch (e) {
-
           // Try to delete the broken controller
           try {
             Get.delete<WebAppointmentController>(force: true);
-          } catch (deleteError) {
-          }
+          } catch (deleteError) {}
           _controller = null;
         }
-      } else {
-      }
+      } else {}
 
       // Verify dependencies exist
       if (!Get.isRegistered<AuthRepository>()) {
@@ -121,7 +116,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
       if (!Get.isRegistered<UserSessionService>()) {
         throw Exception('UserSessionService not found in GetX');
       }
-
 
       // Get dependencies
       final authRepository = Get.find<AuthRepository>();
@@ -135,7 +129,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
 
       // Register with GetX IMMEDIATELY (synchronously)
       Get.put<WebAppointmentController>(_controller!, permanent: true);
-
 
       _initError = null;
 
@@ -151,9 +144,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
           }
         }
       });
-
     } catch (e, stackTrace) {
-
       _initError = e.toString();
       _controller = null;
 
@@ -186,8 +177,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
 
     try {
       _controller!.setSelectedTab(_tabValues[_tabController.index]);
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   void _onMobileTabControllerChanged() {
@@ -204,8 +194,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
 
     try {
       _controller!.setSelectedTab(_tabValues[_mobileTabController.index]);
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   @override
@@ -225,7 +214,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
 
   @override
   Widget build(BuildContext context) {
-
     // ✅ CRITICAL: If logging out, show loading screen immediately
     if (_isLoggingOut) {
       return Scaffold(
@@ -1245,6 +1233,12 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
 
   void _showCalendarPicker() async {
     if (_controller == null) return;
+
+    SnackbarHelper.showSuccess(
+      context: Get.context!,
+      title: "Success",
+      message: "Appointment accepted!",
+    );
 
     final DateTime? picked = await showDatePicker(
       context: context,

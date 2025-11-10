@@ -1,5 +1,6 @@
 import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/user_model.dart';
+import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/admin_web_appointment_controller.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/dialogs/owner_details_dialog.dart';
 import 'package:flutter/material.dart';
@@ -576,9 +577,6 @@ class _WebNonMedicalAppointmentModalState
                   });
 
                   try {
-                    // Close dialog first
-                    Navigator.of(context).pop();
-
                     // Complete the non-medical service
                     await controller.completeNonMedicalService(
                       appointment: widget.appointment,
@@ -586,16 +584,24 @@ class _WebNonMedicalAppointmentModalState
                           ? notesController.text.trim()
                           : null,
                     );
+
+                    // Close dialog after successful completion
+                    if (mounted) {
+                      Navigator.of(context).pop();
+                    }
                   } catch (e) {
                     setState(() {
                       isSubmitting = false;
                     });
-                    Get.snackbar(
-                      'Error',
-                      'Failed to complete service: $e',
-                      backgroundColor: Colors.red,
-                      colorText: Colors.white,
-                    );
+
+                    if (mounted) {
+                      SnackbarHelper.showError(
+                        context: context,
+                        title: "Completion Failed",
+                        message:
+                            "Failed to complete service. Please try again.",
+                      );
+                    }
                   }
                 },
           icon: isSubmitting
@@ -633,7 +639,6 @@ class _WebNonMedicalAppointmentModalState
     );
 
     try {
-
       // Get user document
       final userDoc = await controller.authRepository
           .getUserById(widget.appointment.userId);
@@ -642,16 +647,14 @@ class _WebNonMedicalAppointmentModalState
       Get.back();
 
       if (userDoc == null) {
-        Get.snackbar(
-          'Error',
-          'Could not load owner information',
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 3),
+        SnackbarHelper.showError(
+          context: context,
+          title: "Owner Not Found",
+          message:
+              "Could not load owner information. The user may have been deleted.",
         );
         return;
       }
-
 
       // Convert to User model
       final owner = User.fromMap(userDoc.data);
@@ -662,18 +665,15 @@ class _WebNonMedicalAppointmentModalState
         builder: (context) => OwnerDetailsDialog(owner: owner),
       );
     } catch (e, stackTrace) {
-
       // Close loading indicator if still open
       if (Get.isDialogOpen ?? false) {
         Get.back();
       }
 
-      Get.snackbar(
-        'Error',
-        'Failed to load owner information: ${e.toString()}',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 3),
+      SnackbarHelper.showError(
+        context: context,
+        title: "Error",
+        message: "Failed to load owner information. Please try again.",
       );
     }
   }
