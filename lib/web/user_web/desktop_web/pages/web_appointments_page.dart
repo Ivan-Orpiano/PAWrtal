@@ -1817,29 +1817,29 @@ class _EnhancedWebAppointmentsPageState
                       maxLength: 200,
                     ),
                     const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.info_outline,
-                              color: Colors.blue.shade700, size: 16),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'You can cancel up to 1 hour before your appointment time.',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.blue.shade700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    // Container(
+                    //   padding: const EdgeInsets.all(12),
+                    //   decoration: BoxDecoration(
+                    //     color: Colors.blue.shade50,
+                    //     borderRadius: BorderRadius.circular(8),
+                    //   ),
+                    //   child: Row(
+                    //     children: [
+                    //       Icon(Icons.info_outline,
+                    //           color: Colors.blue.shade700, size: 16),
+                    //       const SizedBox(width: 8),
+                    //       Expanded(
+                    //         child: Text(
+                    //           'You can cancel up to 1 hour before your appointment time.',
+                    //           style: TextStyle(
+                    //             fontSize: 11,
+                    //             color: Colors.blue.shade700,
+                    //           ),
+                    //         ),
+                    //       ),
+                    //     ],
+                    //   ),
+                    // ),
                     const SizedBox(height: 24),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
