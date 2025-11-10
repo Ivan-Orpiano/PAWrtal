@@ -10,6 +10,7 @@ import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/notification/services/notification_preferences_service.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
+import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:appwrite/appwrite.dart';
 import 'package:flutter/material.dart';
@@ -92,6 +93,13 @@ class WebAppointmentController extends GetxController {
 
       final user = await authRepository.getUser();
       if (user == null) {
+        if (Get.context != null) {
+          SnackbarHelper.showError(
+            context: Get.context!,
+            title: "Authentication Error",
+            message: "User session expired. Please log in again.",
+          );
+        }
         return;
       }
 
@@ -107,8 +115,8 @@ class WebAppointmentController extends GetxController {
         final clinicDoc = await authRepository.getClinicByAdminId(user.$id);
         if (clinicDoc != null) {
           clinicId = clinicDoc.$id;
-        } else {}
-      } else {}
+        }
+      }
 
       if (clinicId != null && clinicId.isNotEmpty) {
         final clinicDoc = await authRepository.getClinicById(clinicId);
@@ -125,10 +133,32 @@ class WebAppointmentController extends GetxController {
 
           // Initialize new real-time updates
           await _initializeRealTimeUpdates();
-        } else {}
-      } else {}
+        } else {
+          if (Get.context != null) {
+            SnackbarHelper.showError(
+              context: Get.context!,
+              title: "Clinic Not Found",
+              message: "Could not load clinic data. Please contact support.",
+            );
+          }
+        }
+      } else {
+        if (Get.context != null) {
+          SnackbarHelper.showWarning(
+            context: Get.context!,
+            title: "No Clinic Associated",
+            message: "Your account is not associated with a clinic.",
+          );
+        }
+      }
     } catch (e) {
-      Get.snackbar("Error", "Failed to load clinic data: $e");
+      if (Get.context != null) {
+        SnackbarHelper.showError(
+          context: Get.context!,
+          title: "Error",
+          message: "Failed to load clinic data. Please try again.",
+        );
+      }
     } finally {
       isLoading.value = false;
     }
@@ -298,7 +328,11 @@ class WebAppointmentController extends GetxController {
       // Update filtered view
       updateFilteredAppointments();
     } catch (e) {
-      Get.snackbar("Error", "Failed to load appointments: $e");
+      SnackbarHelper.showError(
+        context: Get.context!,
+        title: "Error",
+        message: "Failed to load appointments",
+      );
     }
   }
 
@@ -661,48 +695,73 @@ class WebAppointmentController extends GetxController {
     );
 
     if (!isAvailable) {
-      Get.snackbar(
-        "Time Slot Unavailable",
-        "This time slot is already booked. Please ask the client to choose a different time.",
-        backgroundColor: Colors.orange,
-        colorText: Colors.white,
-      );
+      if (Get.context != null) {
+        SnackbarHelper.showWarning(
+          context: Get.context!,
+          title: "Time Slot Unavailable",
+          message:
+              "This time slot is already booked. Please ask the client to choose a different time.",
+        );
+      }
       return;
     }
 
-    await _updateAppointmentStatus(appointment, 'accepted');
-
     try {
-      final notification = AppNotification.appointmentAccepted(
-        userId: appointment.userId,
-        appointmentId: appointment.documentId!,
-        clinicId: appointment.clinicId,
-        clinicName: clinicData.value?.clinicName ?? 'Clinic',
-        petName: getPetName(appointment.petId),
-        service: appointment.service,
-        appointmentDateTime: appointment.dateTime,
+      await _updateAppointmentStatus(appointment, 'accepted');
+
+      try {
+        final notification = AppNotification.appointmentAccepted(
+          userId: appointment.userId,
+          appointmentId: appointment.documentId!,
+          clinicId: appointment.clinicId,
+          clinicName: clinicData.value?.clinicName ?? 'Clinic',
+          petName: getPetName(appointment.petId),
+          service: appointment.service,
+          appointmentDateTime: appointment.dateTime,
+        );
+
+        await authRepository.createNotification(notification);
+      } catch (e) {
+        // Notification creation failed, but appointment was accepted
+      }
+
+      await _sendAppointmentStatusNotification(appointment, 'accepted');
+
+      await _sendAutomatedAppointmentMessage(
+        appointment: appointment,
+        messageType: 'accepted',
       );
 
-      await authRepository.createNotification(notification);
-    } catch (e) {}
-
-    await _sendAppointmentStatusNotification(appointment, 'accepted');
-
-    await _sendAutomatedAppointmentMessage(
-      appointment: appointment,
-      messageType: 'accepted',
-    );
-
-    Get.snackbar(
-      "Success",
-      "Appointment accepted! Time slot has been reserved.",
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-    );
+      if (Get.context != null) {
+        SnackbarHelper.showSuccess(
+          context: Get.context!,
+          title: "Appointment Accepted",
+          message:
+              "Appointment for ${getPetName(appointment.petId)} has been accepted successfully!",
+        );
+      }
+    } catch (e) {
+      if (Get.context != null) {
+        SnackbarHelper.showError(
+          context: Get.context!,
+          title: "Error",
+          message: "Failed to accept appointment. Please try again.",
+        );
+      }
+    }
   }
 
   Future<void> declineAppointment(Appointment appointment, String notes) async {
-    if (appointment.documentId == null) return;
+    if (appointment.documentId == null) {
+      if (Get.context != null) {
+        SnackbarHelper.showError(
+          context: Get.context!,
+          title: "Error",
+          message: "Cannot decline appointment: Missing document ID",
+        );
+      }
+      return;
+    }
 
     try {
       final updatedAppointment = appointment.copyWith(
@@ -724,7 +783,9 @@ class WebAppointmentController extends GetxController {
         );
 
         await authRepository.createNotification(notification);
-      } catch (e) {}
+      } catch (e) {
+        // Notification creation failed, but appointment was declined
+      }
 
       await _sendAppointmentStatusNotification(
         updatedAppointment,
@@ -738,50 +799,93 @@ class WebAppointmentController extends GetxController {
         declineReason: notes,
       );
 
-      Get.snackbar(
-        "Success",
-        "Appointment declined. Patient will be notified.",
-        backgroundColor: Colors.orange,
-        colorText: Colors.white,
-      );
+      if (Get.context != null) {
+        SnackbarHelper.showSuccess(
+          context: Get.context!,
+          title: "Appointment Declined",
+          message:
+              "Appointment declined successfully. Patient will be notified.",
+        );
+      }
     } catch (e) {
-      Get.snackbar("Error", "Failed to decline appointment: $e");
+      if (Get.context != null) {
+        SnackbarHelper.showError(
+          context: Get.context!,
+          title: "Error",
+          message: "Failed to decline appointment. Please try again.",
+        );
+      }
     }
   }
 
   Future<void> checkInPatient(Appointment appointment) async {
     if (!appointment.isToday) {
-      Get.snackbar("Error", "Cannot check in patient for future appointments");
+      if (Get.context != null) {
+        SnackbarHelper.showWarning(
+          context: Get.context!,
+          title: "Cannot Check In",
+          message: "Cannot check in patient for future appointments.",
+        );
+      }
       return;
     }
 
-    final updatedAppointment = appointment.copyWith(
-      status: 'in_progress',
-      checkedInAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
+    try {
+      final updatedAppointment = appointment.copyWith(
+        status: 'in_progress',
+        checkedInAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
 
-    await updateFullAppointment(updatedAppointment);
+      await updateFullAppointment(updatedAppointment);
 
-    await _sendAppointmentStatusNotification(updatedAppointment, 'in_progress');
+      await _sendAppointmentStatusNotification(
+          updatedAppointment, 'in_progress');
 
-    Get.snackbar(
-      "Success",
-      "${getPetName(appointment.petId)} has been checked in!",
-      backgroundColor: Colors.blue,
-      colorText: Colors.white,
-    );
+      if (Get.context != null) {
+        SnackbarHelper.showSuccess(
+          context: Get.context!,
+          title: "Patient Checked In",
+          message:
+              "${getPetName(appointment.petId)} has been checked in successfully!",
+        );
+      }
+    } catch (e) {
+      if (Get.context != null) {
+        SnackbarHelper.showError(
+          context: Get.context!,
+          title: "Error",
+          message: "Failed to check in patient. Please try again.",
+        );
+      }
+    }
   }
 
   Future<void> startService(Appointment appointment) async {
-    final updatedAppointment = appointment.copyWith(
-      serviceStartedAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
+    try {
+      final updatedAppointment = appointment.copyWith(
+        serviceStartedAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
 
-    await updateFullAppointment(updatedAppointment);
-    Get.snackbar(
-        "Info", "Service started for ${getPetName(appointment.petId)}");
+      await updateFullAppointment(updatedAppointment);
+
+      if (Get.context != null) {
+        SnackbarHelper.showSuccess(
+          context: Get.context!,
+          title: "Service Started",
+          message: "Service for ${getPetName(appointment.petId)} has begun.",
+        );
+      }
+    } catch (e) {
+      if (Get.context != null) {
+        SnackbarHelper.showError(
+          context: Get.context!,
+          title: "Error",
+          message: "Failed to start service. Please try again.",
+        );
+      }
+    }
   }
 
   Future<void> completeServiceWithRecord({
@@ -795,12 +899,11 @@ class WebAppointmentController extends GetxController {
     DateTime? nextAppointmentDate,
   }) async {
     try {
-      // CRITICAL: Check if we have pending vitals stored locally
+      // Check if we have pending vitals stored locally
       Map<String, dynamic>? finalVitals = vitals;
       if (pendingVitals.containsKey(appointment.documentId)) {
         finalVitals = pendingVitals[appointment.documentId];
-      } else if (vitals != null) {
-      } else {}
+      }
 
       // Step 1: Update appointment status
       final updatedAppointment = appointment.copyWith(
@@ -895,7 +998,9 @@ class WebAppointmentController extends GetxController {
         );
 
         await authRepository.createNotification(notification);
-      } catch (e) {}
+      } catch (e) {
+        // Notification creation failed
+      }
 
       // Step 4: Send status notification
       await _sendAppointmentStatusNotification(updatedAppointment, 'completed');
@@ -906,32 +1011,24 @@ class WebAppointmentController extends GetxController {
         messageType: 'completed',
       );
 
-      // Use Future.microtask to ensure we're not in the middle of a build
-      Future.microtask(() {
-        if (Get.isRegistered<WebAppointmentController>()) {
-          Get.snackbar(
-            "Success",
-            finalVitals != null
-                ? "Service completed! Medical record created with vitals for ${getPetName(appointment.petId)}"
-                : "Service completed! Medical record created for ${getPetName(appointment.petId)}",
-            backgroundColor: Colors.green,
-            colorText: Colors.white,
-            duration: const Duration(seconds: 4),
-          );
-        }
-      });
+      // Show success snackbar
+      if (Get.context != null) {
+        SnackbarHelper.showSuccess(
+          context: Get.context!,
+          title: "Service Completed",
+          message: finalVitals != null
+              ? "Medical record created with vitals for ${getPetName(appointment.petId)}!"
+              : "Medical record created for ${getPetName(appointment.petId)}!",
+        );
+      }
     } catch (e) {
-      // Use Future.microtask for error snackbar
-      Future.microtask(() {
-        if (Get.isRegistered<WebAppointmentController>()) {
-          Get.snackbar(
-            "Error",
-            "Failed to complete service: $e",
-            backgroundColor: Colors.red,
-            colorText: Colors.white,
-          );
-        }
-      });
+      if (Get.context != null) {
+        SnackbarHelper.showError(
+          context: Get.context!,
+          title: "Error",
+          message: "Failed to complete service. Please try again.",
+        );
+      }
       rethrow;
     }
   }
@@ -956,8 +1053,14 @@ class WebAppointmentController extends GetxController {
     Map<String, dynamic> vitals,
   ) async {
     try {
-      // CRITICAL FIX: Check if we're still registered and in valid state
       if (!Get.isRegistered<WebAppointmentController>()) {
+        if (Get.context != null) {
+          SnackbarHelper.showError(
+            context: Get.context!,
+            title: "Error",
+            message: "Controller not available. Please refresh the page.",
+          );
+        }
         return;
       }
 
@@ -965,36 +1068,61 @@ class WebAppointmentController extends GetxController {
       pendingVitals[appointment.documentId!] =
           Map<String, dynamic>.from(vitals);
 
-      // CRITICAL FIX: Schedule snackbar for next frame to avoid state conflicts
+      // Use postFrameCallback to avoid showing snackbar during build
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        try {
-          if (Get.isRegistered<WebAppointmentController>() &&
-              Get.context != null) {
-            Get.snackbar(
-              "Vitals Recorded",
-              "Vital signs recorded. They will be saved when you complete the service.",
-              backgroundColor: Colors.blue,
-              colorText: Colors.white,
-              duration: const Duration(seconds: 3),
-              snackPosition: SnackPosition.TOP,
-              margin: const EdgeInsets.all(16),
-            );
-          }
-        } catch (e) {}
+        if (Get.context != null) {
+          SnackbarHelper.showSuccess(
+            context: Get.context!,
+            title: "Vitals Recorded",
+            message:
+                "Vital signs saved. They will be included when you complete the service.",
+          );
+        }
       });
-    } catch (e) {}
+    } catch (e) {
+      if (Get.context != null) {
+        SnackbarHelper.showError(
+          context: Get.context!,
+          title: "Error",
+          message: "Failed to record vitals. Please try again.",
+        );
+      }
+    }
   }
 
   Future<void> markNoShow(Appointment appointment) async {
     // Check if appointment is in the future
     if (appointment.dateTime.isAfter(DateTime.now())) {
-      Get.snackbar("Error", "Cannot mark as no-show for future appointments");
+      if (Get.context != null) {
+        SnackbarHelper.showWarning(
+          context: Get.context!,
+          title: "Cannot Mark No-Show",
+          message: "Cannot mark as no-show for future appointments.",
+        );
+      }
       return;
     }
 
-    // Otherwise, mark it as no-show if the appointment is in the past
-    await _updateAppointmentStatus(appointment, 'no_show');
-    Get.snackbar("Info", "Appointment marked as No Show");
+    try {
+      await _updateAppointmentStatus(appointment, 'no_show');
+
+      if (Get.context != null) {
+        SnackbarHelper.showSuccess(
+          context: Get.context!,
+          title: "No Show Recorded",
+          message:
+              "Appointment for ${getPetName(appointment.petId)} marked as No Show.",
+        );
+      }
+    } catch (e) {
+      if (Get.context != null) {
+        SnackbarHelper.showError(
+          context: Get.context!,
+          title: "Error",
+          message: "Failed to mark as no-show. Please try again.",
+        );
+      }
+    }
   }
 
   // Check if a time slot is available
@@ -1036,7 +1164,13 @@ class WebAppointmentController extends GetxController {
 
   Future<void> updateFullAppointment(Appointment appointment) async {
     if (appointment.documentId == null) {
-      Get.snackbar("Error", "Cannot update appointment: Missing document ID");
+      if (Get.context != null) {
+        SnackbarHelper.showError(
+          context: Get.context!,
+          title: "Error",
+          message: "Cannot update appointment: Missing document ID",
+        );
+      }
       return;
     }
 
@@ -1052,14 +1186,25 @@ class WebAppointmentController extends GetxController {
         updateFilteredAppointments();
       }
     } catch (e) {
-      Get.snackbar("Error", "Failed to update appointment: $e");
+      if (Get.context != null) {
+        SnackbarHelper.showError(
+          context: Get.context!,
+          title: "Error",
+          message: "Failed to update appointment. Please try again.",
+        );
+      }
+      rethrow;
     }
   }
 
   Future<void> _updateAppointmentStatus(
       Appointment appointment, String status) async {
     if (appointment.documentId == null) {
-      Get.snackbar("Error", "Cannot update appointment: Missing document ID");
+      SnackbarHelper.showError(
+        context: Get.context!,
+        title: "Error",
+        message: "Cannot update appointment: Missing document ID",
+      );
       return;
     }
 
@@ -1078,12 +1223,34 @@ class WebAppointmentController extends GetxController {
         updateFilteredAppointments();
       }
     } catch (e) {
-      Get.snackbar("Error", "Failed to update appointment: $e");
+      SnackbarHelper.showError(
+        context: Get.context!,
+        title: "Error",
+        message: "Failed to update appointment",
+      );
     }
   }
 
   Future<void> refreshAppointments() async {
-    await fetchClinicAppointments();
+    try {
+      await fetchClinicAppointments();
+
+      if (Get.context != null) {
+        SnackbarHelper.showSuccess(
+          context: Get.context!,
+          title: "Refreshed",
+          message: "Appointments refreshed successfully!",
+        );
+      }
+    } catch (e) {
+      if (Get.context != null) {
+        SnackbarHelper.showError(
+          context: Get.context!,
+          title: "Error",
+          message: "Failed to refresh appointments. Please try again.",
+        );
+      }
+    }
   }
 
   void setSearchQuery(String query) {
@@ -1192,20 +1359,21 @@ class WebAppointmentController extends GetxController {
 
       await authRepository.createVaccination(vaccination);
 
-      Get.snackbar(
-        "Success",
-        "Vaccination completed! Records created for ${getPetName(appointment.petId)}",
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 4),
-      );
+      if (Get.context != null) {
+        SnackbarHelper.showSuccess(
+          context: Get.context!,
+          title: "Success",
+          message: "Vaccination completed! Records created",
+        );
+      }
     } catch (e) {
-      Get.snackbar(
-        "Error",
-        "Failed to complete vaccination: $e",
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      if (Get.context != null) {
+        SnackbarHelper.showError(
+          context: Get.context!,
+          title: "Error",
+          message: "Failed to complete vaccination",
+        );
+      }
       rethrow;
     }
   }
@@ -1550,8 +1718,7 @@ class WebAppointmentController extends GetxController {
     String? declineReason,
   }) async {
     try {
-
-      // STEP 1: Get user document
+      // Get user details
       final userDoc = await authRepository.getUserById(appointment.userId);
       if (userDoc == null) {
         return;
@@ -1578,6 +1745,14 @@ class WebAppointmentController extends GetxController {
         return;
       }
 
+      // NEW: Get user's notification preferences
+      final notificationPrefsService =
+          Get.find<NotificationPreferencesService>();
+      final userDocId = userDoc.data['\$id'] ?? appointment.userId;
+      final userPreferences =
+          await notificationPrefsService.getPreferencesForUser(userDocId);
+
+      // Use AppwriteProvider to send notifications
       final appwriteProvider = Get.find<AppWriteProvider>();
 
       // Prepare notification content
@@ -1607,52 +1782,43 @@ class WebAppointmentController extends GetxController {
           pushBody = 'Your appointment for $petName has been updated.';
       }
 
-      // STEP 2: Send push notification (only if enabled)
-      if (pushEnabled) {
-        try {
-          await appwriteProvider.sendPushNotification(
-            title: pushTitle,
-            body: pushBody,
-            userIds: [appointment.userId],
-            data: {
-              'type': 'appointment',
-              'status': status,
-              'appointmentId': appointment.documentId!,
-              'petName': petName,
-              'clinicName': clinicName,
-            },
-          );
-        } catch (e) {
-        }
-      } else {
-      }
+      // 1. Send push notification ONLY if user has it enabled
+      if (userPreferences.pushNotificationsEnabled) {
+        await appwriteProvider.sendPushNotification(
+          title: pushTitle,
+          body: pushBody,
+          userIds: [appointment.userId],
+          data: {
+            'type': 'appointment',
+            'status': status,
+            'appointmentId': appointment.documentId!,
+            'petName': petName,
+            'clinicName': clinicName,
+          },
+        );
+      } else {}
 
       // STEP 3: Send email (only if enabled and status is accepted/declined)
       if (status == 'accepted' || status == 'declined') {
-        if (emailEnabled) {
-          try {
-            await appwriteProvider.sendEmail(
-              to: userEmail,
-              subject: status == 'accepted'
-                  ? 'Appointment Confirmed - PAWrtal'
-                  : 'Appointment Update - PAWrtal',
-              htmlContent: appwriteProvider.buildEmailTemplate(
-                userName: userName,
-                petName: petName,
-                clinicName: clinicName,
-                service: appointment.service,
-                appointmentDateTime: appointment.dateTime,
-                status: status,
-                declineReason: declineReason,
-              ),
-              userId: appointment.userId,
-            );
-          } catch (e) {
-          }
-        } else {
-        }
+        if (userPreferences.emailNotificationsEnabled) {
+          await appwriteProvider.sendEmail(
+            to: userEmail,
+            subject: status == 'accepted'
+                ? 'Appointment Confirmed - PAWrtal'
+                : 'Appointment Update - PAWrtal',
+            htmlContent: appwriteProvider.buildEmailTemplate(
+              userName: userName,
+              petName: petName,
+              clinicName: clinicName,
+              service: appointment.service,
+              appointmentDateTime: appointment.dateTime,
+              status: status,
+              declineReason: declineReason,
+            ),
+            userId: appointment.userId,
+          );
+        } else {}
       }
-
     } catch (e) {
       // Don't fail the appointment operation if notification fails
     }
@@ -1663,12 +1829,10 @@ class WebAppointmentController extends GetxController {
     required Appointment appointment,
     required Map<String, dynamic> vaccinationData,
     String? vetNotes,
-    Map<String, dynamic>? vitals, // ADDED: Vitals parameter
+    Map<String, dynamic>? vitals,
   }) async {
     try {
-      if (vitals != null) {}
-
-      // CRITICAL: Extract individual vital values
+      // Extract individual vital values
       double? temperature;
       double? weight;
       String? bloodPressure;
@@ -1682,8 +1846,7 @@ class WebAppointmentController extends GetxController {
             temperature = tempValue is double
                 ? tempValue
                 : double.parse(tempValue.toString());
-          } catch (e) {
-          }
+          } catch (e) {}
         }
 
         if (vitals.containsKey('weight') && vitals['weight'] != null) {
@@ -1709,7 +1872,7 @@ class WebAppointmentController extends GetxController {
         }
       }
 
-      // Step 1: Update appointment status - ONLY workflow fields
+      // Step 1: Update appointment status
       final updatedAppointment = appointment.copyWith(
         status: 'completed',
         serviceCompletedAt: DateTime.now(),
@@ -1734,7 +1897,6 @@ class WebAppointmentController extends GetxController {
               ? 'Batch: ${vaccinationData['batchNumber']}'
               : null,
           notes: vetNotes ?? 'Vaccination completed successfully',
-          // CRITICAL: Include individual vital fields
           temperature: temperature,
           weight: weight,
           bloodPressure: bloodPressure,
@@ -1744,7 +1906,7 @@ class WebAppointmentController extends GetxController {
 
         await authRepository.createMedicalRecord(medicalRecord);
 
-        // CRITICAL: Clear pending vitals after successful save
+        // Clear pending vitals after successful save
         if (pendingVitals.containsKey(appointment.documentId)) {
           pendingVitals.remove(appointment.documentId);
         }
@@ -1788,22 +1950,23 @@ class WebAppointmentController extends GetxController {
         messageType: 'completed',
       );
 
-      Get.snackbar(
-        "Success",
-        vitals != null
-            ? "Vaccination completed! Records created with vitals for ${getPetName(appointment.petId)}"
-            : "Vaccination completed! Records created for ${getPetName(appointment.petId)}",
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 4),
-      );
+      if (Get.context != null) {
+        SnackbarHelper.showSuccess(
+          context: Get.context!,
+          title: "Vaccination Completed",
+          message: vitals != null
+              ? "Vaccination and medical records created with vitals for ${getPetName(appointment.petId)}!"
+              : "Vaccination and medical records created for ${getPetName(appointment.petId)}!",
+        );
+      }
     } catch (e) {
-      Get.snackbar(
-        "Error",
-        "Failed to complete vaccination: $e",
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      if (Get.context != null) {
+        SnackbarHelper.showError(
+          context: Get.context!,
+          title: "Error",
+          message: "Failed to complete vaccination. Please try again.",
+        );
+      }
       rethrow;
     }
   }
@@ -2229,20 +2392,22 @@ For more details, please check your appointments.
         messageType: 'completed',
       );
 
-      Get.snackbar(
-        "Success",
-        "Service completed for ${getPetName(appointment.petId)}!",
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 3),
-      );
+      if (Get.context != null) {
+        SnackbarHelper.showSuccess(
+          context: Get.context!,
+          title: "Service Completed",
+          message:
+              "Service completed successfully for ${getPetName(appointment.petId)}!",
+        );
+      }
     } catch (e) {
-      Get.snackbar(
-        "Error",
-        "Failed to complete service: $e",
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      if (Get.context != null) {
+        SnackbarHelper.showError(
+          context: Get.context!,
+          title: "Error",
+          message: "Failed to complete service. Please try again.",
+        );
+      }
       rethrow;
     }
   }

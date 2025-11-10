@@ -1,3 +1,4 @@
+import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -143,12 +144,10 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
       if (result != null) {
         final bytes = await result.readAsBytes();
         if (bytes.length > 5 * 1024 * 1024) {
-          Get.snackbar(
-            'Error',
-            'Image size must be less than 5MB',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.red,
-            colorText: Colors.white,
+          SnackbarHelper.showError(
+            context: context,
+            title: "Image Too Large",
+            message: "Image size must be less than 5MB",
           );
           return;
         }
@@ -159,12 +158,10 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
         });
       }
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to pick image: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
+      SnackbarHelper.showError(
+        context: context,
+        title: "Error",
+        message: "Failed to pick image",
       );
     }
   }
@@ -293,16 +290,13 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
               final oldFileId =
                   widget.currentImageUrl!.split('/').last.split('?').first;
               await authRepo.deleteImage(oldFileId);
-            } catch (e) {
-            }
+            } catch (e) {}
           }
         } catch (e) {
-          Get.snackbar(
-            'Warning',
-            'Failed to upload new image, other changes will be saved',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: vetOrange,
-            colorText: Colors.white,
+          SnackbarHelper.showWarning(
+            context: context,
+            title: "Warning",
+            message: "Failed to upload new image, other changes will be saved",
           );
         }
       }
@@ -345,23 +339,16 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
 
       Navigator.of(context).pop();
 
-      Get.snackbar(
-        'Success',
-        '${widget.staffName}\'s details updated successfully',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: vetGreen,
-        colorText: Colors.white,
-        icon: const Icon(Icons.check_circle, color: Colors.white),
-        duration: const Duration(seconds: 2),
+      SnackbarHelper.showSuccess(
+        context: context,
+        title: "Success",
+        message: "${widget.staffName}'s details updated successfully",
       );
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to update staff details: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 3),
+      SnackbarHelper.showError(
+        context: context,
+        title: "Error",
+        message: "Failed to update staff details",
       );
     }
   }
@@ -371,14 +358,10 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
       widget.onRemove();
       Navigator.of(context).pop();
 
-      Get.snackbar(
-        'Success',
-        '${widget.staffName} has been removed',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: vetOrange,
-        colorText: Colors.white,
-        icon: const Icon(Icons.info_outline, color: Colors.white),
-        duration: const Duration(seconds: 2),
+      SnackbarHelper.showSuccess(
+        context: context,
+        title: "Success",
+        message: "${widget.staffName} has been removed",
       );
     } else {
       setState(() {

@@ -1,4 +1,5 @@
 import 'package:capstone_app/data/models/appointment_model.dart';
+import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/admin_web_appointment_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -701,7 +702,7 @@ class _VaccinationCompletionDialogState
     }
   }
 
-  void _submitVaccination() {
+  void _submitVaccination() async {
     if (_formKey.currentState!.validate()) {
       final controller = Get.find<WebAppointmentController>();
       final vetName = controller.getVeterinarianName();
@@ -726,8 +727,6 @@ class _VaccinationCompletionDialogState
         if (_hrController.text.isNotEmpty) {
           vitalsData['heartRate'] = int.parse(_hrController.text);
         }
-
-      } else {
       }
 
       final vaccinationData = {
@@ -747,19 +746,30 @@ class _VaccinationCompletionDialogState
         'veterinarianName': vetName,
       };
 
-
       // Close dialog BEFORE starting the async operation
       if (mounted) Navigator.pop(context);
 
+      try {
+        // Call the updated method with vitals
+        await controller.completeVaccinationServiceWithVitals(
+          appointment: widget.appointment,
+          vaccinationData: vaccinationData,
+          vetNotes: _vetNotesController.text.trim().isNotEmpty
+              ? _vetNotesController.text.trim()
+              : null,
+          vitals: vitalsData,
+        );
 
-      // Call the updated method with vitals
-      controller.completeVaccinationServiceWithVitals(
-        appointment: widget.appointment,
-        vaccinationData: vaccinationData,
-        vetNotes: _vetNotesController.text.trim().isNotEmpty
-            ? _vetNotesController.text.trim()
-            : null,
-        vitals: vitalsData,
+        // Success snackbar is already shown in the controller method
+      } catch (e) {
+        // Error snackbar is already shown in the controller method
+      }
+    } else {
+      // Show validation error
+      SnackbarHelper.showWarning(
+        context: context,
+        title: "Validation Error",
+        message: "Please fill in all required fields correctly.",
       );
     }
   }
