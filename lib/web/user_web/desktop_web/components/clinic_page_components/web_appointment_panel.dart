@@ -1,6 +1,7 @@
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -29,9 +30,13 @@ class _EnhancedWebAppointmentPanelState
     extends State<EnhancedWebAppointmentPanel> {
   late WebAppointmentController controller;
 
+  String? _clinicProfilePictureUrl;
+  bool _isLoadingClinicImage = true;
+
   @override
   void initState() {
     super.initState();
+    _fetchClinicImage(); // ADD THIS LINE
     if (!Get.isRegistered<WebAppointmentController>(
         tag: widget.clinic.documentId)) {
       controller = Get.put(
@@ -46,6 +51,11 @@ class _EnhancedWebAppointmentPanelState
       controller =
           Get.find<WebAppointmentController>(tag: widget.clinic.documentId);
     }
+
+    // Auto-select today's date after the controller is ready
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _autoSelectTodayIfNeeded();
+    });
   }
 
   @override
@@ -526,7 +536,7 @@ class _EnhancedWebAppointmentPanelState
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: isEnabled ? controller.bookAppointment : null,
+              onPressed: isEnabled ? _showBookingConfirmation : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor:
                     isEnabled ? const Color(0xFF5173B8) : Colors.grey[300],
@@ -598,6 +608,763 @@ class _EnhancedWebAppointmentPanelState
           borderRadius: BorderRadius.circular(8),
         ),
       ),
+    );
+  }
+
+  void _showBookingConfirmation() {
+    final selectedDate = controller.selectedDateTime.value;
+    final selectedTime = controller.selectedTime.value;
+    final selectedService = controller.selectedService.value;
+    final selectedPet = controller.selectedPet.value;
+
+    if (selectedDate == null ||
+        selectedTime == null ||
+        selectedService == null ||
+        selectedPet == null) {
+      return;
+    }
+
+    // Format date
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    final formattedDate =
+        '${months[selectedDate.month - 1]} ${selectedDate.day}, ${selectedDate.year}';
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            width: 480,
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header with gradient background
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFF5173B8),
+                        const Color(0xFF5173B8).withOpacity(0.8),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.calendar_month,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Confirm Appointment',
+                              style: GoogleFonts.inter(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Review your booking details',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                color: Colors.white.withOpacity(0.9),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Content
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      // Clinic Section with Image
+                      _buildClinicSection(),
+
+                      const SizedBox(height: 20),
+
+                      // Divider
+                      Divider(color: Colors.grey[300], height: 1),
+
+                      const SizedBox(height: 20),
+
+                      // Pet Section with Image
+                      _buildDisplayPetSection(selectedPet),
+
+                      const SizedBox(height: 20),
+
+                      // Service, Date, and Time in Cards
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildInfoCard(
+                              icon: Icons.medical_services,
+                              iconColor: const Color(0xFF5173B8),
+                              label: 'Service',
+                              value: selectedService,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildInfoCard(
+                              icon: Icons.calendar_today,
+                              iconColor: Colors.orange,
+                              label: 'Date',
+                              value: formattedDate,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildInfoCard(
+                              icon: Icons.access_time,
+                              iconColor: Colors.green,
+                              label: 'Time',
+                              value: selectedTime,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Action Buttons
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => _showCancelConfirmation(context),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.grey[700],
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(color: Colors.grey[300]!),
+                            ),
+                          ),
+                          child: Text(
+                            'Cancel',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            controller.bookAppointment();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF5173B8),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 2,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.check_circle, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Confirm Booking',
+                                style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showCancelConfirmation(BuildContext parentContext) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          contentPadding: EdgeInsets.zero,
+          content: Container(
+            width: 360,
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.warning_amber_rounded,
+                    color: Colors.orange[700],
+                    size: 48,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Cancel Booking?',
+                  style: GoogleFonts.inter(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[900],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Are you sure you want to cancel this appointment booking? This action cannot be undone.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.grey[700],
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            side: BorderSide(color: Colors.grey[300]!),
+                          ),
+                        ),
+                        child: Text(
+                          'Go Back',
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          Navigator.of(parentContext).pop();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red[600],
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Yes, Cancel',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildClinicSection() {
+    print('DEBUG - [WEB] Building clinic section');
+    print('DEBUG - [WEB] Clinic ID: ${widget.clinic.documentId}');
+    print('DEBUG - [WEB] Image URL: $_clinicProfilePictureUrl');
+    print('DEBUG - [WEB] Loading: $_isLoadingClinicImage');
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Row(
+        children: [
+          // Clinic image with proper error handling
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: _buildClinicImage(),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Veterinary Clinic',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  widget.clinic.clinicName,
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    color: Colors.grey[900],
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDisplayPetSection(Pet pet) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blue[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue[100]!),
+      ),
+      child: Row(
+        children: [
+          // Pet image
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.blue[200]!, width: 2),
+              image: pet.image != null && pet.image!.isNotEmpty
+                  ? DecorationImage(
+                      image: NetworkImage(pet.image!),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
+            ),
+            child: pet.image == null || pet.image!.isEmpty
+                ? Icon(Icons.pets, color: Colors.blue[300], size: 28)
+                : null,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Your Pet',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Colors.blue[700],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  pet.name,
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    color: Colors.grey[900],
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${pet.type} • ${pet.breed}',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoCard({
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              size: 20,
+              color: iconColor,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: Colors.grey[900],
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _autoSelectTodayIfNeeded() {
+    // Only auto-select if no date is currently selected
+    if (controller.selectedDateTime.value == null) {
+      final today = DateTime.now();
+
+      // Check if today is selectable (not closed, within business hours, etc.)
+      if (controller.isDateSelectable(today)) {
+        controller.onDateSelected(today);
+      }
+    }
+  }
+
+  Future<void> _fetchClinicImage() async {
+    if (!mounted) return;
+
+    try {
+      setState(() => _isLoadingClinicImage = true);
+
+      print('DEBUG - [WEB] ========================================');
+      print('DEBUG - [WEB] Starting image fetch');
+      print('DEBUG - [WEB] Clinic ID: ${widget.clinic.documentId}');
+
+      if (widget.clinic.documentId == null ||
+          widget.clinic.documentId!.isEmpty) {
+        print('DEBUG - [WEB] ❌ No clinic document ID provided');
+        if (mounted) setState(() => _isLoadingClinicImage = false);
+        return;
+      }
+
+      final authRepo = Get.find<AuthRepository>();
+      final clinicId = widget.clinic.documentId!;
+
+      // STEP 1: Get ClinicSettings
+      print('DEBUG - [WEB] Fetching ClinicSettings...');
+      final clinicSettings =
+          await authRepo.getClinicSettingsByClinicId(clinicId);
+
+      if (clinicSettings != null) {
+        print('DEBUG - [WEB] ✅ ClinicSettings found');
+        print(
+            'DEBUG - [WEB] dashboardPic RAW: "${clinicSettings.dashboardPic}"');
+        print(
+            'DEBUG - [WEB] dashboardPic length: ${clinicSettings.dashboardPic.length}');
+        print(
+            'DEBUG - [WEB] dashboardPic isEmpty: ${clinicSettings.dashboardPic.isEmpty}');
+      } else {
+        print('DEBUG - [WEB] ❌ ClinicSettings NOT found');
+      }
+
+      // STEP 2: Get Clinic document
+      print('DEBUG - [WEB] Fetching Clinic document...');
+      final clinicDoc = await authRepo.getClinicById(clinicId);
+
+      if (clinicDoc != null) {
+        print('DEBUG - [WEB] ✅ Clinic document found');
+        print(
+            'DEBUG - [WEB] All keys in clinic document: ${clinicDoc.data.keys.toList()}');
+        print(
+            'DEBUG - [WEB] profilePictureId: "${clinicDoc.data['profilePictureId']}"');
+        print('DEBUG - [WEB] image: "${clinicDoc.data['image']}"');
+        print(
+            'DEBUG - [WEB] dashboardPic in clinic doc: "${clinicDoc.data['dashboardPic']}"');
+      } else {
+        print('DEBUG - [WEB] ❌ Clinic document NOT found');
+      }
+
+      if (!mounted) return;
+
+      String? imageUrl;
+      String? fileId;
+
+      // PRIORITY 1: dashboardPic from ClinicSettings
+      if (clinicSettings != null && clinicSettings.dashboardPic.isNotEmpty) {
+        final dashboardPic = clinicSettings.dashboardPic.trim();
+        print('DEBUG - [WEB] 📸 Trying dashboardPic: "$dashboardPic"');
+
+        // Extract file ID
+        if (dashboardPic.contains('/files/')) {
+          final parts = dashboardPic.split('/files/');
+          fileId = parts.last.split('/').first.split('?').first;
+          print('DEBUG - [WEB] Extracted file ID from URL: "$fileId"');
+        } else {
+          fileId = dashboardPic;
+          print('DEBUG - [WEB] Using dashboardPic as file ID: "$fileId"');
+        }
+
+        imageUrl =
+            'https://cloud.appwrite.io/v1/storage/buckets/${AppwriteConstants.imageBucketID}/files/$fileId/view?project=${AppwriteConstants.projectID}';
+        print('DEBUG - [WEB] ✅ Priority 1 - Constructed URL from dashboardPic');
+        print('DEBUG - [WEB] File ID: $fileId');
+        print('DEBUG - [WEB] URL: $imageUrl');
+      }
+
+      // PRIORITY 2: profilePictureId from Clinic
+      if ((imageUrl == null || imageUrl.isEmpty) && clinicDoc != null) {
+        final profilePictureId = clinicDoc.data['profilePictureId'] as String?;
+        if (profilePictureId != null && profilePictureId.trim().isNotEmpty) {
+          print(
+              'DEBUG - [WEB] 📸 Trying profilePictureId: "$profilePictureId"');
+
+          String cleanId = profilePictureId.trim();
+          if (cleanId.contains('/files/')) {
+            final parts = cleanId.split('/files/');
+            fileId = parts.last.split('/').first.split('?').first;
+            print('DEBUG - [WEB] Extracted file ID from URL: "$fileId"');
+          } else {
+            fileId = cleanId;
+            print('DEBUG - [WEB] Using profilePictureId as file ID: "$fileId"');
+          }
+
+          imageUrl =
+              'https://cloud.appwrite.io/v1/storage/buckets/${AppwriteConstants.imageBucketID}/files/$fileId/view?project=${AppwriteConstants.projectID}';
+          print(
+              'DEBUG - [WEB] ✅ Priority 2 - Constructed URL from profilePictureId');
+          print('DEBUG - [WEB] File ID: $fileId');
+          print('DEBUG - [WEB] URL: $imageUrl');
+        }
+      }
+
+      // PRIORITY 3: image field from Clinic
+      if ((imageUrl == null || imageUrl.isEmpty) && clinicDoc != null) {
+        final image = clinicDoc.data['image'] as String?;
+        if (image != null && image.trim().isNotEmpty) {
+          print('DEBUG - [WEB] 📸 Trying image field: "$image"');
+
+          String cleanId = image.trim();
+          if (cleanId.contains('/files/')) {
+            final parts = cleanId.split('/files/');
+            fileId = parts.last.split('/').first.split('?').first;
+            print('DEBUG - [WEB] Extracted file ID from URL: "$fileId"');
+          } else {
+            fileId = cleanId;
+            print('DEBUG - [WEB] Using image as file ID: "$fileId"');
+          }
+
+          imageUrl =
+              'https://cloud.appwrite.io/v1/storage/buckets/${AppwriteConstants.imageBucketID}/files/$fileId/view?project=${AppwriteConstants.projectID}';
+          print(
+              'DEBUG - [WEB] ✅ Priority 3 - Constructed URL from image field');
+          print('DEBUG - [WEB] File ID: $fileId');
+          print('DEBUG - [WEB] URL: $imageUrl');
+        }
+      }
+
+      // FINAL RESULT
+      if (imageUrl == null || imageUrl.isEmpty) {
+        print('DEBUG - [WEB] ❌ No image found in any field');
+      } else {
+        print('DEBUG - [WEB] ✅ Final image URL: $imageUrl');
+        print('DEBUG - [WEB] Final file ID: $fileId');
+      }
+
+      print('DEBUG - [WEB] ========================================');
+
+      if (mounted) {
+        setState(() {
+          _clinicProfilePictureUrl = imageUrl;
+          _isLoadingClinicImage = false;
+        });
+      }
+    } catch (e, stackTrace) {
+      print('DEBUG - [WEB] ❌ ERROR: $e');
+      print('DEBUG - [WEB] Stack trace: $stackTrace');
+      if (mounted) setState(() => _isLoadingClinicImage = false);
+    }
+  }
+
+  Widget _buildClinicImage() {
+    if (_isLoadingClinicImage) {
+      return Center(
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Colors.grey[400],
+          ),
+        ),
+      );
+    }
+
+    if (_clinicProfilePictureUrl != null &&
+        _clinicProfilePictureUrl!.isNotEmpty) {
+      return Image.network(
+        _clinicProfilePictureUrl!,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          print('DEBUG - [WEB] Image load error: $error');
+          return _buildDefaultClinicIcon();
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) {
+            print('DEBUG - [WEB] Image loaded successfully');
+            return child;
+          }
+          return Center(
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded /
+                        loadingProgress.expectedTotalBytes!
+                    : null,
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+    return _buildDefaultClinicIcon();
+  }
+
+  Widget _buildDefaultClinicIcon() {
+    return Icon(
+      Icons.local_hospital,
+      color: Colors.grey[400],
+      size: 28,
     );
   }
 }

@@ -64,8 +64,7 @@ class WebAppointmentController extends GetxController {
           _fetchOccupiedSlots();
         }
       });
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   Future<void> _fetchOccupiedSlots() async {
@@ -78,11 +77,9 @@ class WebAppointmentController extends GetxController {
       final slots = await authRepository.getOccupiedTimeSlots(
           clinicId, selectedDateTime.value!);
 
-
       occupiedTimeSlots.value = slots;
       _updateAvailableTimeSlots();
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   Future<void> _loadClinicSettings() async {
@@ -95,8 +92,7 @@ class WebAppointmentController extends GetxController {
       if (settings != null) {
         closedDates.value = settings.closedDates;
       }
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   Future<void> _loadUserPets() async {
@@ -169,7 +165,7 @@ class WebAppointmentController extends GetxController {
 
   String _formatDateToString(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-  } 
+  }
 
   String _getDayName(int weekday) {
     switch (weekday) {
@@ -366,7 +362,6 @@ class WebAppointmentController extends GetxController {
     try {
       isBooking.value = true;
 
-
       // ✅ FIXED: Parse time correctly handling both 12-hour and 24-hour formats
       final timeString = selectedTime.value!;
       int hour;
@@ -387,16 +382,13 @@ class WebAppointmentController extends GetxController {
           } else if (period == 'AM' && hour == 12) {
             hour = 0;
           }
-
         } else {
           // 24-hour format (e.g., "14:30")
           final timeParts = timeString.split(':');
           hour = int.parse(timeParts[0]);
           minute = int.parse(timeParts[1]);
-
         }
       } catch (e) {
-
         _showCompactNotification(
           "Invalid time format. Please try again.",
           bgColor: Colors.red[600]!,
@@ -415,15 +407,12 @@ class WebAppointmentController extends GetxController {
         minute,
       );
 
-
       // CRITICAL: Check if service is medical from clinic settings
       bool isMedicalService = false;
       if (clinicSettings.value != null && selectedService.value != null) {
         isMedicalService =
             clinicSettings.value!.isServiceMedical(selectedService.value!);
-      } else {
-      }
-
+      } else {}
 
       final appointment = Appointment(
         userId: userId,
@@ -437,9 +426,7 @@ class WebAppointmentController extends GetxController {
         isMedicalService: isMedicalService,
       );
 
-
       await authRepository.createAppointment(appointment);
-
 
       // Create notification for admin
       try {
@@ -462,8 +449,7 @@ class WebAppointmentController extends GetxController {
             await authRepository.createNotification(notification);
           }
         }
-      } catch (e) {
-      }
+      } catch (e) {}
 
       await _notifyAdminOfNewAppointment(appointment);
 
@@ -484,7 +470,6 @@ class WebAppointmentController extends GetxController {
       selectedPet.value = null;
       availableTimes.clear();
     } catch (e) {
-
       _showCompactNotification(
         "Failed to book appointment: $e",
         bgColor: Colors.red[600]!,
@@ -498,7 +483,6 @@ class WebAppointmentController extends GetxController {
 
   Future<void> _notifyAdminOfNewAppointment(Appointment appointment) async {
     try {
-
       // Get clinic admin ID
       final clinicDoc =
           await authRepository.getClinicById(clinic.documentId ?? '');
@@ -526,7 +510,6 @@ class WebAppointmentController extends GetxController {
         appointmentDateTime: appointment.dateTime,
         appointmentId: appointment.documentId ?? '',
       );
-
     } catch (e) {
       // Don't fail booking if notification fails
     }
@@ -566,5 +549,49 @@ class WebAppointmentController extends GetxController {
       dismissDirection: DismissDirection.horizontal,
       maxWidth: 300,
     );
+  }
+
+  Future<String?> fetchClinicImage(String clinicId) async {
+    if (clinicId.isEmpty) {
+      print('DEBUG - [CONTROLLER] Empty clinic ID');
+      return null;
+    }
+
+    try {
+      print('DEBUG - [CONTROLLER] Fetching image for clinic: $clinicId');
+
+      final clinicDoc = await authRepository.getClinicById(clinicId);
+
+      if (clinicDoc == null) {
+        print('DEBUG - [CONTROLLER] Clinic document not found');
+        return null;
+      }
+
+      final clinicData = clinicDoc.data;
+      print('DEBUG - [CONTROLLER] Clinic data fetched');
+
+      // Priority 1: dashboardPic
+      if (clinicData['dashboardPic'] != null &&
+          clinicData['dashboardPic'].toString().trim().isNotEmpty) {
+        final imageUrl = clinicData['dashboardPic'].toString();
+        print('DEBUG - [CONTROLLER] Using dashboardPic: $imageUrl');
+        return imageUrl;
+      }
+
+      // Priority 2: image
+      if (clinicData['image'] != null &&
+          clinicData['image'].toString().trim().isNotEmpty) {
+        final imageUrl = clinicData['image'].toString();
+        print('DEBUG - [CONTROLLER] Using image: $imageUrl');
+        return imageUrl;
+      }
+
+      print('DEBUG - [CONTROLLER] No image found');
+      return null;
+    } catch (e, stackTrace) {
+      print('DEBUG - [CONTROLLER] Error fetching clinic image: $e');
+      print('DEBUG - [CONTROLLER] Stack trace: $stackTrace');
+      return null;
+    }
   }
 }
