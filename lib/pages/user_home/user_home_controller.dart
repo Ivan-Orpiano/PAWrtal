@@ -19,20 +19,25 @@ class UserHomeController extends GetxController {
     try {
       // Use the centralized logout helper
       await LogoutHelper.logout();
+      print('✅ UserHomeController.logout() completed');
     } catch (e) {
-      
+      print('>>> LOGOUT ERROR in UserHomeController: $e');
+
       // Fallback: Force local logout
       try {
-        FullScreenDialogLoader.cancelDialog();
+        if (Get.isDialogOpen ?? false) {
+          Get.back();
+        }
+
         await _getStorage.erase();
         Get.offAllNamed(Routes.login);
-        
+
         SnackbarHelper.showError(
-          context: Get.overlayContext,
-          title: "Logged Out",
-          message: "You have been signed out locally"
-        );
+            context: Get.overlayContext,
+            title: "Logged Out",
+            message: "You have been signed out locally");
       } catch (fallbackError) {
+        print('>>> Fallback logout error: $fallbackError');
       }
     }
   }
