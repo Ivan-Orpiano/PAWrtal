@@ -33,7 +33,7 @@ class NotificationService {
   }
 
   /// Get current FCM token
-  
+
   String? get fcmToken => _currentFCMToken;
 
   /// Check if notifications are initialized
@@ -41,25 +41,23 @@ class NotificationService {
 
   Future<void> initializeNotifications() async {
     try {
-
       // Only initialize FCM on mobile platforms
       if (!kIsWeb) {
         await _initializeFCM();
-      } else {
-      }
+      } else {}
 
       // Initialize local notifications (works on both mobile and web)
       await _initializeLocalNotifications();
 
       _isInitialized = true;
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   Future<void> _initializeFCM() async {
     try {
       // Set background message handler
-      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+      FirebaseMessaging.onBackgroundMessage(
+          _firebaseMessagingBackgroundHandler);
 
       // Request permissions (iOS)
       final settings = await _firebaseMessaging.requestPermission(
@@ -68,7 +66,6 @@ class NotificationService {
         sound: true,
         provisional: false,
       );
-
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized ||
           settings.authorizationStatus == AuthorizationStatus.provisional) {
@@ -89,14 +86,13 @@ class NotificationService {
 
         // Set up message handlers
         _setupMessageHandlers();
-      } else {
-      }
-    } catch (e) {
-    }
+      } else {}
+    } catch (e) {}
   }
 
   Future<void> _initializeLocalNotifications() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(
       requestSoundPermission: true,
       requestBadgePermission: true,
@@ -110,7 +106,6 @@ class NotificationService {
       ),
       onDidReceiveNotificationResponse: _handleNotificationTap,
     );
-
   }
 
   void _setupMessageHandlers() {
@@ -118,7 +113,8 @@ class NotificationService {
     FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
 
     // Handle notification taps when app is in background
-    FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationTapFromBackground);
+    FirebaseMessaging.onMessageOpenedApp
+        .listen(_handleNotificationTapFromBackground);
 
     // Check for initial notification (app opened from terminated state)
     _checkInitialMessage();
@@ -132,7 +128,6 @@ class NotificationService {
   }
 
   void _handleNotificationTap(NotificationResponse response) {
-    
     if (response.payload != null) {
       // Parse payload and navigate
       try {
@@ -143,8 +138,7 @@ class NotificationService {
           final id = parts[1];
           _navigateToScreen(type, id);
         }
-      } catch (e) {
-      }
+      } catch (e) {}
     }
   }
 
@@ -153,7 +147,6 @@ class NotificationService {
   }
 
   Future<void> _handleForegroundMessage(RemoteMessage message) async {
-
     // Show local notification when app is in foreground
     await _showLocalNotification(
       title: message.notification?.title ?? 'PAWrtal',
@@ -215,13 +208,11 @@ class NotificationService {
       ),
       payload: payload,
     );
-
   }
 
   void _handleNotificationData(Map<String, dynamic> data) {
-    
     final type = data['type'];
-    
+
     if (type == 'appointment' || type == 'new_appointment') {
       final appointmentId = data['appointmentId'];
       if (appointmentId != null) {
@@ -236,7 +227,6 @@ class NotificationService {
   }
 
   void _navigateToScreen(String type, String id) {
-    
     // Use GetX navigation
     switch (type) {
       case 'appointment':
@@ -264,8 +254,7 @@ class NotificationService {
         badge: true,
         sound: true,
       );
-    
-      
+
       return settings.authorizationStatus == AuthorizationStatus.authorized ||
           settings.authorizationStatus == AuthorizationStatus.provisional;
     } catch (e) {
@@ -293,12 +282,26 @@ class NotificationService {
   /// Clear notification token (call on logout)
   Future<void> clearToken() async {
     try {
+      print('🔔 Clearing FCM token...');
+
       if (!kIsWeb) {
+        // Delete the token from Firebase
         await _firebaseMessaging.deleteToken();
+        print('✅ FCM token deleted from Firebase');
       }
+
+      // Clear local storage
       _currentFCMToken = null;
       _storage.remove('fcm_token');
+      _storage.remove('push_target_id'); // Also remove push target ID
+
+      print('✅ Local FCM data cleared');
     } catch (e) {
+      print('⚠️ Error clearing FCM token: $e');
+      // Still clear local storage even if deleteToken fails
+      _currentFCMToken = null;
+      _storage.remove('fcm_token');
+      _storage.remove('push_target_id');
     }
   }
 

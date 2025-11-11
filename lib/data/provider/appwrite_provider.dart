@@ -72,8 +72,35 @@ class AppWriteProvider {
       final email = map["email"];
       final password = map["password"];
 
+      print('🔐 Starting login process for: $email');
 
-      // Step 1: Create session first
+      // CRITICAL FIX: Check for existing session and clear it first
+      try {
+        final existingUser = await account!.get();
+        print('⚠️ Found existing session for user: ${existingUser.$id}');
+
+        // Delete the existing session
+        try {
+          await account!.deleteSession(sessionId: 'current');
+          print('✅ Cleared existing session');
+        } catch (e) {
+          print('⚠️ Could not clear session, trying to delete all');
+          try {
+            await account!.deleteSessions();
+            print('✅ Cleared all sessions');
+          } catch (e2) {
+            print('⚠️ Could not clear sessions: $e2');
+          }
+        }
+
+        // Wait a bit for session deletion to propagate
+        await Future.delayed(const Duration(milliseconds: 500));
+      } catch (e) {
+        // No existing session, this is fine
+        print('✅ No existing session found (this is normal)');
+      }
+
+      // Step 1: Create NEW session
       final session = await account!.createEmailPasswordSession(
         email: email,
         password: password,
@@ -81,12 +108,12 @@ class AppWriteProvider {
 
       final user = await account!.get();
 
+      print('✅ New session created for: ${user.$id}');
 
       // Step 2: CRITICAL - Check if ADMIN first (highest priority)
       final clinicDoc = await getClinicByAdminId(user.$id);
 
       if (clinicDoc != null) {
-
         // Store admin data in GetStorage
         _storage.write('userId', user.$id);
         _storage.write('email', user.email);
@@ -112,7 +139,6 @@ class AppWriteProvider {
           _storage.write('userProfilePictureId', '');
         }
 
-
         return {
           'success': true,
           'session': session,
@@ -127,7 +153,6 @@ class AppWriteProvider {
       final staffCheck = await checkIfStaffAccount(email);
 
       if (staffCheck['isStaff'] == true) {
-
         if (staffCheck['isActive'] != true) {
           return {
             'success': false,
@@ -141,7 +166,6 @@ class AppWriteProvider {
         final clinicId = staffCheck['clinicId'] ?? '';
         final authorities = staffCheck['authorities'] ?? [];
 
-
         // Store staff data in GetStorage
         _storage.write('userId', user.$id);
         _storage.write('email', user.email);
@@ -150,7 +174,6 @@ class AppWriteProvider {
         _storage.write('clinicId', clinicId);
         _storage.write('staffId', staffDoc.$id);
         _storage.write('authorities', authorities);
-
 
         return {
           'success': true,
@@ -167,35 +190,34 @@ class AppWriteProvider {
       }
 
       // Step 4: Regular user/customer
-        String? role = user.prefs.data["role"];
-        String? phone; // ADD THIS
+      String? role = user.prefs.data["role"];
+      String? phone; // ADD THIS
 
-        if (role == null || role.isEmpty) {
-          try {
-            final userDoc = await getUserById(user.$id);
-            if (userDoc != null) {
-              role = userDoc.data['role'] ?? 'customer';
-              phone = userDoc.data['phone'] as String?; // ADD THIS
-              // ADD THIS
-            } else {
-              role = 'customer';
-            }
-          } catch (e) {
+      if (role == null || role.isEmpty) {
+        try {
+          final userDoc = await getUserById(user.$id);
+          if (userDoc != null) {
+            role = userDoc.data['role'] ?? 'customer';
+            phone = userDoc.data['phone'] as String?; // ADD THIS
+            // ADD THIS
+          } else {
             role = 'customer';
           }
+        } catch (e) {
+          role = 'customer';
         }
+      }
 
+      // Store regular user data in GetStorage
+      _storage.write('userId', user.$id);
+      _storage.write('email', user.email);
+      _storage.write('userName', user.name);
+      _storage.write('role', role);
+      _storage.write('phone', phone ?? ''); // ADD THIS
+      // clinicId is not stored for regular users, or set to empty string
+      _storage.write('clinicId', '');
 
-        // Store regular user data in GetStorage
-        _storage.write('userId', user.$id);
-        _storage.write('email', user.email);
-        _storage.write('userName', user.name);
-        _storage.write('role', role);
-        _storage.write('phone', phone ?? ''); // ADD THIS
-        // clinicId is not stored for regular users, or set to empty string
-        _storage.write('clinicId', '');
-
-        // ADD THIS
+      // ADD THIS
 
       try {
         final userDoc = await getUserById(user.$id);
@@ -215,7 +237,6 @@ class AppWriteProvider {
         _storage.write('userProfilePictureId', '');
       }
 
-
       // Step 6: Register FCM token for push notifications (Mobile only)
       try {
         // Only register FCM on mobile platforms
@@ -230,7 +251,6 @@ class AppWriteProvider {
             final fcmToken = await notificationService.getFreshToken();
 
             if (fcmToken != null && fcmToken.isNotEmpty) {
-
               // Register with Appwrite
               final target = await registerUserPushTarget(
                 userId: user.$id,
@@ -239,14 +259,10 @@ class AppWriteProvider {
 
               if (target != null) {
                 _storage.write('push_target_id', target.$id);
-              } else {
-              }
-            } else {
-            }
-          } else {
-          }
-        } else {
-        }
+              } else {}
+            } else {}
+          } else {}
+        } else {}
       } catch (e) {
         // Don't fail login if FCM registration fails
       }
@@ -255,9 +271,7 @@ class AppWriteProvider {
       try {
         final notificationService = Get.find<InAppNotificationService>();
         await notificationService.initialize();
-      } catch (e) {
-      }
-
+      } catch (e) {}
 
       return {
         'success': true,
@@ -273,7 +287,6 @@ class AppWriteProvider {
 
   Future<bool> signInWithGoogle() async {
     try {
-
       if (kIsWeb) {
         // WEB: Use fragment (#) for SPA routing compatibility
         final htmlHelper = PlatformHtmlHelper.instance;
@@ -282,7 +295,6 @@ class AppWriteProvider {
         // Use hash routing for better SPA compatibility
         final String successUrl = '$baseUrl/#/auth/callback';
         final String failureUrl = '$baseUrl/#/auth/failure';
-
 
         // Create OAuth URL with proper encoding
         final oauthUrl =
@@ -366,7 +378,6 @@ class AppWriteProvider {
 
   Future<Document?> getPetById(String petId) async {
     try {
-
       // STRATEGY 1: Try as document ID
       try {
         final result = await databases!.getDocument(
@@ -375,8 +386,7 @@ class AppWriteProvider {
           documentId: petId,
         );
         return result;
-      } catch (e) {
-      }
+      } catch (e) {}
 
       // STRATEGY 2: Try as petId field
       final result = await databases!.listDocuments(
@@ -436,19 +446,16 @@ class AppWriteProvider {
 
   Future<void> createAppointment(Map<String, dynamic> data) async {
     try {
-
       // CRITICAL: Check if service is medical BEFORE creating appointment
       final clinicId = data['clinicId'];
       final service = data['service'];
 
       if (clinicId != null && service != null) {
-
         final settingsDoc = await getClinicSettingsByClinicId(clinicId);
 
         if (settingsDoc != null) {
           final settings = ClinicSettings.fromMap(settingsDoc.data);
           final isMedical = settings.isServiceMedical(service);
-
 
           // CRITICAL: Set isMedicalService based on clinic settings
           data['isMedicalService'] = isMedical;
@@ -459,14 +466,12 @@ class AppWriteProvider {
         data['isMedicalService'] = false;
       }
 
-
       await databases!.createDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.appointmentCollectionID,
         documentId: ID.unique(),
         data: data,
       );
-
     } catch (e) {
       rethrow;
     }
@@ -528,8 +533,7 @@ class AppWriteProvider {
         final notificationService = Get.find<InAppNotificationService>();
         notificationService.clearOnLogout();
       }
-    } catch (e) {
-    }
+    } catch (e) {}
 
     final response = await account!.deleteSession(sessionId: sessionId);
     return response;
@@ -543,8 +547,7 @@ class AppWriteProvider {
           final notificationService = Get.find<InAppNotificationService>();
           notificationService.clearOnLogout();
         }
-      } catch (e) {
-      }
+      } catch (e) {}
 
       await account?.deleteSession(sessionId: 'current');
       return true;
@@ -706,7 +709,6 @@ class AppWriteProvider {
 
   Future<void> updateFullAppointment(
       String documentId, Map<String, dynamic> data) async {
-
     // CRITICAL: Remove any medical data fields if they somehow got in
     // Appointments should ONLY have workflow, billing, and follow-up fields
     final cleanedData = Map<String, dynamic>.from(data);
@@ -747,8 +749,7 @@ class AppWriteProvider {
 
     // Warn about any unexpected fields
     for (var key in cleanedData.keys) {
-      if (!allowedFields.contains(key)) {
-      }
+      if (!allowedFields.contains(key)) {}
     }
 
     try {
@@ -758,14 +759,12 @@ class AppWriteProvider {
         documentId: documentId,
         data: cleanedData,
       );
-
     } catch (e) {
       rethrow;
     }
   }
 
   Future<models.Document> createMedicalRecord(Map<String, dynamic> data) async {
-
     // CRITICAL: Validate individual vitals data
 
     // Ensure all required fields are present
@@ -812,7 +811,6 @@ class AppWriteProvider {
       'updatedAt': data['updatedAt'],
     };
 
-
     try {
       final doc = await databases!.createDocument(
         databaseId: AppwriteConstants.dbID,
@@ -820,7 +818,6 @@ class AppWriteProvider {
         documentId: ID.unique(),
         data: cleanedData,
       );
-
 
       return doc;
     } catch (e) {
@@ -853,7 +850,6 @@ class AppWriteProvider {
 
   Future<Document> updateMedicalRecord(
       String documentId, Map<String, dynamic> data) async {
-
     // Clean the data similar to create
     final Map<String, dynamic> cleanedData = {
       if (data.containsKey('petId')) 'petId': data['petId'],
@@ -891,7 +887,6 @@ class AppWriteProvider {
       'updatedAt': DateTime.now().toIso8601String(),
     };
 
-
     try {
       final doc = await databases!.updateDocument(
         databaseId: AppwriteConstants.dbID,
@@ -899,7 +894,6 @@ class AppWriteProvider {
         documentId: documentId,
         data: cleanedData,
       );
-
 
       return doc;
     } catch (e) {
@@ -1010,8 +1004,7 @@ class AppWriteProvider {
         );
 
         uploadedFiles.add(response);
-      } catch (e) {
-      }
+      } catch (e) {}
     }
 
     return uploadedFiles;
@@ -1024,8 +1017,7 @@ class AppWriteProvider {
           bucketId: AppwriteConstants.imageBucketID,
           fileId: fileId,
         );
-      } catch (e) {
-      }
+      } catch (e) {}
     }
   }
 
@@ -1142,7 +1134,6 @@ class AppWriteProvider {
   /// Returns the uploaded file object with $id
   Future<models.File> uploadClinicProfilePicture(dynamic image) async {
     try {
-
       String fileName =
           "clinic_profile_${DateTime.now().millisecondsSinceEpoch}.jpg";
       InputFile inputFile;
@@ -1175,12 +1166,10 @@ class AppWriteProvider {
   /// Delete clinic profile picture by file ID
   Future<void> deleteClinicProfilePicture(String fileId) async {
     try {
-
       await storage!.deleteFile(
         bucketId: AppwriteConstants.imageBucketID,
         fileId: fileId,
       );
-
     } catch (e) {
       rethrow;
     }
@@ -1206,7 +1195,6 @@ class AppWriteProvider {
     dynamic newImage,
   ) async {
     try {
-
       // Upload new profile picture
       final uploadedFile = await uploadClinicProfilePicture(newImage);
       final newFileId = uploadedFile.$id;
@@ -1225,7 +1213,6 @@ class AppWriteProvider {
         'profilePictureId': newFileId,
         'updatedAt': DateTime.now().toIso8601String(),
       });
-
 
       return newFileId;
     } catch (e) {
@@ -1345,7 +1332,6 @@ class AppWriteProvider {
 
   Future<Document> createMessage(Map<String, dynamic> data) async {
     try {
-
       final conversationId = data['conversationId'];
       final senderId = data['senderId'];
       final messageText = data['messageText'];
@@ -1368,7 +1354,6 @@ class AppWriteProvider {
       if (recentDuplicates.documents.isNotEmpty) {
         return recentDuplicates.documents.first;
       }
-
 
       // Get conversation details to determine receiver
       final conversation = await databases!.getDocument(
@@ -1418,7 +1403,6 @@ class AppWriteProvider {
         data: completeMessageData,
       );
 
-
       // Update conversation
       final currentUserUnreadCount = conversation.data['userUnreadCount'] ?? 0;
       final currentClinicUnreadCount =
@@ -1448,7 +1432,6 @@ class AppWriteProvider {
         documentId: conversationId,
         data: updateData,
       );
-
 
       return messageDoc;
     } catch (e) {
@@ -1539,9 +1522,7 @@ class AppWriteProvider {
         documentId: conversationId,
         data: updateData,
       );
-
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   // ============= CONVERSATION STARTERS METHODS =============
@@ -1589,7 +1570,6 @@ class AppWriteProvider {
 
   Future<void> initializeDefaultConversationStarters(String clinicId) async {
     try {
-
       final existing = await getClinicConversationStarters(clinicId);
       if (existing.isNotEmpty) {
         return;
@@ -1642,16 +1622,12 @@ class AppWriteProvider {
         },
       ];
 
-
       for (var starter in defaultStarters) {
         try {
           final doc = await createConversationStarter(starter);
-        } catch (e) {
-        }
+        } catch (e) {}
       }
-
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   // ============= USER STATUS METHODS =============
@@ -1726,12 +1702,10 @@ class AppWriteProvider {
   StreamSubscription<RealtimeMessage>? _statusSubscription;
 
   Stream<RealtimeMessage> subscribeToMessages(String conversationId) {
-
     final realtime = Realtime(client);
 
     final channel =
         'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.messagesCollectionID}.documents';
-
 
     return realtime
         .subscribe([channel])
@@ -1744,21 +1718,18 @@ class AppWriteProvider {
           final matches = messageConversationId == conversationId;
 
           if (matches) {
-          } else {
-          }
+          } else {}
 
           return matches;
         });
   }
 
   Stream<RealtimeMessage> subscribeToConversations(String clinicId) {
-
     final realtime = Realtime(client);
 
     // Subscribe to ALL conversation events in the collection
     final channel =
         'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.conversationsCollectionID}.documents';
-
 
     return realtime
         .subscribe([channel])
@@ -1772,8 +1743,7 @@ class AppWriteProvider {
           final matches = messageClinicId == clinicId;
 
           if (matches) {
-          } else {
-          }
+          } else {}
 
           return matches;
         });
@@ -1877,10 +1847,8 @@ class AppWriteProvider {
     bool isDoctor = false, // NEW: Add isDoctor parameter with default false
   }) async {
     try {
-
       // Store current admin session
       final currentSession = await account!.getSession(sessionId: 'current');
-
 
       // Create user with username and password ONLY
       final authUser = await account!.create(
@@ -1895,7 +1863,6 @@ class AppWriteProvider {
         'username': username,
         'isStaff': true,
       });
-
 
       // Verify admin session is still active
       final verifySession = await account!.get();
@@ -1930,7 +1897,6 @@ class AppWriteProvider {
       // Final session verification
       final finalSession = await account!.get();
 
-
       return {
         'success': true,
         'authUser': authUser,
@@ -1961,7 +1927,6 @@ class AppWriteProvider {
 
   Future<Document?> getStaffByUserId(String userId) async {
     try {
-
       final result = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.staffCollectionID,
@@ -1977,7 +1942,6 @@ class AppWriteProvider {
 
       final doc = result.documents.first;
 
-
       return doc;
     } catch (e) {
       return null;
@@ -1987,7 +1951,6 @@ class AppWriteProvider {
   // RENAMED: getStaffByEmail -> getStaffByUsername
   Future<Document?> getStaffByUsername(String username) async {
     try {
-
       final result = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.staffCollectionID,
@@ -2003,7 +1966,6 @@ class AppWriteProvider {
 
       final doc = result.documents.first;
 
-
       return doc;
     } catch (e) {
       return null;
@@ -2013,7 +1975,6 @@ class AppWriteProvider {
   /// NEW: Fix userId mismatch in staff record
   Future<void> fixStaffUserId(String staffDocId, String correctUserId) async {
     try {
-
       await databases!.updateDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.staffCollectionID,
@@ -2023,7 +1984,6 @@ class AppWriteProvider {
           'updatedAt': DateTime.now().toIso8601String(),
         },
       );
-
     } catch (e) {
       rethrow;
     }
@@ -2050,12 +2010,10 @@ class AppWriteProvider {
 
   Future<void> migrateExistingStaffRecords() async {
     try {
-
       final result = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.staffCollectionID,
       );
-
 
       for (var doc in result.documents) {
         try {
@@ -2077,7 +2035,6 @@ class AppWriteProvider {
 
           // If username is missing, generate one
           if (currentUsername == null || currentUsername.isEmpty) {
-
             String generatedUsername;
             if (name != null && name.isNotEmpty) {
               generatedUsername = name
@@ -2108,14 +2065,10 @@ class AppWriteProvider {
               documentId: doc.$id,
               data: updateData,
             );
-          } else {
-          }
-        } catch (e) {
-        }
+          } else {}
+        } catch (e) {}
       }
-
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   Future<Map<String, int>> getClinicStaffStatsWithDoctors(
@@ -2200,7 +2153,6 @@ class AppWriteProvider {
     bool isDoctor,
   ) async {
     try {
-
       return await databases!.updateDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.staffCollectionID,
@@ -2297,7 +2249,6 @@ class AppWriteProvider {
   // UPDATE checkIfStaffAccount METHOD to be more robust:
   Future<Map<String, dynamic>> checkIfStaffAccount(String username) async {
     try {
-
       // Check using username field in database
       final staffResult = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
@@ -2317,7 +2268,6 @@ class AppWriteProvider {
       final clinicId = staffDoc.data['clinicId'] ?? '';
       final authorities = staffDoc.data['authorities'] ?? [];
 
-
       return {
         'isStaff': true,
         'isActive': isActive,
@@ -2334,7 +2284,6 @@ class AppWriteProvider {
   Future<Map<String, dynamic>> staffLogin(
       String username, String password) async {
     try {
-
       // Step 1: Check if staff account exists using username
       final staffCheck = await checkIfStaffAccount(username);
 
@@ -2354,11 +2303,9 @@ class AppWriteProvider {
         };
       }
 
-
       // Step 3: Get the auth user ID from staff record
       final staffDoc = staffCheck['staffDoc'];
       final authUserId = staffDoc.data['userId'];
-
 
       // Use the internal email format that was created during registration
       final internalEmail = '$username@${AppwriteConstants.projectID}.internal';
@@ -2374,7 +2321,6 @@ class AppWriteProvider {
       final clinicId = staffCheck['clinicId'] ?? '';
       final authorities = staffCheck['authorities'] ?? [];
 
-
       // IMPORTANT: Get clinic info for correct display in UI
       String clinicName = 'Unknown Clinic';
       String clinicProfilePictureId = '';
@@ -2385,8 +2331,7 @@ class AppWriteProvider {
           clinicName = clinicDoc.data['clinicName'] ?? 'Unknown Clinic';
           clinicProfilePictureId = clinicDoc.data['profilePictureId'] ?? '';
         }
-      } catch (e) {
-      }
+      } catch (e) {}
 
       // CRITICAL: Store staff data in GetStorage with CORRECT clinic info
       _storage.write('userId', user.$id);
@@ -2399,7 +2344,6 @@ class AppWriteProvider {
       // IMPORTANT: Store clinic info from the staff's clinic, not from previous login
       _storage.write('clinicName', clinicName);
       _storage.write('clinicProfilePictureId', clinicProfilePictureId);
-
 
       return {
         'success': true,
@@ -2469,7 +2413,6 @@ class AppWriteProvider {
 
   Future<Map<String, dynamic>> deleteClinicCompletely(String clinicId) async {
     try {
-
       final errors = <String>[];
       final results = {
         'clinicDeleted': false,
@@ -2583,8 +2526,7 @@ class AppWriteProvider {
                 );
                 results['messagesDeleted'] =
                     (results['messagesDeleted'] as int) + 1;
-              } catch (e) {
-              }
+              } catch (e) {}
             }
 
             // Delete conversation
@@ -2618,11 +2560,9 @@ class AppWriteProvider {
               collectionId: AppwriteConstants.conversationStartersCollectionID,
               documentId: doc.$id,
             );
-          } catch (e) {
-          }
+          } catch (e) {}
         }
-      } catch (e) {
-      }
+      } catch (e) {}
 
       // Step 6: Deactivate all staff (don't delete to preserve data)
       try {
@@ -2660,12 +2600,10 @@ class AppWriteProvider {
           if (clinicImage != null && clinicImage.isNotEmpty) {
             try {
               await deleteImage(clinicImage);
-            } catch (e) {
-            }
+            } catch (e) {}
           }
         }
-      } catch (e) {
-      }
+      } catch (e) {}
 
       // Step 8: Finally, delete the clinic document
       try {
@@ -2679,7 +2617,6 @@ class AppWriteProvider {
         errors.add('Clinic document: ${e.toString()}');
         throw Exception('Failed to delete clinic: ${e.toString()}');
       }
-
 
       return results;
     } catch (e) {
@@ -2727,7 +2664,6 @@ class AppWriteProvider {
   /// Create ID verification record
   Future<Document> createIdVerification(Map<String, dynamic> data) async {
     try {
-
       return await databases!.createDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.idVerificationCollectionID,
@@ -2742,7 +2678,6 @@ class AppWriteProvider {
   /// Get ID verification by userId
   Future<Document?> getIdVerificationByUserId(String userId) async {
     try {
-
       final result = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.idVerificationCollectionID,
@@ -2766,7 +2701,6 @@ class AppWriteProvider {
   /// Get ID verification by submissionId (from ARGOS webhook)
   Future<Document?> getIdVerificationBySubmissionId(String submissionId) async {
     try {
-
       final result = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.idVerificationCollectionID,
@@ -2791,7 +2725,6 @@ class AppWriteProvider {
     Map<String, dynamic> data,
   ) async {
     try {
-
       data['updatedAt'] = DateTime.now().toIso8601String();
 
       return await databases!.updateDocument(
@@ -2811,7 +2744,6 @@ class AppWriteProvider {
     Map<String, dynamic> webhookData,
   ) async {
     try {
-
       final userId = webhookData['userId'] as String?;
       final submissionId = webhookData['submissionId'] as String?;
       final status = webhookData['status'] as String?;
@@ -2885,7 +2817,6 @@ class AppWriteProvider {
           );
         }
       }
-
 
       return {
         'success': true,
@@ -2987,13 +2918,11 @@ class AppWriteProvider {
           );
         }
       }
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   Future<Document> createRatingAndReview(Map<String, dynamic> data) async {
     try {
-
       return await databases!.createDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
@@ -3250,8 +3179,7 @@ class AppWriteProvider {
           bucketId: AppwriteConstants.imageBucketID,
           fileId: fileId,
         );
-      } catch (e) {
-      }
+      } catch (e) {}
     }
   }
 
@@ -3281,7 +3209,6 @@ class AppWriteProvider {
 
   Future<List<Map<String, dynamic>>> getPetVaccinations(String petId) async {
     try {
-
       // Step 1: Get the pet document to find both petId and name
       final petDoc = await getPetById(petId);
       String? petName;
@@ -3290,8 +3217,7 @@ class AppWriteProvider {
       if (petDoc != null) {
         petName = petDoc.data['name'] as String?;
         actualPetId = petDoc.data['petId'] as String?;
-      } else {
-      }
+      } else {}
 
       // Step 2: Fetch ALL vaccinations (pagination)
       const int limit = 100;
@@ -3300,7 +3226,6 @@ class AppWriteProvider {
       final List<Document> allDocs = [];
 
       while (hasMore) {
-
         final result = await databases!.listDocuments(
           databaseId: AppwriteConstants.dbID,
           collectionId: AppwriteConstants.vaccinationsCollectionID,
@@ -3325,7 +3250,6 @@ class AppWriteProvider {
         }
       }
 
-
       // Step 3: Filter for THIS pet using multiple matching strategies
       final filteredDocs = allDocs.where((doc) {
         final docPetId = doc.data['petId']?.toString() ?? '';
@@ -3342,12 +3266,10 @@ class AppWriteProvider {
 
         final matches = matchesDocId || matchesPetIdField || matchesPetName;
 
-        if (matches) {
-        }
+        if (matches) {}
 
         return matches;
       }).toList();
-
 
       return filteredDocs.map((doc) {
         final data = Map<String, dynamic>.from(doc.data);
@@ -3494,7 +3416,6 @@ class AppWriteProvider {
     String pinnedBy,
   ) async {
     try {
-
       final data = {
         'isPinned': isPinned,
         'pinnedAt': isPinned ? DateTime.now().toIso8601String() : null,
@@ -3601,13 +3522,11 @@ class AppWriteProvider {
         queries: [Query.limit(500)],
       );
 
-
       int updated = 0;
       for (var doc in result.documents) {
         try {
           // Check if isArchived field exists
           if (!doc.data.containsKey('isArchived')) {
-
             // If it has archivedAt, mark as archived, otherwise not archived
             final bool shouldBeArchived = doc.data['archivedAt'] != null;
 
@@ -3649,53 +3568,51 @@ class AppWriteProvider {
   }
 
   Future<List<models.File>> uploadFeedbackAttachments(
-  List<PlatformFile> files,
-) async {
-  final List<models.File> uploadedFiles = [];
+    List<PlatformFile> files,
+  ) async {
+    final List<models.File> uploadedFiles = [];
 
-  for (int i = 0; i < files.length; i++) {
-    try {
-      final file = files[i];
-      final extension = file.extension ?? 'jpg';
-      // CRITICAL: Validate that only images are allowed
-      final allowedImageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-      if (!allowedImageExtensions.contains(extension.toLowerCase())) {
-      
-        continue; // Skip non-image files
-      }
-      String fileName =
-          "${DateTime.now().millisecondsSinceEpoch}_feedback_$i.$extension";
+    for (int i = 0; i < files.length; i++) {
+      try {
+        final file = files[i];
+        final extension = file.extension ?? 'jpg';
+        // CRITICAL: Validate that only images are allowed
+        final allowedImageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+        if (!allowedImageExtensions.contains(extension.toLowerCase())) {
+          continue; // Skip non-image files
+        }
+        String fileName =
+            "${DateTime.now().millisecondsSinceEpoch}_feedback_$i.$extension";
 
-      // Validate file size (5MB for images only)
-      if (file.size > 5 * 1024 * 1024) {
-        continue;
-      }
-      InputFile inputFile;
-      if (file.bytes != null) {
-        inputFile = InputFile.fromBytes(
-          bytes: file.bytes!,
-          filename: fileName,
+        // Validate file size (5MB for images only)
+        if (file.size > 5 * 1024 * 1024) {
+          continue;
+        }
+        InputFile inputFile;
+        if (file.bytes != null) {
+          inputFile = InputFile.fromBytes(
+            bytes: file.bytes!,
+            filename: fileName,
+          );
+        } else if (file.path != null) {
+          inputFile = InputFile.fromPath(
+            path: file.path!,
+            filename: fileName,
+          );
+        } else {
+          continue;
+        }
+        final response = await storage!.createFile(
+          bucketId: AppwriteConstants.feedbackAttachmentsBucketID,
+          fileId: ID.unique(),
+          file: inputFile,
         );
-      } else if (file.path != null) {
-        inputFile = InputFile.fromPath(
-          path: file.path!,
-          filename: fileName,
-        );
-      } else {
-        continue;
-      }
-      final response = await storage!.createFile(
-        bucketId: AppwriteConstants.feedbackAttachmentsBucketID,
-        fileId: ID.unique(),
-        file: inputFile,
-      );
-      uploadedFiles.add(response);
-    } catch (e) {
+        uploadedFiles.add(response);
+      } catch (e) {}
     }
-  }
 
-  return uploadedFiles;
-}
+    return uploadedFiles;
+  }
 
   /// Delete feedback attachments
   Future<void> deleteFeedbackAttachments(List<String> fileIds) async {
@@ -3705,8 +3622,7 @@ class AppWriteProvider {
           bucketId: AppwriteConstants.feedbackAttachmentsBucketID,
           fileId: fileId,
         );
-      } catch (e) {
-      }
+      } catch (e) {}
     }
   }
 
@@ -3782,14 +3698,12 @@ class AppWriteProvider {
     String archiveReason = 'No reason provided',
   }) async {
     try {
-
       // Step 1: Get original user document
       final userDoc = await databases!.getDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.usersCollectionID,
         documentId: userDocumentId,
       );
-
 
       // Step 2: Prepare archived user data with compressed original data
       final now = DateTime.now();
@@ -3821,7 +3735,6 @@ class AppWriteProvider {
           };
           originalUserDataJson = jsonEncode(minimalData);
         }
-
       } catch (e) {
         originalUserDataJson = jsonEncode({
           'userId': userId,
@@ -3853,7 +3766,6 @@ class AppWriteProvider {
         data: archivedUserData,
       );
 
-
       // ============================================
       // CRITICAL CHANGE: ONLY DELETE USER DOCUMENT
       // DO NOT DELETE RELATED DATA (pets, appointments, etc.)
@@ -3865,12 +3777,8 @@ class AppWriteProvider {
         documentId: userDocumentId,
       );
 
-
       // Step 4: Deactivate user account (prevent login)
-      try {
-      } catch (e) {
-      }
-
+      try {} catch (e) {}
 
       return {
         'success': true,
@@ -3961,7 +3869,6 @@ class AppWriteProvider {
   /// Permanently delete user (called automatically after 30 days)
   Future<Map<String, dynamic>> permanentlyDeleteUser(String userId) async {
     try {
-
       final errors = <String>[];
       final results = {
         'userDeleted': false,
@@ -4115,7 +4022,6 @@ class AppWriteProvider {
         errors.add('Archived record: ${e.toString()}');
       }
 
-
       return results;
     } catch (e) {
       return {
@@ -4132,7 +4038,6 @@ class AppWriteProvider {
     required String recoveredBy,
   }) async {
     try {
-
       // Step 1: Get archived record
       final archivedDoc = await getArchivedUserByUserId(userId);
       if (archivedDoc == null) {
@@ -4164,7 +4069,6 @@ class AppWriteProvider {
         };
       }
 
-
       Map<String, dynamic> originalUserData;
       try {
         originalUserData =
@@ -4175,7 +4079,6 @@ class AppWriteProvider {
           'error': 'Failed to parse original user data',
         };
       }
-
 
       // Recreate the user document with original data
       final restoredUserData = {
@@ -4209,7 +4112,6 @@ class AppWriteProvider {
         // If document already exists, update it instead
         if (e.toString().contains('already exists') ||
             e.toString().contains('unique')) {
-
           try {
             restoredDoc = await databases!.updateDocument(
               databaseId: AppwriteConstants.dbID,
@@ -4244,14 +4146,12 @@ class AppWriteProvider {
         // But the user document is already restored, so we continue
       }
 
-
       return {
         'success': true,
         'message': 'User recovered successfully and removed from archive',
         'restoredDocumentId': restoredDoc.$id,
       };
     } catch (e) {
-
       return {
         'success': false,
         'error': e.toString(),
@@ -4262,7 +4162,6 @@ class AppWriteProvider {
   /// Background job to check and permanently delete users (should be called periodically)
   Future<Map<String, dynamic>> processScheduledDeletions() async {
     try {
-
       final usersDue = await getUsersDueForDeletion();
 
       final results = <String, dynamic>{
@@ -4295,7 +4194,6 @@ class AppWriteProvider {
               .add('${archivedUser.data['userId']}: ${e.toString()}');
         }
       }
-
 
       return results;
     } catch (e) {
@@ -4371,7 +4269,6 @@ class AppWriteProvider {
 
   Future<models.File> uploadUserProfilePicture(dynamic image) async {
     try {
-
       String fileName =
           "user_profile_${DateTime.now().millisecondsSinceEpoch}.jpg";
       InputFile inputFile;
@@ -4404,12 +4301,10 @@ class AppWriteProvider {
   /// Delete user profile picture by file ID
   Future<void> deleteUserProfilePicture(String fileId) async {
     try {
-
       await storage!.deleteFile(
         bucketId: AppwriteConstants.imageBucketID,
         fileId: fileId,
       );
-
     } catch (e) {
       rethrow;
     }
@@ -4433,7 +4328,6 @@ class AppWriteProvider {
     dynamic newImage,
   ) async {
     try {
-
       // Upload new profile picture
       final uploadedFile = await uploadUserProfilePicture(newImage);
       final newFileId = uploadedFile.$id;
@@ -4456,7 +4350,6 @@ class AppWriteProvider {
           'profilePictureId': newFileId,
         },
       );
-
 
       return newFileId;
     } catch (e) {
@@ -4545,8 +4438,6 @@ class AppWriteProvider {
         documentId: clinicDocumentId,
       );
 
-
-
       return {
         'success': true,
         'archivedDocumentId': archivedDoc.$id,
@@ -4563,7 +4454,6 @@ class AppWriteProvider {
   }
 
   Future<void> _deleteClinicRelatedData(String clinicId) async {
-
     // Delete clinic settings
     try {
       final settingsDoc = await getClinicSettingsByClinicId(clinicId);
@@ -4573,13 +4463,11 @@ class AppWriteProvider {
         for (String imageId in gallery) {
           try {
             await deleteImage(imageId);
-          } catch (e) {
-          }
+          } catch (e) {}
         }
         await deleteClinicSettings(settingsDoc.$id);
       }
-    } catch (e) {
-    }
+    } catch (e) {}
 
     // Delete appointments
     try {
@@ -4595,8 +4483,7 @@ class AppWriteProvider {
           documentId: doc.$id,
         );
       }
-    } catch (e) {
-    }
+    } catch (e) {}
 
     // Delete medical records
     try {
@@ -4612,8 +4499,7 @@ class AppWriteProvider {
           documentId: doc.$id,
         );
       }
-    } catch (e) {
-    }
+    } catch (e) {}
 
     // Delete conversations and messages
     try {
@@ -4643,8 +4529,7 @@ class AppWriteProvider {
           documentId: conversation.$id,
         );
       }
-    } catch (e) {
-    }
+    } catch (e) {}
 
     // Delete staff accounts (NOW during permanent deletion)
     try {
@@ -4660,8 +4545,7 @@ class AppWriteProvider {
           documentId: doc.$id,
         );
       }
-    } catch (e) {
-    }
+    } catch (e) {}
 
     // Delete clinic profile picture
     try {
@@ -4671,20 +4555,17 @@ class AppWriteProvider {
         if (profilePictureId != null && profilePictureId.isNotEmpty) {
           try {
             await deleteImage(profilePictureId);
-          } catch (e) {
-          }
+          } catch (e) {}
         }
 
         final clinicImage = clinicDoc.data['image'] as String?;
         if (clinicImage != null && clinicImage.isNotEmpty) {
           try {
             await deleteImage(clinicImage);
-          } catch (e) {
-          }
+          } catch (e) {}
         }
       }
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   /// Get archived clinic by clinicId
@@ -4895,7 +4776,6 @@ class AppWriteProvider {
   /// Process scheduled clinic deletions (background job)
   Future<Map<String, dynamic>> processScheduledClinicDeletions() async {
     try {
-
       final clinicsDue = await getClinicsDueForDeletion();
 
       final results = {
@@ -5022,7 +4902,6 @@ class AppWriteProvider {
   Future<Document> createFeedbackDeletionRequest(
       Map<String, dynamic> data) async {
     try {
-
       return await databases!.createDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
@@ -5069,8 +4948,7 @@ class AppWriteProvider {
         );
 
         uploadedFiles.add(response);
-      } catch (e) {
-      }
+      } catch (e) {}
     }
 
     return uploadedFiles;
@@ -5084,8 +4962,7 @@ class AppWriteProvider {
           bucketId: AppwriteConstants.imageBucketID,
           fileId: fileId,
         );
-      } catch (e) {
-      }
+      } catch (e) {}
     }
   }
 
@@ -5111,7 +4988,6 @@ class AppWriteProvider {
     int limit = 100,
   }) async {
     try {
-
       List<String> queries = [
         Query.equal('clinicId', clinicId),
         Query.orderDesc('requestedAt'),
@@ -5128,10 +5004,8 @@ class AppWriteProvider {
         queries: queries,
       );
 
-
       // Debug: Print first request if exists
-      if (result.documents.isNotEmpty) {
-      }
+      if (result.documents.isNotEmpty) {}
 
       return result.documents;
     } catch (e, stackTrace) {
@@ -5172,7 +5046,6 @@ class AppWriteProvider {
     String? reviewNotes,
   ) async {
     try {
-
       // Step 1: Get the review to know which clinic it belongs to
       Document? reviewDoc;
       try {
@@ -5222,7 +5095,6 @@ class AppWriteProvider {
         // Don't fail the entire operation if recalculation fails
       }
 
-
       return {
         'success': true,
         'message':
@@ -5239,7 +5111,6 @@ class AppWriteProvider {
   /// Helper method to recalculate clinic ratings after review deletion
   Future<void> _recalculateClinicRatings(String clinicId) async {
     try {
-
       // Get all non-archived reviews for this clinic
       final result = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
@@ -5271,7 +5142,6 @@ class AppWriteProvider {
 
       final newAverageRating = totalRating / activeReviews.length;
 
-
       // Note: The stats are calculated on-the-fly in getClinicRatingStats,
       // so we don't need to store them. They'll be automatically correct
       // when querying non-archived reviews.
@@ -5283,7 +5153,6 @@ class AppWriteProvider {
   /// Check if a review has a pending deletion request
   Future<bool> hasReviewPendingDeletionRequest(String reviewId) async {
     try {
-
       final result = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
@@ -5327,7 +5196,6 @@ class AppWriteProvider {
     String? reviewNotes,
   ) async {
     try {
-
       await databases!.updateDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
@@ -5340,7 +5208,6 @@ class AppWriteProvider {
           'updatedAt': DateTime.now().toIso8601String(),
         },
       );
-
 
       return {
         'success': true,
@@ -5393,7 +5260,6 @@ class AppWriteProvider {
     required String fcmToken,
   }) async {
     try {
-
       final target = await account!.createPushTarget(
         targetId: ID.unique(),
         identifier: fcmToken,
@@ -5413,7 +5279,6 @@ class AppWriteProvider {
     required String newFcmToken,
   }) async {
     try {
-
       final target = await account!.updatePushTarget(
         targetId: targetId,
         identifier: newFcmToken,
@@ -5428,7 +5293,6 @@ class AppWriteProvider {
   /// Delete push target (logout)
   Future<bool> deletePushTarget(String targetId) async {
     try {
-
       await account!.deletePushTarget(targetId: targetId);
 
       return true;
@@ -5445,7 +5309,6 @@ class AppWriteProvider {
     Map<String, String>? data,
   }) async {
     try {
-
       final functions = Functions(client);
 
       final execution = await functions.createExecution(
@@ -5473,7 +5336,6 @@ class AppWriteProvider {
     String? userId, // Add optional userId
   }) async {
     try {
-
       final functions = Functions(client);
 
       final execution = await functions.createExecution(
@@ -5507,7 +5369,6 @@ class AppWriteProvider {
     String? declineReason,
   }) async {
     try {
-
       // 1. Send push notification (mobile only)
       String pushTitle;
       String pushBody;
@@ -5567,9 +5428,7 @@ class AppWriteProvider {
           userId: userId,
         );
       }
-
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   /// Helper: Send new appointment notification to admin
@@ -5582,7 +5441,6 @@ class AppWriteProvider {
     required String appointmentId,
   }) async {
     try {
-
       await sendPushNotification(
         title: 'New Appointment Request 📅',
         body: '$ownerName booked $service for $petName',
@@ -5594,9 +5452,7 @@ class AppWriteProvider {
           'ownerName': ownerName,
         },
       );
-
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   String buildEmailTemplate({
@@ -5691,7 +5547,6 @@ class AppWriteProvider {
     required String responseText,
   }) async {
     try {
-
       // CRITICAL: Check for recent duplicate responses (within last 5 seconds)
 
       final recentResponses = await databases!.listDocuments(
@@ -5710,7 +5565,6 @@ class AppWriteProvider {
       if (recentResponses.documents.isNotEmpty) {
         return recentResponses.documents.first;
       }
-
 
       // Get conversation to determine userId
       final conversation = await databases!.getDocument(
@@ -5745,7 +5599,6 @@ class AppWriteProvider {
         data: messageData,
       );
 
-
       // Update conversation
       final currentUserUnreadCount = conversation.data['userUnreadCount'] ?? 0;
       final currentClinicUnreadCount =
@@ -5767,7 +5620,6 @@ class AppWriteProvider {
         },
       );
 
-
       return messageDoc;
     } catch (e) {
       rethrow;
@@ -5778,7 +5630,6 @@ class AppWriteProvider {
   /// Create a new notification
   Future<models.Document> createNotification(Map<String, dynamic> data) async {
     try {
-
       return await databases!.createDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.notificationsCollectionID,
@@ -5858,7 +5709,6 @@ class AppWriteProvider {
   /// Mark all notifications as read for a user
   Future<void> markAllNotificationsAsRead(String userId) async {
     try {
-
       final unreadNotifications = await getUserNotifications(
         userId,
         unreadOnly: true,
@@ -5868,10 +5718,8 @@ class AppWriteProvider {
       for (var notification in unreadNotifications) {
         try {
           await markNotificationAsRead(notification.$id);
-        } catch (e) {
-        }
+        } catch (e) {}
       }
-
     } catch (e) {
       rethrow;
     }
@@ -5898,10 +5746,8 @@ class AppWriteProvider {
       for (var notification in notifications) {
         try {
           await deleteNotification(notification.$id);
-        } catch (e) {
-        }
+        } catch (e) {}
       }
-
     } catch (e) {
       rethrow;
     }
@@ -5909,7 +5755,6 @@ class AppWriteProvider {
 
   /// Subscribe to user notifications (real-time)
   Stream<RealtimeMessage> subscribeToUserNotifications(String userId) {
-
     final realtime = Realtime(client);
     return realtime
         .subscribe([
@@ -5970,7 +5815,6 @@ class AppWriteProvider {
     Map<String, dynamic>? metadata,
   }) async {
     try {
-
       final notificationData = {
         'userId': recipientId,
         'title': title,
@@ -6004,7 +5848,6 @@ class AppWriteProvider {
     Map<String, dynamic>? metadata,
   }) async {
     try {
-
       final notificationData = {
         'userId': clinicAdminId,
         'title': title,
@@ -6017,9 +5860,7 @@ class AppWriteProvider {
         'metadata': metadata != null ? jsonEncode(metadata) : null,
       };
 
-
       final doc = await createNotification(notificationData);
-
 
       // Verify the notification exists
       try {
@@ -6028,9 +5869,7 @@ class AppWriteProvider {
           collectionId: AppwriteConstants.notificationsCollectionID,
           documentId: doc.$id,
         );
-      } catch (verifyError) {
-      }
-
+      } catch (verifyError) {}
     } catch (e) {
       // Don't rethrow - notification failure shouldn't break the main flow
     }
@@ -6039,18 +5878,15 @@ class AppWriteProvider {
   /// Fix existing conversation starters that don't have isAutoReply field
   Future<void> migrateConversationStarters() async {
     try {
-
       final result = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.conversationStartersCollectionID,
       );
 
-
       for (var doc in result.documents) {
         try {
           // Check if isAutoReply field exists
           if (!doc.data.containsKey('isAutoReply')) {
-
             await databases!.updateDocument(
               databaseId: AppwriteConstants.dbID,
               collectionId: AppwriteConstants.conversationStartersCollectionID,
@@ -6060,33 +5896,26 @@ class AppWriteProvider {
                 'updatedAt': DateTime.now().toIso8601String(),
               },
             );
-
           }
-        } catch (e) {
-        }
+        } catch (e) {}
       }
-
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   /// Migrate existing feedback to add pin fields
   Future<void> migrateFeedbackPinFields() async {
     try {
-
       final result = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.feedbackAndReportCollectionID,
         queries: [Query.limit(500)],
       );
 
-
       int updated = 0;
       for (var doc in result.documents) {
         try {
           // Check if pin fields exist
           if (!doc.data.containsKey('isPinned')) {
-
             await databases!.updateDocument(
               databaseId: AppwriteConstants.dbID,
               collectionId: AppwriteConstants.feedbackAndReportCollectionID,
@@ -6101,17 +5930,13 @@ class AppWriteProvider {
 
             updated++;
           }
-        } catch (e) {
-        }
+        } catch (e) {}
       }
-
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   Future<List<Map<String, dynamic>>> getPetMedicalRecords(String petId) async {
     try {
-
       // Get pet document to find both document ID and petId field
       final petDoc = await getPetById(petId);
       String? petName;
@@ -6122,8 +5947,7 @@ class AppWriteProvider {
         petName = petDoc.data['name'] as String?;
         actualPetId = petDoc.data['petId'] as String?;
         petDocumentId = petDoc.$id;
-      } else {
-      }
+      } else {}
 
       // Fetch ALL medical records (paginated)
       const int limit = 100;
@@ -6132,7 +5956,6 @@ class AppWriteProvider {
       final List<Document> allDocs = [];
 
       while (hasMore) {
-
         final result = await databases!.listDocuments(
           databaseId: AppwriteConstants.dbID,
           collectionId: AppwriteConstants.medicalRecordsCollectionID,
@@ -6157,7 +5980,6 @@ class AppWriteProvider {
         }
       }
 
-
       // Filter for THIS pet using multiple matching strategies
       final filteredDocs = allDocs.where((doc) {
         final docPetId = doc.data['petId']?.toString() ?? '';
@@ -6180,12 +6002,10 @@ class AppWriteProvider {
             matchesPetName ||
             matchesProvidedId;
 
-        if (matches) {
-        }
+        if (matches) {}
 
         return matches;
       }).toList();
-
 
       return filteredDocs.map((doc) {
         final data = Map<String, dynamic>.from(doc.data);
@@ -6206,7 +6026,6 @@ class AppWriteProvider {
     // ... keep existing implementation unchanged ...
     // This is used by super admin only
     try {
-
       const int limit = 100;
       int offset = 0;
       bool hasMore = true;
@@ -6288,7 +6107,6 @@ class AppWriteProvider {
     String clinicId,
   ) async {
     try {
-
       // Fetch ALL appointments (paginated)
       const int limit = 100;
       int offset = 0;
@@ -6296,7 +6114,6 @@ class AppWriteProvider {
       final List<Document> allDocs = [];
 
       while (hasMore) {
-
         final result = await databases!.listDocuments(
           databaseId: AppwriteConstants.dbID,
           collectionId: AppwriteConstants.appointmentCollectionID,
@@ -6320,7 +6137,6 @@ class AppWriteProvider {
           offset += limit;
         }
       }
-
 
       // Get pet document for matching strategies
       final petDoc = await getPetById(petId);
@@ -6371,7 +6187,6 @@ class AppWriteProvider {
         return isMedical;
       }).toList();
 
-
       return filteredDocs.map((doc) {
         final data = Map<String, dynamic>.from(doc.data);
         data['\$id'] = doc.$id;
@@ -6387,7 +6202,6 @@ class AppWriteProvider {
   /// Debug method - Check appointment data structure
   Future<void> debugPetAppointments(String petId) async {
     try {
-
       // Get pet name
       final petDoc = await getPetById(petId);
       String? petName;
@@ -6405,17 +6219,14 @@ class AppWriteProvider {
         ],
       );
 
-
       // Filter for this pet (by ID or name)
       final petAppointments = allAppointments.documents.where((doc) {
         final docPetId = doc.data['petId']?.toString() ?? '';
         return docPetId == petId || (petName != null && docPetId == petName);
       }).toList();
 
-
       if (petAppointments.isEmpty) {
-        if (petName != null) {
-        }
+        if (petName != null) {}
 
         final uniquePetIds = allAppointments.documents
             .map((doc) => doc.data['petId'])
@@ -6423,27 +6234,21 @@ class AppWriteProvider {
             .take(10)
             .toList();
 
-        for (var samplePetId in uniquePetIds) {
-        }
+        for (var samplePetId in uniquePetIds) {}
       } else {
         for (var doc in petAppointments) {
-
           // Check if it matches our criteria
           final isMedical = doc.data['isMedicalService'] == true;
           final isCompleted = doc.data['status'] == 'completed';
           final matches = isMedical && isCompleted;
-
         }
       }
-
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   /// Get pet by petId field (not document ID)
   Future<Document?> getPetByPetId(String petId) async {
     try {
-
       final result = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.petsCollectionID,
@@ -6462,7 +6267,6 @@ class AppWriteProvider {
 
   Future<void> debugPetVaccinations(String petId) async {
     try {
-
       // Get pet name
       final petDoc = await getPetById(petId);
       String? petName;
@@ -6480,17 +6284,14 @@ class AppWriteProvider {
         ],
       );
 
-
       // Filter for this pet
       final petVaccinations = allVaccinations.documents.where((doc) {
         final docPetId = doc.data['petId']?.toString() ?? '';
         return docPetId == petId || (petName != null && docPetId == petName);
       }).toList();
 
-
       if (petVaccinations.isEmpty) {
-        if (petName != null) {
-        }
+        if (petName != null) {}
 
         final uniquePetIds = allVaccinations.documents
             .map((doc) => doc.data['petId'])
@@ -6498,27 +6299,21 @@ class AppWriteProvider {
             .take(10)
             .toList();
 
-        for (var samplePetId in uniquePetIds) {
-        }
+        for (var samplePetId in uniquePetIds) {}
       } else {
-        for (var doc in petVaccinations) {
-        }
+        for (var doc in petVaccinations) {}
       }
-
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   /// Get staff member by document ID with complete profile information
   Future<Staff?> getStaffByDocumentId(String staffDocumentId) async {
     try {
-
       final doc = await databases!.getDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.staffCollectionID,
         documentId: staffDocumentId,
       );
-
 
       final staff = Staff.fromMap(doc.data);
       staff.documentId = doc.$id;
@@ -6530,12 +6325,10 @@ class AppWriteProvider {
 
   Future<void> fixStaffImageUrls() async {
     try {
-
       final result = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.staffCollectionID,
       );
-
 
       int fixed = 0;
       int alreadyCorrect = 0;
@@ -6551,7 +6344,6 @@ class AppWriteProvider {
 
           // Check if it's a URL
           if (currentImage.contains('http')) {
-
             // Extract file ID from URL
             String? fileId;
             try {
@@ -6566,7 +6358,6 @@ class AppWriteProvider {
             }
 
             if (fileId != null && fileId.isNotEmpty) {
-
               // Update the staff record
               await databases!.updateDocument(
                 databaseId: AppwriteConstants.dbID,
@@ -6583,12 +6374,9 @@ class AppWriteProvider {
           } else {
             alreadyCorrect++;
           }
-        } catch (e) {
-        }
+        } catch (e) {}
       }
-
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   Future<Document> toggleDeletionRequestPin(
@@ -6597,7 +6385,6 @@ class AppWriteProvider {
     String pinnedBy,
   ) async {
     try {
-
       final data = <String, dynamic>{
         'isPinned': isPinned,
         'pinnedAt': isPinned ? DateTime.now().toIso8601String() : null,
@@ -6619,20 +6406,17 @@ class AppWriteProvider {
   /// Migrate existing deletion requests to add pin fields
   Future<void> migrateDeletionRequestPinFields() async {
     try {
-
       final result = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.feedbackDeletionRequestCollectionID,
         queries: [Query.limit(500)],
       );
 
-
       int updated = 0;
       for (var doc in result.documents) {
         try {
           // Check if pin fields exist
           if (!doc.data.containsKey('isPinned')) {
-
             await databases!.updateDocument(
               databaseId: AppwriteConstants.dbID,
               collectionId:
@@ -6648,12 +6432,9 @@ class AppWriteProvider {
 
             updated++;
           }
-        } catch (e) {
-        }
+        } catch (e) {}
       }
-
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   /// Get closed dates for a specific date range
@@ -6663,7 +6444,6 @@ class AppWriteProvider {
     DateTime endDate,
   ) async {
     try {
-
       final settingsDoc = await getClinicSettingsByClinicId(clinicId);
 
       if (settingsDoc == null) {
@@ -6708,7 +6488,6 @@ class AppWriteProvider {
     DateTime date,
   ) async {
     try {
-
       final settingsDoc = await getClinicSettingsByClinicId(clinicId);
 
       if (settingsDoc == null) {
@@ -6727,9 +6506,7 @@ class AppWriteProvider {
           settingsDoc.$id,
           {'closedDates': settings.closedDates},
         );
-
-      } else {
-      }
+      } else {}
     } catch (e) {
       rethrow;
     }
@@ -6741,7 +6518,6 @@ class AppWriteProvider {
     DateTime date,
   ) async {
     try {
-
       final settingsDoc = await getClinicSettingsByClinicId(clinicId);
 
       if (settingsDoc == null) {
@@ -6757,7 +6533,6 @@ class AppWriteProvider {
         settingsDoc.$id,
         {'closedDates': settings.closedDates},
       );
-
     } catch (e) {
       rethrow;
     }
@@ -6766,7 +6541,6 @@ class AppWriteProvider {
   /// Clear all closed dates for a clinic
   Future<void> clearAllClosedDatesForClinic(String clinicId) async {
     try {
-
       final settingsDoc = await getClinicSettingsByClinicId(clinicId);
 
       if (settingsDoc == null) {
@@ -6777,7 +6551,6 @@ class AppWriteProvider {
         settingsDoc.$id,
         {'closedDates': []},
       );
-
     } catch (e) {
       rethrow;
     }
@@ -6786,7 +6559,6 @@ class AppWriteProvider {
   /// Remove past closed dates (cleanup utility)
   Future<void> removePastClosedDatesForClinic(String clinicId) async {
     try {
-
       final settingsDoc = await getClinicSettingsByClinicId(clinicId);
 
       if (settingsDoc == null) {
@@ -6809,9 +6581,7 @@ class AppWriteProvider {
           settingsDoc.$id,
           {'closedDates': futureDates},
         );
-
-      } else {
-      }
+      } else {}
     } catch (e) {
       rethrow;
     }
@@ -6848,7 +6618,6 @@ class AppWriteProvider {
     List<DateTime> dates,
   ) async {
     try {
-
       final settingsDoc = await getClinicSettingsByClinicId(clinicId);
 
       if (settingsDoc == null) {
@@ -6871,7 +6640,6 @@ class AppWriteProvider {
         settingsDoc.$id,
         {'closedDates': settings.closedDates},
       );
-
     } catch (e) {
       rethrow;
     }
@@ -6880,20 +6648,17 @@ class AppWriteProvider {
   /// Migrate existing reviews to add isArchived field
   Future<void> migrateReviewsArchiveField() async {
     try {
-
       final result = await databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
         queries: [Query.limit(1000)],
       );
 
-
       int updated = 0;
       for (var doc in result.documents) {
         try {
           // Check if isArchived field exists
           if (!doc.data.containsKey('isArchived')) {
-
             await databases!.updateDocument(
               databaseId: AppwriteConstants.dbID,
               collectionId: AppwriteConstants.ratingsAndReviewsCollectionID,
@@ -6905,17 +6670,13 @@ class AppWriteProvider {
 
             updated++;
           }
-        } catch (e) {
-        }
+        } catch (e) {}
       }
-
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   Future<Map<String, dynamic>> sendPasswordResetEmail(String email) async {
     try {
-
       // CRITICAL: Appwrite will append ?userId=xxx&secret=xxx to this URL
       // We need to use a URL format that works with Flutter web hash routing
       final baseUrl = kIsWeb
@@ -6925,13 +6686,11 @@ class AppWriteProvider {
       // Use hash routing compatible format
       final resetUrl = '$baseUrl/#/reset-password';
 
-
       // Use Appwrite's built-in password recovery
       final recovery = await account!.createRecovery(
         email: email,
         url: resetUrl,
       );
-
 
       return {
         'success': true,
@@ -6939,7 +6698,6 @@ class AppWriteProvider {
             'If an account exists with this email, a password reset link has been sent.',
       };
     } catch (e) {
-
       // For security, always return success message
       return {
         'success': true,
@@ -6951,7 +6709,6 @@ class AppWriteProvider {
 
   Future<bool> validatePasswordResetSecret(String userId, String secret) async {
     try {
-
       // Get user document from Users collection
       final userDoc = await getUserById(userId);
 
@@ -6994,7 +6751,6 @@ class AppWriteProvider {
     required String newPassword,
   }) async {
     try {
-
       // Use Appwrite's updateRecovery to complete the password reset
       // This validates the secret and updates the password
       await account!.updateRecovery(
@@ -7004,22 +6760,18 @@ class AppWriteProvider {
         // passwordAgain: newPassword, // Confirm password
       );
 
-
       return true;
     } catch (e) {
-
       return false;
     }
   }
 
   /// Subscribe to USER conversations (filter by userId)
   Stream<RealtimeMessage> subscribeToUserConversations(String userId) {
-
     final realtime = Realtime(client);
 
     final channel =
         'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.conversationsCollectionID}.documents';
-
 
     return realtime
         .subscribe([channel])
@@ -7033,8 +6785,7 @@ class AppWriteProvider {
           final matches = messageUserId == userId;
 
           if (matches) {
-          } else {
-          }
+          } else {}
 
           return matches;
         });
@@ -7042,12 +6793,10 @@ class AppWriteProvider {
 
   /// Subscribe to CLINIC conversations (filter by clinicId)
   Stream<RealtimeMessage> subscribeToClinicConversations(String clinicId) {
-
     final realtime = Realtime(client);
 
     final channel =
         'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.conversationsCollectionID}.documents';
-
 
     return realtime
         .subscribe([channel])
@@ -7061,8 +6810,7 @@ class AppWriteProvider {
           final matches = messageClinicId == clinicId;
 
           if (matches) {
-          } else {
-          }
+          } else {}
 
           return matches;
         });
@@ -7073,11 +6821,9 @@ class AppWriteProvider {
     Map<String, dynamic>? fields,
   }) async {
     try {
-
       if (fields == null || fields.isEmpty) {
         throw Exception('No fields provided for update');
       }
-
 
       final doc = await databases!.updateDocument(
         databaseId: AppwriteConstants.dbID,
@@ -7085,7 +6831,6 @@ class AppWriteProvider {
         documentId: documentId,
         data: fields,
       );
-
 
       return doc;
     } catch (e) {
@@ -7095,7 +6840,6 @@ class AppWriteProvider {
 
   Future<Map<String, dynamic>?> getPetWithImage(String petId) async {
     try {
-
       final petDoc = await getPetById(petId);
       if (petDoc == null) return null;
 

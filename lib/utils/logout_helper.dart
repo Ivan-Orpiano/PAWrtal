@@ -1,6 +1,7 @@
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/mobile/user/controllers/user_messaging_controller.dart';
 import 'package:capstone_app/notification/services/appointment_reminder_service.dart';
+import 'package:capstone_app/notification/services/notification_service.dart';
 import 'package:capstone_app/pages/routes/app_pages.dart';
 import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
@@ -22,7 +23,69 @@ class LogoutHelper {
       // CRITICAL: Set global logout flag FIRST
       isLoggingOut.value = true;
 
-      // Show loading indicator
+      print('🚀 Starting logout process...');
+
+      // ========================================
+      // STEP 1: Get ALL data IMMEDIATELY and store in local variables
+      // ========================================
+      final sessionId = _getStorage.read('sessionId');
+      final userId = _getStorage.read('userId');
+      final pushTargetId = _getStorage.read('push_target_id');
+      final fcmToken = _getStorage.read('fcm_token');
+
+      print('📋 Session Info:');
+      print('   - Session ID: $sessionId');
+      print('   - User ID: $userId');
+      print('   - Push Target ID: $pushTargetId');
+      print('   - FCM Token: $fcmToken');
+
+      // ========================================
+      // STEP 2: AGGRESSIVELY delete FCM target FIRST
+      // Don't even check if session is valid - just try to delete it
+      // ========================================
+      bool fcmTargetDeleted = false;
+      
+      if (!kIsWeb && pushTargetId != null && pushTargetId.isNotEmpty) {
+        try {
+          print('🔔 AGGRESSIVELY deleting FCM push target: $pushTargetId');
+          final appWriteProvider = Get.find<AppWriteProvider>();
+          
+          // Try to delete without checking session validity first
+          final deleted = await appWriteProvider.deletePushTarget(pushTargetId);
+          
+          if (deleted) {
+            fcmTargetDeleted = true;
+            print('✅ FCM push target DELETED: $pushTargetId');
+          } else {
+            print('⚠️ FCM push target deletion returned false');
+          }
+        } catch (fcmError) {
+          print('❌ Error deleting FCM push target: $fcmError');
+          
+          // If it failed due to auth error, the session is already dead
+          // Log this for debugging
+          if (fcmError.toString().contains('401') || 
+              fcmError.toString().contains('unauthorized')) {
+            print('⚠️ FCM deletion failed due to invalid session');
+            print('⚠️ This means session was invalidated BEFORE logout was called');
+          }
+        }
+      }
+
+      // Try to clear FCM token from Firebase (this doesn't require Appwrite session)
+      if (!kIsWeb && fcmToken != null) {
+        try {
+          final notificationService = Get.find<NotificationService>();
+          await notificationService.clearToken();
+          print('✅ FCM token cleared from Firebase');
+        } catch (e) {
+          print('⚠️ Error clearing FCM token: $e');
+        }
+      }
+
+      // ========================================
+      // STEP 3: Show loading indicator
+      // ========================================
       Get.dialog(
         const Center(
           child: CircularProgressIndicator(),
@@ -30,21 +93,26 @@ class LogoutHelper {
         barrierDismissible: false,
       );
 
-      // Step 1: Clear MessagingController FIRST (before logout)
+      // ========================================
+      // STEP 4: Do other cleanup
+      // ========================================
+
+      // Set user offline and clear messaging
       if (Get.isRegistered<MessagingController>()) {
         final messagingController = Get.find<MessagingController>();
-
         try {
-          await messagingController.setUserOffline();
+          // Only try to set offline if we think session might be valid
+          if (sessionId != null && sessionId.isNotEmpty) {
+            await messagingController.setUserOffline();
+          }
         } catch (e) {
-          print('Error setting user offline: $e');
+          print('⚠️ Error setting user offline: $e');
         }
-
         messagingController.clearAllData();
         Get.delete<MessagingController>();
       }
 
-      // Step 1.5: CRITICAL - Stop appointment reminder service
+      // Stop appointment reminder service
       if (Get.isRegistered<AppointmentReminderService>()) {
         try {
           final reminderService = Get.find<AppointmentReminderService>();
@@ -55,119 +123,97 @@ class LogoutHelper {
         }
       }
 
-      // Step 2: Clear WebAppointmentController
+      // Clear WebAppointmentController
       if (Get.isRegistered<WebAppointmentController>()) {
         try {
           final appointmentController = Get.find<WebAppointmentController>();
           appointmentController.cleanupOnLogout();
           Get.delete<WebAppointmentController>(force: true);
         } catch (e) {
-          print('Error cleaning appointment controller: $e');
+          print('⚠️ Error cleaning appointment controller: $e');
         }
       }
 
-      // Step 2.5: Clear AdminDashboardController with cache cleanup
+      // Clear AdminDashboardController
       if (Get.isRegistered<AdminDashboardController>()) {
         try {
           final dashboardController = Get.find<AdminDashboardController>();
           dashboardController.cleanupOnLogout();
           Get.delete<AdminDashboardController>(force: true);
         } catch (e) {
-          print('Error cleaning dashboard controller: $e');
+          print('⚠️ Error cleaning dashboard controller: $e');
         }
       }
 
-      // Step 3: Get important data BEFORE clearing storage
-      final sessionId = _getStorage.read('sessionId');
-      final userId = _getStorage.read('userId');
-      final pushTargetId = _getStorage.read('push_target_id');
-
-      // Step 4: CRITICAL - Delete FCM push target on mobile
-      if (!kIsWeb && pushTargetId != null && pushTargetId.isNotEmpty) {
-        try {
-          final appWriteProvider = Get.find<AppWriteProvider>();
-          // Use the existing deletePushTarget method from AppWriteProvider
-          final deleted = await appWriteProvider.deletePushTarget(pushTargetId);
-          if (deleted) {
-            print('✅ FCM push target deleted successfully: $pushTargetId');
-          } else {
-            print('⚠️ FCM push target deletion returned false');
-          }
-        } catch (e) {
-          print('❌ Error deleting FCM push target: $e');
-          // Continue with logout even if this fails
-        }
-      }
-
-      // Step 5: Clear UserSessionService
+      // Clear UserSessionService
       if (Get.isRegistered<UserSessionService>()) {
         final userSession = Get.find<UserSessionService>();
         await userSession.clearSession();
+        print('✅ UserSessionService cleared');
       }
 
-      // Step 6: Perform Appwrite logout with multiple strategies
-      bool serverLogoutSuccess = false;
-      try {
-        final appWriteProvider = Get.find<AppWriteProvider>();
+      // ========================================
+      // STEP 5: Try to delete Appwrite session (may already be invalid)
+      // ========================================
+      if (sessionId != null && sessionId.isNotEmpty) {
+        bool serverLogoutSuccess = false;
+        try {
+          final appWriteProvider = Get.find<AppWriteProvider>();
 
-        // STRATEGY 1: Try deleting specific session
-        if (sessionId != null && sessionId.isNotEmpty) {
+          // STRATEGY 1: Try deleting specific session
           try {
+            print('🔐 Attempting to delete session: $sessionId');
             await appWriteProvider.account!.deleteSession(sessionId: sessionId);
             serverLogoutSuccess = true;
             print('✅ Session deleted successfully: $sessionId');
           } catch (e) {
             print('⚠️ Specific session deletion failed: $e');
-            // Continue to strategy 2
           }
-        }
 
-        // STRATEGY 2: If strategy 1 failed, try deleting current session
-        if (!serverLogoutSuccess) {
-          try {
-            await appWriteProvider.account!.deleteSession(sessionId: 'current');
-            serverLogoutSuccess = true;
-            print('✅ Current session deleted successfully');
-          } catch (e) {
-            print('⚠️ Current session deletion failed: $e');
-            // Continue to strategy 3
-          }
-        }
-
-        // STRATEGY 3: If both failed, try deleting ALL sessions (nuclear option)
-        if (!serverLogoutSuccess && !kIsWeb) {
-          try {
-            await appWriteProvider.account!.deleteSessions();
-            serverLogoutSuccess = true;
-            print('✅ All sessions deleted successfully (mobile fallback)');
-          } catch (e) {
-            print('⚠️ Delete all sessions failed: $e');
-            // Check if error is because user is already logged out
-            final errorMessage = e.toString().toLowerCase();
-            if (errorMessage.contains('unauthorized') ||
-                errorMessage.contains('session') ||
-                errorMessage.contains('guests')) {
+          // STRATEGY 2: Try deleting current session
+          if (!serverLogoutSuccess) {
+            try {
+              print('🔐 Attempting to delete current session');
+              await appWriteProvider.account!.deleteSession(sessionId: 'current');
               serverLogoutSuccess = true;
-              print('✅ Session already invalid, proceeding with local logout');
+              print('✅ Current session deleted successfully');
+            } catch (e) {
+              print('⚠️ Current session deletion failed: $e');
             }
           }
+
+          // STRATEGY 3: Try deleting ALL sessions (mobile only)
+          if (!serverLogoutSuccess && !kIsWeb) {
+            try {
+              print('🔐 Attempting to delete ALL sessions (mobile fallback)');
+              await appWriteProvider.account!.deleteSessions();
+              serverLogoutSuccess = true;
+              print('✅ All sessions deleted successfully (mobile fallback)');
+            } catch (e) {
+              print('⚠️ Delete all sessions failed: $e');
+            }
+          }
+
+          if (!serverLogoutSuccess) {
+            print('⚠️ All session deletion strategies failed');
+            print('⚠️ Session may have been invalidated before logout was called');
+          }
+        } catch (e) {
+          print('⚠️ Appwrite logout error: $e');
         }
-      } catch (e) {
-        print('⚠️ Appwrite logout error: $e');
-        
-        final errorMessage = e.toString().toLowerCase();
-        if (errorMessage.contains('unauthorized') ||
-            errorMessage.contains('session') ||
-            errorMessage.contains('guests')) {
-          serverLogoutSuccess = true;
-          print('✅ Session already invalid, proceeding with local logout');
-        }
+      } else {
+        print('⏭️ No session ID found - skipping session deletion');
       }
 
-      // Step 7: Clear GetStorage (do this AFTER Appwrite logout attempt)
+      // ========================================
+      // STEP 6: Clear local storage
+      // ========================================
       await _clearAllUserData();
+      print('✅ Local storage cleared');
 
-      // Step 8: Reinitialize AppwriteProvider with fresh client (web only)
+      // ========================================
+      // STEP 7: Reinitialize AppwriteProvider (web only)
+      // ========================================
       if (kIsWeb) {
         try {
           final appWriteProvider = Get.find<AppWriteProvider>();
@@ -183,22 +229,38 @@ class LogoutHelper {
         }
       }
 
-      // Step 9: Close loading dialog
+      // ========================================
+      // STEP 8: Close dialog and navigate
+      // ========================================
       if (Get.isDialogOpen ?? false) {
         Get.back();
       }
 
-      // Step 10: Navigate to login page
       Get.offAllNamed(Routes.login);
 
-      // Show success message
+      // Show appropriate message
+      String message;
+      if (fcmTargetDeleted) {
+        message = "You have been successfully logged out";
+      } else if (pushTargetId != null && pushTargetId.isNotEmpty) {
+        message = "Logged out (Note: Your session was already invalid. You may need to clear app data if you experience issues.)";
+      } else {
+        message = "You have been successfully logged out";
+      }
+      
       SnackbarHelper.showSuccess(
         context: Get.overlayContext,
         title: "Logged Out",
-        message: "You have been successfully logged out"
+        message: message
       );
       
       print('✅ Logout completed successfully');
+      if (fcmTargetDeleted) {
+        print('✅ FCM target was properly deleted');
+      } else if (pushTargetId != null && pushTargetId.isNotEmpty) {
+        print('⚠️ FCM target was NOT deleted - session was already invalid');
+        print('⚠️ INVESTIGATION NEEDED: Something invalidated the session before logout');
+      }
     } catch (e) {
       print('❌ Critical logout error: $e');
 
@@ -235,15 +297,49 @@ class LogoutHelper {
     try {
       print('🚀 Starting logout with navigation to: $route');
 
-      // Step 1: Clear MessagingController
+      // Get session data FIRST
+      final sessionId = _getStorage.read('sessionId');
+      final userId = _getStorage.read('userId');
+      final pushTargetId = _getStorage.read('push_target_id');
+      final fcmToken = _getStorage.read('fcm_token');
+
+      // AGGRESSIVELY delete FCM target
+      if (!kIsWeb && pushTargetId != null && pushTargetId.isNotEmpty) {
+        try {
+          final appWriteProvider = Get.find<AppWriteProvider>();
+          final deleted = await appWriteProvider.deletePushTarget(pushTargetId);
+          if (deleted) {
+            print('✅ FCM push target deleted: $pushTargetId');
+          }
+        } catch (e) {
+          print('❌ Error deleting FCM push target: $e');
+        }
+      }
+
+      // Clear FCM token
+      if (!kIsWeb && fcmToken != null) {
+        try {
+          final notificationService = Get.find<NotificationService>();
+          await notificationService.clearToken();
+        } catch (e) {
+          print('⚠️ Error clearing FCM token: $e');
+        }
+      }
+
+      // Do other cleanup
       if (Get.isRegistered<MessagingController>()) {
         final messagingController = Get.find<MessagingController>();
-        await messagingController.setUserOffline();
+        try {
+          if (sessionId != null && sessionId.isNotEmpty) {
+            await messagingController.setUserOffline();
+          }
+        } catch (e) {
+          print('⚠️ Error setting user offline: $e');
+        }
         messagingController.clearAllData();
         Get.delete<MessagingController>();
       }
 
-      // Step 1.5: CRITICAL - Stop appointment reminder service
       if (Get.isRegistered<AppointmentReminderService>()) {
         try {
           final reminderService = Get.find<AppointmentReminderService>();
@@ -254,7 +350,6 @@ class LogoutHelper {
         }
       }
 
-      // Step 2: Clear WebAppointmentController
       if (Get.isRegistered<WebAppointmentController>()) {
         try {
           final appointmentController = Get.find<WebAppointmentController>();
@@ -265,7 +360,6 @@ class LogoutHelper {
         }
       }
 
-      // Step 2.5: Clear AdminDashboardController with cache cleanup
       if (Get.isRegistered<AdminDashboardController>()) {
         try {
           final dashboardController = Get.find<AdminDashboardController>();
@@ -276,44 +370,20 @@ class LogoutHelper {
         }
       }
 
-      // Step 3: Get important data before clearing
-      final sessionId = _getStorage.read('sessionId');
-      final userId = _getStorage.read('userId');
-      final pushTargetId = _getStorage.read('push_target_id');
-
-      // Step 4: CRITICAL - Delete FCM push target on mobile
-      if (!kIsWeb && pushTargetId != null && pushTargetId.isNotEmpty) {
+      // Logout from Appwrite
+      if (sessionId != null && sessionId.isNotEmpty) {
         try {
           final appWriteProvider = Get.find<AppWriteProvider>();
-          // Use the existing deletePushTarget method from AppWriteProvider
-          final deleted = await appWriteProvider.deletePushTarget(pushTargetId);
-          if (deleted) {
-            print('✅ FCM push target deleted: $pushTargetId');
-          } else {
-            print('⚠️ FCM push target deletion returned false');
-          }
-        } catch (e) {
-          print('❌ Error deleting FCM push target: $e');
-        }
-      }
-
-      // Step 5: Logout from Appwrite with multiple strategies
-      try {
-        final appWriteProvider = Get.find<AppWriteProvider>();
-        
-        // STRATEGY 1: Try specific session
-        if (sessionId != null && sessionId.isNotEmpty) {
+          
           try {
             await appWriteProvider.account!.deleteSession(sessionId: sessionId);
             print('✅ Session deleted: $sessionId');
           } catch (e) {
             print('⚠️ Specific session deletion failed, trying current');
-            // STRATEGY 2: Try current session
             try {
               await appWriteProvider.account!.deleteSession(sessionId: 'current');
               print('✅ Current session deleted');
             } catch (e2) {
-              // STRATEGY 3: Delete all sessions (mobile only)
               if (!kIsWeb) {
                 try {
                   await appWriteProvider.account!.deleteSessions();
@@ -324,33 +394,18 @@ class LogoutHelper {
               }
             }
           }
-        } else {
-          // No session ID, try current or all
-          try {
-            await appWriteProvider.account!.deleteSession(sessionId: 'current');
-            print('✅ Current session deleted');
-          } catch (e) {
-            if (!kIsWeb) {
-              try {
-                await appWriteProvider.account!.deleteSessions();
-                print('✅ All sessions deleted (mobile fallback)');
-              } catch (e2) {
-                print('⚠️ Session deletion failed: $e2');
-              }
-            }
-          }
+        } catch (e) {
+          print('⚠️ Session deletion error: $e');
         }
-      } catch (e) {
-        print('⚠️ Session deletion error: $e');
       }
 
-      // Step 6: Clear session and storage
+      // Clear session and storage
       if (Get.isRegistered<UserSessionService>()) {
         await Get.find<UserSessionService>().clearSession();
       }
       await _clearAllUserData();
 
-      // Step 7: Custom navigation
+      // Custom navigation
       if (context.mounted) {
         Navigator.of(context).pushNamedAndRemoveUntil(route, (route) => false);
       }
@@ -381,6 +436,7 @@ class LogoutHelper {
       "userDocumentId",
       "userProfilePictureId",
       "push_target_id", // CRITICAL: Clear FCM target ID
+      "fcm_token", // CRITICAL: Also clear FCM token
       "phone",
       "username",
       "authorities",
