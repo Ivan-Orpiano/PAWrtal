@@ -1,240 +1,227 @@
 import 'dart:async';
+import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
-import 'package:capstone_app/utils/user_session_service.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:capstone_app/notification/services/notification_preferences_service.dart';
+import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:get/get.dart';
-import 'package:timezone/timezone.dart' as tz;
-import 'package:timezone/data/latest.dart' as tz;
+import 'package:get_storage/get_storage.dart';
 
-/// User-side appointment reminder service
-/// Schedules notifications for upcoming appointments
-/// Works even when app is closed (uses local scheduled notifications)
 class AppointmentReminderService extends GetxService {
   final AuthRepository authRepository;
-  final AppWriteProvider appwriteProvider;
-  final UserSessionService session;
-  final FlutterLocalNotificationsPlugin _localNotifications;
+  final NotificationPreferencesService notificationPrefsService;
+  final AppWriteProvider appWriteProvider;
 
-  AppointmentReminderService({
-    required this.authRepository,
-    required this.appwriteProvider,
-    required this.session,
-  }) : _localNotifications = FlutterLocalNotificationsPlugin();
+  AppointmentReminderService(
+      {required this.authRepository,
+      required this.notificationPrefsService,
+      required this.appWriteProvider});
 
-  // Track scheduled notifications
-  final Map<String, int> _scheduledNotifications = {};
+  Timer? _reminderTimer;
+  final Set<String> _remindedAppointments = {};
+  final GetStorage _storage = GetStorage();
+
+  // Configuration
+  static const Duration checkInterval =
+      Duration(minutes: 10); // Check every 10 minutes
+  static const Duration reminderWindow =
+      Duration(hours: 1); // Remind 1 hour before
 
   @override
-  Future<void> onInit() async {
+  void onInit() {
     super.onInit();
-    await _initializeLocalNotifications();
-    await _scheduleAllUpcomingAppointments();
+    _loadRemindedAppointments();
+    _startReminderService();
   }
 
   @override
   void onClose() {
-    _scheduledNotifications.clear();
+    _reminderTimer?.cancel();
     super.onClose();
   }
 
-  /// Initialize local notifications with timezone support
-  Future<void> _initializeLocalNotifications() async {
+  /// Start the reminder service
+  void _startReminderService() {
+    print('🔔 Appointment Reminder Service: STARTED');
+    print(
+        '⏰ Checking every ${checkInterval.inMinutes} minutes for appointments within ${reminderWindow.inMinutes} minutes');
+
+    // Run initial check
+    _checkAndSendReminders();
+
+    // Schedule periodic checks
+    _reminderTimer = Timer.periodic(checkInterval, (timer) {
+      _checkAndSendReminders();
+    });
+  }
+
+  /// Stop the reminder service
+  void stopReminderService() {
+    _reminderTimer?.cancel();
+    _reminderTimer = null;
+    print('🔔 Appointment Reminder Service: STOPPED');
+  }
+
+  /// Main method to check and send reminders
+  Future<void> _checkAndSendReminders() async {
     try {
-      // Initialize timezones
-      tz.initializeTimeZones();
+      print('\n🔍 Checking for upcoming appointments...');
+      // CRITICAL: Use local time for comparison (Philippines timezone)
+      final now = DateTime.now();
+      print('⏰ Current time (Local): $now');
+      print('⏰ Current time (UTC): ${now.toUtc()}');
 
-      const androidSettings =
-          AndroidInitializationSettings('@mipmap/ic_launcher');
-      const iosSettings = DarwinInitializationSettings(
-        requestSoundPermission: true,
-        requestBadgePermission: true,
-        requestAlertPermission: true,
-      );
+      // Get all accepted appointments from all clinics
+      final allAppointments = await _getAllAcceptedAppointments();
 
-      await _localNotifications.initialize(
-        const InitializationSettings(
-          android: androidSettings,
-          iOS: iosSettings,
-        ),
-        onDidReceiveNotificationResponse: _handleNotificationTap,
-      );
+      if (allAppointments.isEmpty) {
+        print('✓ No accepted appointments found');
+        return;
+      }
 
+      print('📋 Found ${allAppointments.length} accepted appointment(s)');
+
+      int remindersCount = 0;
+
+      for (var appointment in allAppointments) {
+        // Skip if already reminded
+        if (_remindedAppointments.contains(appointment.documentId)) {
+          continue;
+        }
+
+        // CRITICAL WORKAROUND: Appointments are stored incorrectly (PH time as UTC)
+        // So we treat the stored UTC time as if it's actually PH local time
+
+        // Get the stored datetime (which has Z suffix but is actually PH time)
+        final storedDateTime = appointment.dateTime;
+
+        // Remove the UTC marker and treat as local PH time
+        final actualLocalTime = DateTime(
+          storedDateTime.year,
+          storedDateTime.month,
+          storedDateTime.day,
+          storedDateTime.hour,
+          storedDateTime.minute,
+          storedDateTime.second,
+        ); // This creates a local DateTime with the same values
+
+        final nowLocal = now;
+
+        print('\n📅 Checking appointment ${appointment.documentId}:');
+        print('   - Appointment time (stored): ${appointment.dateTime}');
+        print('   - Appointment time (CORRECTED as local): $actualLocalTime');
+        print('   - Current time (local): $nowLocal');
+
+        // Calculate time until appointment using corrected local times
+        final timeUntilAppointment = actualLocalTime.difference(nowLocal);
+        print('   - Time until: ${timeUntilAppointment.inMinutes} minutes');
+
+        // Check if appointment is within reminder window (1 hour)
+        // and hasn't passed yet
+        if (timeUntilAppointment > Duration.zero &&
+            timeUntilAppointment <= reminderWindow) {
+          print('\n⏰ Appointment within reminder window:');
+          print('   - Pet: ${appointment.petId}');
+          print('   - Time until: ${timeUntilAppointment.inMinutes} minutes');
+          print('   - Appointment ID: ${appointment.documentId}');
+
+          await _sendAppointmentReminder(
+              appointment, timeUntilAppointment.inMinutes);
+          remindersCount++;
+
+          // Mark as reminded
+          _remindedAppointments.add(appointment.documentId!);
+          _saveRemindedAppointments();
+        }
+      }
+
+      if (remindersCount > 0) {
+        print('\n✉️ Sent $remindersCount appointment reminder(s)');
+      } else {
+        print('✓ No appointments need reminders at this time');
+      }
+
+      // Cleanup old reminded appointments (older than 24 hours)
+      _cleanupRemindedAppointments(allAppointments);
     } catch (e) {
+      print('❌ Error checking reminders: $e');
     }
   }
 
-  void _handleNotificationTap(NotificationResponse response) {
+  /// Get all accepted appointments from all clinics
+  Future<List<Appointment>> _getAllAcceptedAppointments() async {
+    try {
+      // CRITICAL: Import Query class at the top of the file
+      // Add this import: import 'package:appwrite/appwrite.dart';
 
-    if (response.payload != null) {
-      // Navigate to appointments page
+      // Get all appointments with status 'accepted'
+      final result = await appWriteProvider.databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.appointmentCollectionID,
+        queries: [
+          Query.equal("status", "accepted"), // ✅ FIXED - Use Query object
+          Query.limit(1000), // ✅ FIXED - Use Query object
+        ],
+      );
+
+      print('✅ Fetched ${result.documents.length} accepted appointments');
+
+      return result.documents
+          .map((doc) => Appointment.fromMap(doc.data))
+          .toList();
+    } catch (e) {
+      print('❌ Error fetching accepted appointments: $e');
+      return [];
+    }
+  }
+
+  /// Send appointment reminder (both in-app and push)
+  Future<void> _sendAppointmentReminder(
+    Appointment appointment,
+    int minutesUntil,
+  ) async {
+    try {
+      print(
+          '\n📤 Sending reminder for appointment ${appointment.documentId}...');
+
+      // Get user details
+      final userDoc = await authRepository.getUserById(appointment.userId);
+      if (userDoc == null) {
+        print('❌ User not found: ${appointment.userId}');
+        return;
+      }
+
+      final userDocId = userDoc.data['\$id'] ?? appointment.userId;
+
+      // Get user's notification preferences
+      final userPreferences =
+          await notificationPrefsService.getPreferencesForUser(userDocId);
+
+      print('👤 User: ${userDoc.data['name'] ?? 'Unknown'}');
+      print('📧 Email: ${userDoc.data['email'] ?? 'N/A'}');
+      print('🔔 Push enabled: ${userPreferences.pushNotificationsEnabled}');
+      print('📬 Email enabled: ${userPreferences.emailNotificationsEnabled}');
+
+      // Get clinic and pet details
+      final clinicDoc =
+          await authRepository.getClinicById(appointment.clinicId);
+      final clinicName = clinicDoc?.data['clinicName'] ?? 'Clinic';
+
+      // Try to get pet name
+      String petName = appointment.petId;
       try {
-        // You can parse the payload to get appointment details
-        // Get.toNamed('/userHome'); // Adjust route as needed
+        final petDoc = await authRepository.getPetById(appointment.petId);
+        if (petDoc != null) {
+          petName = petDoc.data['name'] ?? appointment.petId;
+        }
       } catch (e) {
-      }
-    }
-  }
-
-  /// Schedule notifications for all upcoming accepted appointments
-  Future<void> _scheduleAllUpcomingAppointments() async {
-    try {
-      final userId = session.userId;
-      if (userId.isEmpty) {
-        return;
+        print('⚠️ Could not fetch pet name, using petId: $e');
       }
 
-      final appointments = await authRepository.getUserAppointments(userId);
-
-      // Filter for accepted appointments in the future
-      final upcomingAccepted = appointments.where((apt) {
-        return apt.status == 'accepted' && apt.dateTime.isAfter(DateTime.now());
-      }).toList();
-
-
-      // Schedule notification for each
-      for (var appointment in upcomingAccepted) {
-        await scheduleAppointmentReminder(appointment);
-      }
-
-    } catch (e) {
-    }
-  }
-
-  /// Schedule a reminder notification for an appointment
-  /// Called when:
-  /// 1. Appointment is accepted by admin
-  /// 2. User logs in and has upcoming accepted appointments
-  Future<void> scheduleAppointmentReminder(Appointment appointment) async {
-    try {
-      if (appointment.documentId == null) return;
-
-      // Calculate reminder time (1 hour before appointment)
-      final reminderTime =
-          appointment.dateTime.subtract(const Duration(hours: 1));
-
-      // Don't schedule if reminder time is in the past
-      if (reminderTime.isBefore(DateTime.now())) {
-        return;
-      }
-
-
-      // Get pet and clinic details
-      final petName = await _getPetName(appointment.petId);
-      final clinicName = await _getClinicName(appointment.clinicId);
-
-      // Generate unique notification ID
-      final notificationId = appointment.documentId.hashCode;
-
-      // Schedule local notification
-      await _scheduleLocalNotification(
-        notificationId: notificationId,
-        scheduledTime: reminderTime,
-        title: '⏰ Appointment Reminder',
-        body: '$petName\'s appointment at $clinicName is in 1 hour!',
-        payload: appointment.documentId!,
-        appointment: appointment,
-      );
-
-      // Track scheduled notification
-      _scheduledNotifications[appointment.documentId!] = notificationId;
-
-      // Also create in-app notification (will be delivered at reminder time)
-      await _scheduleInAppNotification(
-        appointment: appointment,
-        reminderTime: reminderTime,
-        petName: petName,
-        clinicName: clinicName,
-      );
-
-    } catch (e) {
-    }
-  }
-
-  /// Schedule local notification (works even when app is closed)
-  Future<void> _scheduleLocalNotification({
-    required int notificationId,
-    required DateTime scheduledTime,
-    required String title,
-    required String body,
-    required String payload,
-    required Appointment appointment,
-  }) async {
-    try {
-      // Convert to timezone-aware datetime
-      final tz.TZDateTime scheduledDate = tz.TZDateTime.from(
-        scheduledTime,
-        tz.local,
-      );
-
-      const androidDetails = AndroidNotificationDetails(
-        'appointment_reminders',
-        'Appointment Reminders',
-        channelDescription: 'Reminders for upcoming appointments',
-        importance: Importance.high,
-        priority: Priority.high,
-        enableVibration: true,
-        playSound: true,
-      );
-
-      const iosDetails = DarwinNotificationDetails(
-        presentAlert: true,
-        presentBadge: true,
-        presentSound: true,
-      );
-
-      const notificationDetails = NotificationDetails(
-        android: androidDetails,
-        iOS: iosDetails,
-      );
-
-      await _localNotifications.zonedSchedule(
-        notificationId,
-        title,
-        body,
-        scheduledDate,
-        notificationDetails,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        payload: payload,
-      );
-
-    } catch (e) {
-
-      // Fallback: If timezone scheduling fails, show immediate notification (for testing)
-      if (kDebugMode) {
-        await _localNotifications.show(
-          notificationId,
-          title,
-          '⚠️ Fallback: $body',
-          const NotificationDetails(
-            android: AndroidNotificationDetails(
-              'appointment_reminders',
-              'Appointment Reminders',
-              importance: Importance.high,
-              priority: Priority.high,
-            ),
-            iOS: DarwinNotificationDetails(),
-          ),
-          payload: payload,
-        );
-      }
-    }
-  }
-
-  /// Schedule in-app notification (stored in database)
-  Future<void> _scheduleInAppNotification({
-    required Appointment appointment,
-    required DateTime reminderTime,
-    required String petName,
-    required String clinicName,
-  }) async {
-    try {
-      // We'll create the notification record now, but with a future timestamp
-      // The InAppNotificationService will display it when fetching notifications
-
+      // 1. Create in-app notification (ALWAYS create)
+      print('📱 Creating in-app notification...');
       final notification = AppNotification.appointmentReminder(
         userId: appointment.userId,
         appointmentId: appointment.documentId!,
@@ -243,109 +230,122 @@ class AppointmentReminderService extends GetxService {
         petName: petName,
         service: appointment.service,
         appointmentDateTime: appointment.dateTime,
-        minutesUntil: 60,
+        minutesUntil: minutesUntil,
       );
 
-      // Create the notification record
       await authRepository.createNotification(notification);
+      print('✓ In-app notification created');
 
-    } catch (e) {
-    }
-  }
+      // 2. Send push notification (only if user has it enabled)
+      if (userPreferences.pushNotificationsEnabled) {
+        print('📲 Sending push notification...');
 
-  /// Cancel scheduled reminder for an appointment
-  /// Called when:
-  /// 1. Appointment is cancelled by user
-  /// 2. Appointment is declined by admin
-  /// 3. Appointment is rescheduled
-  Future<void> cancelAppointmentReminder(String appointmentId) async {
-    try {
+        String timeMessage;
+        if (minutesUntil < 60) {
+          timeMessage = 'in $minutesUntil minutes';
+        } else {
+          final hours = (minutesUntil / 60).floor();
+          timeMessage = 'in $hours hour${hours > 1 ? 's' : ''}';
+        }
 
-      // Get notification ID
-      final notificationId = _scheduledNotifications[appointmentId];
-
-      if (notificationId != null) {
-        // Cancel local notification
-        await _localNotifications.cancel(notificationId);
-
-        // Remove from tracking
-        _scheduledNotifications.remove(appointmentId);
-
+        await authRepository.appWriteProvider.sendPushNotification(
+          title: '⏰ Appointment Reminder',
+          body:
+              '$petName\'s appointment at $clinicName is coming up $timeMessage!',
+          userIds: [appointment.userId],
+          data: {
+            'type': 'appointment_reminder',
+            'appointmentId': appointment.documentId!,
+            'petName': petName,
+            'clinicName': clinicName,
+            'minutesUntil': minutesUntil.toString(),
+          },
+        );
+        print('✓ Push notification sent');
       } else {
+        print('⊘ Push notification skipped (user disabled)');
       }
 
+      print('✅ Reminder sent successfully!');
     } catch (e) {
+      print('❌ Error sending reminder: $e');
+      // Don't throw - continue with other reminders
     }
   }
 
-  /// Reschedule reminder (when appointment time is changed)
-  Future<void> rescheduleAppointmentReminder(Appointment appointment) async {
-    if (appointment.documentId == null) return;
-
-    // Cancel existing reminder
-    await cancelAppointmentReminder(appointment.documentId!);
-
-    // Schedule new reminder
-    await scheduleAppointmentReminder(appointment);
-  }
-
-  /// Get pet name for display
-  Future<String> _getPetName(String petId) async {
+  /// Load reminded appointments from storage
+  void _loadRemindedAppointments() {
     try {
-      final petDoc = await authRepository.getPetById(petId);
-      return petDoc?.data['name'] ?? petId;
-    } catch (e) {
-      return petId;
-    }
-  }
-
-  /// Get clinic name for display
-  Future<String> _getClinicName(String clinicId) async {
-    try {
-      final clinicDoc = await authRepository.getClinicById(clinicId);
-      return clinicDoc?.data['clinicName'] ?? 'Unknown Clinic';
-    } catch (e) {
-      return 'Unknown Clinic';
-    }
-  }
-
-  /// Check for pending scheduled notifications
-  Future<List<PendingNotificationRequest>> getPendingNotifications() async {
-    try {
-      final pending = await _localNotifications.pendingNotificationRequests();
-      for (var notification in pending) {
+      final reminded = _storage.read<List>('reminded_appointments');
+      if (reminded != null) {
+        _remindedAppointments.addAll(reminded.cast<String>());
+        print(
+            '📝 Loaded ${_remindedAppointments.length} reminded appointment(s) from storage');
       }
-      return pending;
     } catch (e) {
-      return [];
+      print('⚠️ Error loading reminded appointments: $e');
     }
   }
 
-  /// Cancel all scheduled notifications (for logout)
-  Future<void> cancelAllReminders() async {
+  /// Save reminded appointments to storage
+  void _saveRemindedAppointments() {
     try {
-      await _localNotifications.cancelAll();
-      _scheduledNotifications.clear();
+      _storage.write('reminded_appointments', _remindedAppointments.toList());
     } catch (e) {
+      print('⚠️ Error saving reminded appointments: $e');
     }
   }
 
-  /// Manual refresh - reschedule all upcoming appointments
-  Future<void> refreshAllReminders() async {
+  /// Cleanup old reminded appointments
+  void _cleanupRemindedAppointments(List<Appointment> currentAppointments) {
+    final appointmentIds = currentAppointments
+        .map((a) => a.documentId)
+        .where((id) => id != null)
+        .toSet();
 
-    // Cancel existing
-    await cancelAllReminders();
+    // Remove reminded appointments that are no longer in current appointments
+    _remindedAppointments.removeWhere((id) => !appointmentIds.contains(id));
 
-    // Reschedule
-    await _scheduleAllUpcomingAppointments();
+    // Also remove appointments older than 24 hours
+    final cutoffTime = DateTime.now().subtract(const Duration(hours: 24));
+    final toRemove = <String>[];
 
+    for (var id in _remindedAppointments) {
+      final appointment = currentAppointments.firstWhereOrNull(
+        (a) => a.documentId == id,
+      );
+      if (appointment != null && appointment.dateTime.isBefore(cutoffTime)) {
+        toRemove.add(id);
+      }
+    }
+
+    if (toRemove.isNotEmpty) {
+      _remindedAppointments.removeAll(toRemove);
+      _saveRemindedAppointments();
+      print('🧹 Cleaned up ${toRemove.length} old reminded appointment(s)');
+    }
   }
 
-  /// Get service statistics
-  Map<String, dynamic> getStatistics() {
+  /// Manually trigger reminder check (for testing)
+  Future<void> manualCheckReminders() async {
+    print('\n🔄 Manual reminder check triggered...');
+    await _checkAndSendReminders();
+  }
+
+  /// Clear reminded appointments (for testing)
+  void clearRemindedAppointments() {
+    _remindedAppointments.clear();
+    _saveRemindedAppointments();
+    print('🗑️ Cleared all reminded appointments');
+  }
+
+  /// Get reminder statistics
+  Map<String, dynamic> getReminderStats() {
     return {
-      'scheduledReminders': _scheduledNotifications.length,
-      'appointments': _scheduledNotifications.keys.toList(),
+      'isRunning': _reminderTimer != null && _reminderTimer!.isActive,
+      'checkIntervalMinutes': checkInterval.inMinutes,
+      'reminderWindowMinutes': reminderWindow.inMinutes,
+      'remindedCount': _remindedAppointments.length,
     };
   }
 }
