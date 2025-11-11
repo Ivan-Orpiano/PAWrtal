@@ -26,15 +26,31 @@ class EnhancedUserAppointmentController extends GetxController {
 
   var appointmentReviews = <String, bool>{}.obs;
 
+  DateTime? _lastFetchTime;
+  final Duration _cacheDuration = const Duration(minutes: 30);
+
   StreamSubscription<RealtimeMessage>? _appointmentSubscription;
   StreamSubscription<RealtimeMessage>? _reviewSubscription;
+
+  bool get isCacheValid {
+    if (_lastFetchTime == null) return false;
+    final now = DateTime.now();
+    return now.difference(_lastFetchTime!) < _cacheDuration;
+  }
+
+  bool get hasData => appointments.isNotEmpty || _lastFetchTime != null;
 
   @override
   void onInit() {
     super.onInit();
-    fetchAppointments();
-    _setupRealtimeSubscription();
-    _setupReviewSubscription();
+    // Only fetch if cache is invalid or no data exists
+    if (!isCacheValid) {
+      fetchAppointments();
+    } else {
+      // Data is cached, just set up real-time
+      _setupRealtimeSubscription();
+      _setupReviewSubscription();
+    }
   }
 
   @override
@@ -49,11 +65,16 @@ class EnhancedUserAppointmentController extends GetxController {
       final userId = session.userId;
       if (userId.isEmpty) return;
 
+      // Cancel existing subscription if any
+      _appointmentSubscription?.cancel();
+
       _appointmentSubscription =
           authRepository.subscribeToUserAppointments(userId).listen((message) {
         _handleRealtimeUpdate(message);
       });
-    } catch (e) {}
+    } catch (e) {
+      // Silent fail for real-time setup
+    }
   }
 
   void _setupReviewSubscription() {
@@ -61,11 +82,16 @@ class EnhancedUserAppointmentController extends GetxController {
       final userId = session.userId;
       if (userId.isEmpty) return;
 
+      // Cancel existing subscription if any
+      _reviewSubscription?.cancel();
+
       _reviewSubscription =
           authRepository.subscribeToClinicReviews('').listen((message) {
         _handleReviewUpdate(message);
       });
-    } catch (e) {}
+    } catch (e) {
+      // Silent fail for real-time setup
+    }
   }
 
   void _handleReviewUpdate(RealtimeMessage message) {
@@ -114,6 +140,18 @@ class EnhancedUserAppointmentController extends GetxController {
     _checkAppointmentReview(appointment.documentId!);
   }
 
+  Map<String, dynamic> getCacheStatus() {
+    return {
+      'isCacheValid': isCacheValid,
+      'lastFetchTime': _lastFetchTime?.toString() ?? 'Never',
+      'minutesRemaining': _lastFetchTime != null
+          ? _cacheDuration.inMinutes -
+              DateTime.now().difference(_lastFetchTime!).inMinutes
+          : 0,
+      'appointmentCount': appointments.length,
+    };
+  }
+
   Future<void> _checkAppointmentReview(String appointmentId) async {
     try {
       final hasReview =
@@ -122,7 +160,13 @@ class EnhancedUserAppointmentController extends GetxController {
     } catch (e) {}
   }
 
-  Future<void> fetchAppointments() async {
+  Future<void> fetchAppointments({bool forceRefresh = false}) async {
+    // Check cache validity unless force refresh is requested
+    if (!forceRefresh && isCacheValid && appointments.isNotEmpty) {
+      // Cache is still valid, no need to fetch
+      return;
+    }
+
     try {
       isLoading.value = true;
       final userId = session.userId;
@@ -135,16 +179,32 @@ class EnhancedUserAppointmentController extends GetxController {
       final result = await authRepository.getUserAppointments(userId);
       appointments.assignAll(result);
 
-      // DEBUG: Print appointment times
-      for (var apt in result.take(3)) {}
+      // Update cache timestamp
+      _lastFetchTime = DateTime.now();
 
       await _fetchRelatedData();
       await _checkAllAppointmentReviews();
+
+      // Setup real-time subscriptions after first fetch
+      if (_appointmentSubscription == null) {
+        _setupRealtimeSubscription();
+      }
+      if (_reviewSubscription == null) {
+        _setupReviewSubscription();
+      }
     } catch (e) {
       Get.snackbar("Error", "Failed to load appointments: $e");
     } finally {
       isLoading.value = false;
     }
+  }
+
+  Future<void> refreshAppointments() async {
+    await fetchAppointments(forceRefresh: true);
+  }
+
+  void clearCache() {
+    _lastFetchTime = null;
   }
 
   Future<void> _checkAllAppointmentReviews() async {
@@ -354,8 +414,7 @@ class EnhancedUserAppointmentController extends GetxController {
             await authRepository.createNotification(notification);
           }
         }
-      } catch (e) {
-      }
+      } catch (e) {}
 
       Get.snackbar(
         "Appointment Cancelled",
@@ -451,28 +510,27 @@ class EnhancedUserAppointmentController extends GetxController {
   }
 
   bool canCancelAppointment(Appointment appointment) {
-  if (appointment.status == 'pending') {
-    return true;
+    if (appointment.status == 'pending') {
+      return true;
+    }
+
+    if (appointment.status == 'accepted') {
+      // Convert both times to local timezone for comparison
+      final now = DateTime.now();
+
+      // Convert the appointment time to local time (if it's in UTC)
+      final appointmentLocal = appointment.dateTime.toLocal();
+
+      // Calculate one hour before the appointment in local time
+      final oneHourBeforeAppointment =
+          appointment.dateTime.subtract(const Duration(hours: 1));
+
+      // Can cancel if current time is before the time 1 hour before the appointment
+      return now.toLocal().isBefore(oneHourBeforeAppointment);
+    }
+
+    return false;
   }
-
-  if (appointment.status == 'accepted') {
-    // Convert both times to local timezone for comparison
-    final now = DateTime.now();
-    
-    // Convert the appointment time to local time (if it's in UTC)
-    final appointmentLocal = appointment.dateTime.toLocal();
-    
-    // Calculate one hour before the appointment in local time
-    final oneHourBeforeAppointment = appointment.dateTime.subtract(const Duration(hours: 1));
-
-
-    // Can cancel if current time is before the time 1 hour before the appointment
-    return now.toLocal().isBefore(oneHourBeforeAppointment);
-  }
-
-  return false;
-}
-
 
   bool needsCancellationReason(Appointment appointment) {
     return appointment.status == 'accepted';
