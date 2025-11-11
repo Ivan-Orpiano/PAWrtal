@@ -1490,6 +1490,10 @@ class _UserDetailsDialogState extends State<UserDetailsDialog> {
   bool _showDeleteConfirm = false;
   bool _isDeleting = false;
 
+  bool _isLoadingVerificationDetails = true;
+  String? _verifyByClinicName;
+  String? _verifyByClinicId;
+
   static const Color backgroundColor = Color.fromRGBO(248, 253, 255, 1);
   static const Color primaryBlue = Color.fromRGBO(81, 115, 153, 1);
   static const Color accentTeal = Color(0xFF5B9BD5);
@@ -1499,6 +1503,7 @@ class _UserDetailsDialogState extends State<UserDetailsDialog> {
   static const Color mediumGray = Color(0xFF9CA3AF);
   static const Color darkText = Color(0xFF374151);
 
+
   String _formatDate(String? dateString) {
     if (dateString == null || dateString.isEmpty) return 'Not available';
     try {
@@ -1506,6 +1511,72 @@ class _UserDetailsDialogState extends State<UserDetailsDialog> {
       return DateFormat('MMMM dd, yyyy - hh:mm a').format(date);
     } catch (e) {
       return 'Invalid date';
+    }
+  }
+
+Future<void> _loadVerificationDetails() async {
+    if (!widget.user.idVerified) {
+      setState(() {
+        _isLoadingVerificationDetails = false;
+      });
+      return;
+    }
+    try {
+      // CRITICAL: Fetch verification document by userId, not by documentId
+      final verificationDocs = await widget.authRepository.appWriteProvider.databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.idVerificationCollectionID,
+        queries: [
+          Query.equal('userId', widget.user.userId),
+          Query.equal('status', 'approved'),
+          Query.orderDesc('\$createdAt'),
+          Query.limit(1),
+        ],
+      );
+        if (verificationDocs.documents.isEmpty) {
+      
+        setState(() {
+          _isLoadingVerificationDetails = false;
+        });
+        return;
+      }
+      final verificationDoc = verificationDocs.documents.first;
+        // Get the verifyByClinic field
+      final verifyByClinic = verificationDoc.data['verifyByClinic'] as String?;
+      if (verifyByClinic != null && verifyByClinic.isNotEmpty) {
+        // Fetch the clinic details to get the clinic name
+        try {
+          final clinicDoc = await widget.authRepository.appWriteProvider.databases!.getDocument(
+            databaseId: AppwriteConstants.dbID,
+            collectionId: AppwriteConstants.clinicsCollectionID,
+            documentId: verifyByClinic,
+          );
+          final clinicName = clinicDoc.data['clinicName'] as String? ?? 'Unknown Clinic';
+          setState(() {
+            _verifyByClinicId = verifyByClinic;
+            _verifyByClinicName = clinicName;
+            _isLoadingVerificationDetails = false;
+          });
+
+        } catch (e) {
+          // Clinic not found, just use the ID
+          setState(() {
+            _verifyByClinicId = verifyByClinic;
+            _verifyByClinicName = 'Clinic (ID: $verifyByClinic)';
+            _isLoadingVerificationDetails = false;
+          });
+        }
+      } else {
+
+        setState(() {
+          _isLoadingVerificationDetails = false;
+        });
+      }
+    } catch (e, stackTrace) {
+          // Error fetching verification details
+      setState(() {
+        _isLoadingVerificationDetails = false;
+      });
     }
   }
 
@@ -1579,6 +1650,14 @@ class _UserDetailsDialogState extends State<UserDetailsDialog> {
 
   @override
   Widget build(BuildContext context) {
+      if (_isLoadingVerificationDetails && widget.user.idVerified) {
+      // Call only once when dialog opens
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _loadVerificationDetails();
+        }
+      });
+    }
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isDesktop = screenWidth > 768;
@@ -1729,55 +1808,57 @@ class _UserDetailsDialogState extends State<UserDetailsDialog> {
                 ],
               ),
             ),
+           Flexible(
+              child: FutureBuilder<void>(
+                future: widget.user.idVerified ? _loadVerificationDetails() : Future.value(),
+                builder: (context, snapshot) {
+                  return SingleChildScrollView(
+                    padding: EdgeInsets.all(isDesktop ? 32 : 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Verification Status Section
+                        _buildSectionHeader(
+                          'Verification Status',
+                          widget.user.idVerified
+                              ? Icons.verified_user
+                              : Icons.pending,
+                          widget.user.idVerified ? vetGreen : vetOrange,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildVerificationStatusCard(),
+                        const SizedBox(height: 24),
 
-            // Content
-            Flexible(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(isDesktop ? 32 : 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Verification Status Section
-                    _buildSectionHeader(
-                      'Verification Status',
-                      widget.user.idVerified
-                          ? Icons.verified_user
-                          : Icons.pending,
-                      widget.user.idVerified ? vetGreen : vetOrange,
+                        // Contact Information Section
+                        _buildSectionHeader(
+                          'Contact Information',
+                          Icons.contact_mail_outlined,
+                          primaryBlue,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildContactInfoCard(),
+                        const SizedBox(height: 24),
+
+                        // Account Information Section
+                        _buildSectionHeader(
+                          'Account Information',
+                          Icons.account_circle_outlined,
+                          accentTeal,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildAccountInfoCard(),
+
+                        // Delete confirmation
+                        if (_showDeleteConfirm) ...[
+                          const SizedBox(height: 24),
+                          _buildDeleteConfirmation(),
+                        ],
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    _buildVerificationStatusCard(),
-                    const SizedBox(height: 24),
-
-                    // Contact Information Section
-                    _buildSectionHeader(
-                      'Contact Information',
-                      Icons.contact_mail_outlined,
-                      primaryBlue,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildContactInfoCard(),
-                    const SizedBox(height: 24),
-
-                    // Account Information Section
-                    _buildSectionHeader(
-                      'Account Information',
-                      Icons.account_circle_outlined,
-                      accentTeal,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildAccountInfoCard(),
-
-                    // Delete confirmation
-                    if (_showDeleteConfirm) ...[
-                      const SizedBox(height: 24),
-                      _buildDeleteConfirmation(),
-                    ],
-                  ],
-                ),
+                  );
+                },
               ),
             ),
-
             // Actions
             Container(
               padding: EdgeInsets.all(isDesktop ? 24 : 20),
@@ -1924,29 +2005,122 @@ class _UserDetailsDialogState extends State<UserDetailsDialog> {
               ),
             ],
           ),
-          if (widget.user.idVerified && widget.user.idVerifiedAt != null) ...[
+          if (widget.user.idVerified) ...[
             const SizedBox(height: 16),
             const Divider(color: mediumGray, height: 1),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Icon(Icons.calendar_today, size: 16, color: mediumGray),
-                const SizedBox(width: 8),
-                Text(
-                  'Verified on: ${_formatDate(widget.user.idVerifiedAt)}',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: mediumGray,
-                    fontWeight: FontWeight.w500,
+            
+            // Show loading indicator while fetching verification details
+            if (_isLoadingVerificationDetails)
+              Row(
+                children: [
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: mediumGray,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Loading verification details...',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: mediumGray,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            
+              // Show "Verified by" if user was verified by a clinic
+              if (!_isLoadingVerificationDetails && _verifyByClinicName != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: accentTeal.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: accentTeal.withOpacity(0.3),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [accentTeal, accentTeal.withOpacity(0.7)],
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.local_hospital,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Verified by:',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: mediumGray,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _verifyByClinicName!,
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: accentTeal,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.verified,
+                        color: vetGreen,
+                        size: 20,
+                      ),
+                    ],
                   ),
                 ),
+                const SizedBox(height: 12),
               ],
-            ),
+              
+              // Show "Verified on" date
+              if (!_isLoadingVerificationDetails && widget.user.idVerifiedAt != null)
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today, size: 16, color: mediumGray),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Verified on: ${_formatDate(widget.user.idVerifiedAt)}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: mediumGray,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
           ],
-        ],
-      ),
-    );
-  }
+        ),
+      );
+    }
 
   Widget _buildContactInfoCard() {
     return Container(

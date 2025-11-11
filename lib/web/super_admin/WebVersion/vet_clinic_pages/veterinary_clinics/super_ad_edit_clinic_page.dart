@@ -99,7 +99,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
   // Settings
   int appointmentDuration = 30;
   int maxAdvanceBooking = 30;
-  bool autoAcceptAppointments = false;
+
   bool isOpen = true;
   String? newDashboardImageId;
 
@@ -153,7 +153,6 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
       // Appointment settings
       appointmentDuration = widget.settings!.appointmentDuration;
       maxAdvanceBooking = widget.settings!.maxAdvanceBooking;
-      autoAcceptAppointments = widget.settings!.autoAcceptAppointments;
       isOpen = widget.settings!.isOpen;
 
       // CRITICAL: Load medical services map from settings
@@ -1104,28 +1103,6 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
                   maxLines: 3,
                   hint: "Any special instructions for customers...",
                 ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey[300]!),
-                  ),
-                  child: SwitchListTile(
-                    title: const Text("Auto-accept Appointments"),
-                    subtitle: const Text(
-                      "Automatically approve new appointment requests",
-                    ),
-                    value: autoAcceptAppointments,
-                    onChanged: (value) {
-                      setState(() {
-                        autoAcceptAppointments = value;
-                      });
-                    },
-                    activeColor: const Color.fromRGBO(81, 115, 153, 1),
-                  ),
-                ),
               ],
             ),
           ),
@@ -1687,7 +1664,6 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
           maxAdvanceBooking: maxAdvanceBooking,
           emergencyContact: emergencyContactController.text.trim(),
           specialInstructions: specialInstructionsController.text.trim(),
-          autoAcceptAppointments: autoAcceptAppointments,
           dashboardPic: finalDashboardImageId, // Store as URL
         );
 
@@ -1705,7 +1681,6 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
           maxAdvanceBooking: maxAdvanceBooking,
           emergencyContact: emergencyContactController.text.trim(),
           specialInstructions: specialInstructionsController.text.trim(),
-          autoAcceptAppointments: autoAcceptAppointments,
           dashboardPic: finalDashboardImageId, // Store as URL
         );
 
