@@ -516,9 +516,11 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                       Expanded(
                         flex: 2,
                         child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                            _confirmBookAppointment();
+                          onPressed: () async {
+                            Navigator.of(context)
+                                .pop(); // Close confirmation dialog
+                            await _confirmBookAppointment();
+                            // Note: Reset is now handled in _showSuccessDialog
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor:
@@ -558,11 +560,6 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
   }
 
   Widget _buildMobileClinicSection() {
-    print('DEBUG - [MOBILE] Building clinic section');
-    print('DEBUG - [MOBILE] Clinic ID: ${widget.clinic.documentId}');
-    print('DEBUG - [MOBILE] Image URL: $_clinicProfilePictureUrl');
-    print('DEBUG - [MOBILE] Loading: $_isLoadingClinicImage');
-
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -925,6 +922,7 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
         Get.find<EnhancedUserAppointmentController>().fetchAppointments();
       }
 
+      // ADDED: Show success dialog (which will handle the reset)
       _showSuccessDialog();
     } catch (e) {
       _showSnackBar("Failed to book appointment: $e", isError: true);
@@ -1002,8 +1000,10 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
         actions: [
           ElevatedButton(
             onPressed: () {
-              Navigator.of(context).pop(); // Close dialog
+              Navigator.of(context).pop(); // Close success dialog
               Navigator.of(context).pop(); // Go back to previous screen
+              // ADDED: Reset form for better UX when user returns
+              _resetFormAfterBooking();
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color.fromARGB(255, 81, 115, 153),
@@ -1482,13 +1482,8 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
     try {
       setState(() => _isLoadingClinicImage = true);
 
-      print('DEBUG - [MOBILE] ========================================');
-      print('DEBUG - [MOBILE] Starting image fetch');
-      print('DEBUG - [MOBILE] Clinic ID: ${widget.clinic.documentId}');
-
       if (widget.clinic.documentId == null ||
           widget.clinic.documentId!.isEmpty) {
-        print('DEBUG - [MOBILE] ❌ No clinic document ID');
         if (mounted) setState(() => _isLoadingClinicImage = false);
         return;
       }
@@ -1497,38 +1492,17 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
       final clinicId = widget.clinic.documentId!;
 
       // STEP 1: Get ClinicSettings
-      print('DEBUG - [MOBILE] Fetching ClinicSettings...');
       final clinicSettings =
           await authRepo.getClinicSettingsByClinicId(clinicId);
 
       if (clinicSettings != null) {
-        print('DEBUG - [MOBILE] ✅ ClinicSettings found');
-        print(
-            'DEBUG - [MOBILE] dashboardPic RAW: "${clinicSettings.dashboardPic}"');
-        print(
-            'DEBUG - [MOBILE] dashboardPic length: ${clinicSettings.dashboardPic.length}');
-        print(
-            'DEBUG - [MOBILE] dashboardPic isEmpty: ${clinicSettings.dashboardPic.isEmpty}');
-      } else {
-        print('DEBUG - [MOBILE] ❌ ClinicSettings NOT found');
-      }
+      } else {}
 
       // STEP 2: Get Clinic document
-      print('DEBUG - [MOBILE] Fetching Clinic document...');
       final clinicDoc = await authRepo.getClinicById(clinicId);
 
       if (clinicDoc != null) {
-        print('DEBUG - [MOBILE] ✅ Clinic document found');
-        print(
-            'DEBUG - [MOBILE] All keys in clinic document: ${clinicDoc.data.keys.toList()}');
-        print(
-            'DEBUG - [MOBILE] profilePictureId: "${clinicDoc.data['profilePictureId']}"');
-        print('DEBUG - [MOBILE] image: "${clinicDoc.data['image']}"');
-        print(
-            'DEBUG - [MOBILE] dashboardPic in clinic doc: "${clinicDoc.data['dashboardPic']}"');
-      } else {
-        print('DEBUG - [MOBILE] ❌ Clinic document NOT found');
-      }
+      } else {}
 
       if (!mounted) return;
 
@@ -1538,50 +1512,33 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
       // PRIORITY 1: dashboardPic from ClinicSettings
       if (clinicSettings != null && clinicSettings.dashboardPic.isNotEmpty) {
         final dashboardPic = clinicSettings.dashboardPic.trim();
-        print('DEBUG - [MOBILE] 📸 Trying dashboardPic: "$dashboardPic"');
 
         // Extract file ID
         if (dashboardPic.contains('/files/')) {
           final parts = dashboardPic.split('/files/');
           fileId = parts.last.split('/').first.split('?').first;
-          print('DEBUG - [MOBILE] Extracted file ID from URL: "$fileId"');
         } else {
           fileId = dashboardPic;
-          print('DEBUG - [MOBILE] Using dashboardPic as file ID: "$fileId"');
         }
 
         imageUrl =
             'https://cloud.appwrite.io/v1/storage/buckets/${AppwriteConstants.imageBucketID}/files/$fileId/view?project=${AppwriteConstants.projectID}';
-        print(
-            'DEBUG - [MOBILE] ✅ Priority 1 - Constructed URL from dashboardPic');
-        print('DEBUG - [MOBILE] File ID: $fileId');
-        print('DEBUG - [MOBILE] URL: $imageUrl');
       }
 
       // PRIORITY 2: profilePictureId from Clinic
       if ((imageUrl == null || imageUrl.isEmpty) && clinicDoc != null) {
         final profilePictureId = clinicDoc.data['profilePictureId'] as String?;
         if (profilePictureId != null && profilePictureId.trim().isNotEmpty) {
-          print(
-              'DEBUG - [MOBILE] 📸 Trying profilePictureId: "$profilePictureId"');
-
           String cleanId = profilePictureId.trim();
           if (cleanId.contains('/files/')) {
             final parts = cleanId.split('/files/');
             fileId = parts.last.split('/').first.split('?').first;
-            print('DEBUG - [MOBILE] Extracted file ID from URL: "$fileId"');
           } else {
             fileId = cleanId;
-            print(
-                'DEBUG - [MOBILE] Using profilePictureId as file ID: "$fileId"');
           }
 
           imageUrl =
               'https://cloud.appwrite.io/v1/storage/buckets/${AppwriteConstants.imageBucketID}/files/$fileId/view?project=${AppwriteConstants.projectID}';
-          print(
-              'DEBUG - [MOBILE] ✅ Priority 2 - Constructed URL from profilePictureId');
-          print('DEBUG - [MOBILE] File ID: $fileId');
-          print('DEBUG - [MOBILE] URL: $imageUrl');
         }
       }
 
@@ -1589,36 +1546,22 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
       if ((imageUrl == null || imageUrl.isEmpty) && clinicDoc != null) {
         final image = clinicDoc.data['image'] as String?;
         if (image != null && image.trim().isNotEmpty) {
-          print('DEBUG - [MOBILE] 📸 Trying image field: "$image"');
-
           String cleanId = image.trim();
           if (cleanId.contains('/files/')) {
             final parts = cleanId.split('/files/');
             fileId = parts.last.split('/').first.split('?').first;
-            print('DEBUG - [MOBILE] Extracted file ID from URL: "$fileId"');
           } else {
             fileId = cleanId;
-            print('DEBUG - [MOBILE] Using image as file ID: "$fileId"');
           }
 
           imageUrl =
               'https://cloud.appwrite.io/v1/storage/buckets/${AppwriteConstants.imageBucketID}/files/$fileId/view?project=${AppwriteConstants.projectID}';
-          print(
-              'DEBUG - [MOBILE] ✅ Priority 3 - Constructed URL from image field');
-          print('DEBUG - [MOBILE] File ID: $fileId');
-          print('DEBUG - [MOBILE] URL: $imageUrl');
         }
       }
 
       // FINAL RESULT
       if (imageUrl == null || imageUrl.isEmpty) {
-        print('DEBUG - [MOBILE] ❌ No image found in any field');
-      } else {
-        print('DEBUG - [MOBILE] ✅ Final image URL: $imageUrl');
-        print('DEBUG - [MOBILE] Final file ID: $fileId');
-      }
-
-      print('DEBUG - [MOBILE] ========================================');
+      } else {}
 
       if (mounted) {
         setState(() {
@@ -1627,8 +1570,6 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
         });
       }
     } catch (e, stackTrace) {
-      print('DEBUG - [MOBILE] ❌ ERROR: $e');
-      print('DEBUG - [MOBILE] Stack trace: $stackTrace');
       if (mounted) setState(() => _isLoadingClinicImage = false);
     }
   }
@@ -1653,12 +1594,10 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
         _clinicProfilePictureUrl!,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
-          print('DEBUG - [MOBILE] Image load error: $error');
           return _buildMobileDefaultIcon();
         },
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) {
-            print('DEBUG - [MOBILE] Image loaded successfully');
             return child;
           }
           return Center(
@@ -1687,5 +1626,18 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
       color: Colors.grey[400],
       size: 24,
     );
+  }
+
+  void _resetFormAfterBooking() {
+    setState(() {
+      selectedTime = null;
+      selectedService = null;
+      selectedPet = null;
+    });
+
+    // Re-select today's date if available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _autoSelectTodayIfNeeded();
+    });
   }
 }

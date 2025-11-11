@@ -553,28 +553,22 @@ class WebAppointmentController extends GetxController {
 
   Future<String?> fetchClinicImage(String clinicId) async {
     if (clinicId.isEmpty) {
-      print('DEBUG - [CONTROLLER] Empty clinic ID');
       return null;
     }
 
     try {
-      print('DEBUG - [CONTROLLER] Fetching image for clinic: $clinicId');
-
       final clinicDoc = await authRepository.getClinicById(clinicId);
 
       if (clinicDoc == null) {
-        print('DEBUG - [CONTROLLER] Clinic document not found');
         return null;
       }
 
       final clinicData = clinicDoc.data;
-      print('DEBUG - [CONTROLLER] Clinic data fetched');
 
       // Priority 1: dashboardPic
       if (clinicData['dashboardPic'] != null &&
           clinicData['dashboardPic'].toString().trim().isNotEmpty) {
         final imageUrl = clinicData['dashboardPic'].toString();
-        print('DEBUG - [CONTROLLER] Using dashboardPic: $imageUrl');
         return imageUrl;
       }
 
@@ -582,15 +576,11 @@ class WebAppointmentController extends GetxController {
       if (clinicData['image'] != null &&
           clinicData['image'].toString().trim().isNotEmpty) {
         final imageUrl = clinicData['image'].toString();
-        print('DEBUG - [CONTROLLER] Using image: $imageUrl');
         return imageUrl;
       }
 
-      print('DEBUG - [CONTROLLER] No image found');
       return null;
     } catch (e, stackTrace) {
-      print('DEBUG - [CONTROLLER] Error fetching clinic image: $e');
-      print('DEBUG - [CONTROLLER] Stack trace: $stackTrace');
       return null;
     }
   }
