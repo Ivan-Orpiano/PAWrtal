@@ -200,25 +200,182 @@ class InAppNotificationService extends GetxService {
       return;
     }
 
+    final overlayContext = Get.overlayContext;
+    if (overlayContext == null) {
+      return;
+    }
+
+    late OverlayEntry overlayEntry;
+
+    overlayEntry = OverlayEntry(
+      builder: (BuildContext context) {
+        // Get screen width to adjust positioning
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isMobile = screenWidth < 600;
+
+        return Positioned(
+          top: isMobile ? 60 : 80,
+          right: isMobile ? 12 : 20,
+          left: isMobile ? 12 : null,
+          child: Material(
+            color: Colors.transparent,
+            child: MediaQuery(
+              data: MediaQueryData.fromView(View.of(context)),
+              child: Directionality(
+                textDirection: TextDirection.ltr,
+                child: TweenAnimationBuilder<double>(
+                  duration: const Duration(milliseconds: 400),
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  curve: Curves.easeOutBack,
+                  builder: (context, value, child) {
+                    return Transform.translate(
+                      offset: Offset(0, -20 * (1 - value)),
+                      child: Opacity(
+                        opacity: value.clamp(0.0, 1.0),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: GestureDetector(
+                    onTap: () {
+                      try {
+                        overlayEntry.remove();
+                      } catch (e) {
+                        // Already removed
+                      }
+                      handleNotificationTap(notification);
+                    },
+                    onHorizontalDragEnd: (details) {
+                      if (details.velocity.pixelsPerSecond.dx.abs() > 500) {
+                        try {
+                          overlayEntry.remove();
+                        } catch (e) {
+                          // Already removed
+                        }
+                      }
+                    },
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: isMobile ? double.infinity : 380,
+                      ),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isMobile ? 14 : 16,
+                          vertical: isMobile ? 12 : 14,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF3B82F6),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF3B82F6).withOpacity(0.3),
+                              spreadRadius: 1,
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Icon
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                _getNotificationIcon(notification.type),
+                                color: Colors.white,
+                                size: isMobile ? 20 : 22,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // Content
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    notification.title,
+                                    style: TextStyle(
+                                      fontSize: isMobile ? 14 : 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                      decoration: TextDecoration.none,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    notification.message,
+                                    style: TextStyle(
+                                      fontSize: isMobile ? 12 : 13,
+                                      color: Colors.white.withOpacity(0.95),
+                                      height: 1.3,
+                                      decoration: TextDecoration.none,
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Close button
+                            GestureDetector(
+                              onTap: () {
+                                try {
+                                  overlayEntry.remove();
+                                } catch (e) {
+                                  // Already removed
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Icon(
+                                  Icons.close,
+                                  color: Colors.white.withOpacity(0.9),
+                                  size: isMobile ? 16 : 18,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
     try {
-      Get.snackbar(
-        notification.title,
-        notification.message,
-        duration: const Duration(seconds: 3),
-        backgroundColor: const Color(0xFF3B82F6),
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
-        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        borderRadius: 12,
-        icon: Icon(
-          _getNotificationIcon(notification.type),
-          color: Colors.white,
-        ),
-        onTap: (_) {
-          handleNotificationTap(notification);
-        },
-      );
-    } catch (e) {}
+      final overlay = Overlay.of(overlayContext);
+      overlay.insert(overlayEntry);
+    } catch (e) {
+      return;
+    }
+
+    // Auto-remove after 3 seconds
+    Future.delayed(const Duration(seconds: 3), () {
+      try {
+        overlayEntry.remove();
+      } catch (e) {
+        // Entry might already be removed
+      }
+    });
   }
 
   IconData _getNotificationIcon(NotificationType type) {

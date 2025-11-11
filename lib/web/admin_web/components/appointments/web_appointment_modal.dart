@@ -907,7 +907,7 @@ class WebAppointmentModal extends StatelessWidget {
             'Appointment Scheduled',
             appointment.status != 'pending',
             Colors.blue,
-            appointment.createdAt,
+            appointment.createdAt.toLocal(),
             isFirst: true,
           ),
           _buildTimelineItem(

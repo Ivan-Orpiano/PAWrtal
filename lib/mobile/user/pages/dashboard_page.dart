@@ -3,6 +3,7 @@ import 'package:capstone_app/mobile/user/components/dashboard_components/dashboa
 import 'package:capstone_app/mobile/user/components/dashboard_components/search_bar.dart';
 import 'package:capstone_app/mobile/user/components/dashboard_components/tags.dart';
 import 'package:capstone_app/mobile/user/pages/pawmap.dart';
+import 'package:capstone_app/notification/widgets/reminder_service_debug_widget.dart';
 import 'package:capstone_app/web/pages/web_user_home/web_user_home_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -68,6 +69,7 @@ class _DashboardPageState extends State<DashboardPage> {
             // Otherwise show the normal list view
             return ListView(
               children: [
+                // const ReminderServiceDebugWidget(),
                 // Search Bar
                 Padding(
                   padding: const EdgeInsets.only(

@@ -30,7 +30,6 @@ Future<void> initializeDependencies() async {
   );
   final authRepo = Get.find<AuthRepository>();
 
-
   Get.put(
     ClinicArchiveService(Get.find<AuthRepository>()),
     permanent: true,
@@ -48,19 +47,19 @@ Future<void> initializeDependencies() async {
     permanent: true,
   );
 
+  // Register Notification Preferences Service
   Get.put(
-    AppointmentReminderService(
+    NotificationPreferencesService(
       authRepository: Get.find<AuthRepository>(),
-      appwriteProvider: Get.find<AppWriteProvider>(),
-      session: Get.find<UserSessionService>(),
     ),
     permanent: true,
   );
 
-  // NEW: Register Notification Preferences Service
   Get.put(
-    NotificationPreferencesService(
+    AppointmentReminderService(
       authRepository: Get.find<AuthRepository>(),
+      notificationPrefsService: Get.find<NotificationPreferencesService>(),
+      appWriteProvider: Get.find<AppWriteProvider>(),
     ),
     permanent: true,
   );
