@@ -812,9 +812,11 @@ class _EnhancedWebAppointmentPanelState
                       Expanded(
                         flex: 2,
                         child: ElevatedButton(
-                          onPressed: () {
+                          onPressed: () async {
                             Navigator.of(context).pop();
-                            controller.bookAppointment();
+                            await controller.bookAppointment();
+                            // ADDED: Reset form after successful booking
+                            _resetFormAfterBooking();
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF5173B8),
@@ -959,11 +961,6 @@ class _EnhancedWebAppointmentPanelState
   }
 
   Widget _buildClinicSection() {
-    print('DEBUG - [WEB] Building clinic section');
-    print('DEBUG - [WEB] Clinic ID: ${widget.clinic.documentId}');
-    print('DEBUG - [WEB] Image URL: $_clinicProfilePictureUrl');
-    print('DEBUG - [WEB] Loading: $_isLoadingClinicImage');
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1163,13 +1160,8 @@ class _EnhancedWebAppointmentPanelState
     try {
       setState(() => _isLoadingClinicImage = true);
 
-      print('DEBUG - [WEB] ========================================');
-      print('DEBUG - [WEB] Starting image fetch');
-      print('DEBUG - [WEB] Clinic ID: ${widget.clinic.documentId}');
-
       if (widget.clinic.documentId == null ||
           widget.clinic.documentId!.isEmpty) {
-        print('DEBUG - [WEB] ❌ No clinic document ID provided');
         if (mounted) setState(() => _isLoadingClinicImage = false);
         return;
       }
@@ -1178,38 +1170,17 @@ class _EnhancedWebAppointmentPanelState
       final clinicId = widget.clinic.documentId!;
 
       // STEP 1: Get ClinicSettings
-      print('DEBUG - [WEB] Fetching ClinicSettings...');
       final clinicSettings =
           await authRepo.getClinicSettingsByClinicId(clinicId);
 
       if (clinicSettings != null) {
-        print('DEBUG - [WEB] ✅ ClinicSettings found');
-        print(
-            'DEBUG - [WEB] dashboardPic RAW: "${clinicSettings.dashboardPic}"');
-        print(
-            'DEBUG - [WEB] dashboardPic length: ${clinicSettings.dashboardPic.length}');
-        print(
-            'DEBUG - [WEB] dashboardPic isEmpty: ${clinicSettings.dashboardPic.isEmpty}');
-      } else {
-        print('DEBUG - [WEB] ❌ ClinicSettings NOT found');
-      }
+      } else {}
 
       // STEP 2: Get Clinic document
-      print('DEBUG - [WEB] Fetching Clinic document...');
       final clinicDoc = await authRepo.getClinicById(clinicId);
 
       if (clinicDoc != null) {
-        print('DEBUG - [WEB] ✅ Clinic document found');
-        print(
-            'DEBUG - [WEB] All keys in clinic document: ${clinicDoc.data.keys.toList()}');
-        print(
-            'DEBUG - [WEB] profilePictureId: "${clinicDoc.data['profilePictureId']}"');
-        print('DEBUG - [WEB] image: "${clinicDoc.data['image']}"');
-        print(
-            'DEBUG - [WEB] dashboardPic in clinic doc: "${clinicDoc.data['dashboardPic']}"');
-      } else {
-        print('DEBUG - [WEB] ❌ Clinic document NOT found');
-      }
+      } else {}
 
       if (!mounted) return;
 
@@ -1219,48 +1190,33 @@ class _EnhancedWebAppointmentPanelState
       // PRIORITY 1: dashboardPic from ClinicSettings
       if (clinicSettings != null && clinicSettings.dashboardPic.isNotEmpty) {
         final dashboardPic = clinicSettings.dashboardPic.trim();
-        print('DEBUG - [WEB] 📸 Trying dashboardPic: "$dashboardPic"');
 
         // Extract file ID
         if (dashboardPic.contains('/files/')) {
           final parts = dashboardPic.split('/files/');
           fileId = parts.last.split('/').first.split('?').first;
-          print('DEBUG - [WEB] Extracted file ID from URL: "$fileId"');
         } else {
           fileId = dashboardPic;
-          print('DEBUG - [WEB] Using dashboardPic as file ID: "$fileId"');
         }
 
         imageUrl =
             'https://cloud.appwrite.io/v1/storage/buckets/${AppwriteConstants.imageBucketID}/files/$fileId/view?project=${AppwriteConstants.projectID}';
-        print('DEBUG - [WEB] ✅ Priority 1 - Constructed URL from dashboardPic');
-        print('DEBUG - [WEB] File ID: $fileId');
-        print('DEBUG - [WEB] URL: $imageUrl');
       }
 
       // PRIORITY 2: profilePictureId from Clinic
       if ((imageUrl == null || imageUrl.isEmpty) && clinicDoc != null) {
         final profilePictureId = clinicDoc.data['profilePictureId'] as String?;
         if (profilePictureId != null && profilePictureId.trim().isNotEmpty) {
-          print(
-              'DEBUG - [WEB] 📸 Trying profilePictureId: "$profilePictureId"');
-
           String cleanId = profilePictureId.trim();
           if (cleanId.contains('/files/')) {
             final parts = cleanId.split('/files/');
             fileId = parts.last.split('/').first.split('?').first;
-            print('DEBUG - [WEB] Extracted file ID from URL: "$fileId"');
           } else {
             fileId = cleanId;
-            print('DEBUG - [WEB] Using profilePictureId as file ID: "$fileId"');
           }
 
           imageUrl =
               'https://cloud.appwrite.io/v1/storage/buckets/${AppwriteConstants.imageBucketID}/files/$fileId/view?project=${AppwriteConstants.projectID}';
-          print(
-              'DEBUG - [WEB] ✅ Priority 2 - Constructed URL from profilePictureId');
-          print('DEBUG - [WEB] File ID: $fileId');
-          print('DEBUG - [WEB] URL: $imageUrl');
         }
       }
 
@@ -1268,36 +1224,22 @@ class _EnhancedWebAppointmentPanelState
       if ((imageUrl == null || imageUrl.isEmpty) && clinicDoc != null) {
         final image = clinicDoc.data['image'] as String?;
         if (image != null && image.trim().isNotEmpty) {
-          print('DEBUG - [WEB] 📸 Trying image field: "$image"');
-
           String cleanId = image.trim();
           if (cleanId.contains('/files/')) {
             final parts = cleanId.split('/files/');
             fileId = parts.last.split('/').first.split('?').first;
-            print('DEBUG - [WEB] Extracted file ID from URL: "$fileId"');
           } else {
             fileId = cleanId;
-            print('DEBUG - [WEB] Using image as file ID: "$fileId"');
           }
 
           imageUrl =
               'https://cloud.appwrite.io/v1/storage/buckets/${AppwriteConstants.imageBucketID}/files/$fileId/view?project=${AppwriteConstants.projectID}';
-          print(
-              'DEBUG - [WEB] ✅ Priority 3 - Constructed URL from image field');
-          print('DEBUG - [WEB] File ID: $fileId');
-          print('DEBUG - [WEB] URL: $imageUrl');
         }
       }
 
       // FINAL RESULT
       if (imageUrl == null || imageUrl.isEmpty) {
-        print('DEBUG - [WEB] ❌ No image found in any field');
-      } else {
-        print('DEBUG - [WEB] ✅ Final image URL: $imageUrl');
-        print('DEBUG - [WEB] Final file ID: $fileId');
-      }
-
-      print('DEBUG - [WEB] ========================================');
+      } else {}
 
       if (mounted) {
         setState(() {
@@ -1306,8 +1248,6 @@ class _EnhancedWebAppointmentPanelState
         });
       }
     } catch (e, stackTrace) {
-      print('DEBUG - [WEB] ❌ ERROR: $e');
-      print('DEBUG - [WEB] Stack trace: $stackTrace');
       if (mounted) setState(() => _isLoadingClinicImage = false);
     }
   }
@@ -1332,12 +1272,10 @@ class _EnhancedWebAppointmentPanelState
         _clinicProfilePictureUrl!,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
-          print('DEBUG - [WEB] Image load error: $error');
           return _buildDefaultClinicIcon();
         },
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) {
-            print('DEBUG - [WEB] Image loaded successfully');
             return child;
           }
           return Center(
@@ -1366,5 +1304,17 @@ class _EnhancedWebAppointmentPanelState
       color: Colors.grey[400],
       size: 28,
     );
+  }
+
+  void _resetFormAfterBooking() {
+    // Clear selections
+    controller.selectedTime.value = null;
+    controller.selectedService.value = null;
+    controller.selectedPet.value = null;
+
+    // Re-select today's date if available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _autoSelectTodayIfNeeded();
+    });
   }
 }

@@ -777,12 +777,9 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
     if (!mounted) return;
 
     try {
-      print(
-          'DEBUG - [DASHBOARD] Fetching clinic image for: ${widget.clinic.documentId}');
 
       if (widget.clinic.documentId == null ||
           widget.clinic.documentId!.isEmpty) {
-        print('DEBUG - [DASHBOARD] No clinic document ID');
         return;
       }
 
@@ -793,25 +790,18 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
 
       if (clinicDoc != null) {
         final clinicData = clinicDoc.data;
-        print('DEBUG - [DASHBOARD] Clinic data fetched successfully');
 
         // Create a fresh Clinic object with the latest data (including images)
         final clinicWithImages = Clinic.fromMap(clinicData);
         clinicWithImages.documentId = widget.clinic.documentId;
 
-        print('DEBUG - [DASHBOARD] Clinic with images prepared');
-        print(
-            'DEBUG - [DASHBOARD] dashboardPic: ${clinicWithImages.dashboardPic}');
-        print('DEBUG - [DASHBOARD] image: ${clinicWithImages.image}');
 
         // Store the updated clinic for navigation
         _updatedClinic = clinicWithImages;
       } else {
-        print('DEBUG - [DASHBOARD] Clinic document not found');
         _updatedClinic = widget.clinic; // Fallback to original
       }
     } catch (e) {
-      print('DEBUG - [DASHBOARD] Error fetching clinic: $e');
       _updatedClinic = widget.clinic; // Fallback to original on error
     }
   }
