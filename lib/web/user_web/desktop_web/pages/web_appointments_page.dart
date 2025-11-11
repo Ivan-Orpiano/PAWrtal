@@ -44,7 +44,8 @@ class _EnhancedWebAppointmentsPageState
       ));
     } else {
       appointmentController = Get.find<EnhancedUserAppointmentController>();
-      appointmentController.fetchAppointments();
+      // REMOVED: appointmentController.fetchAppointments();
+      // The controller's onInit() handles cache check automatically
     }
   }
 
