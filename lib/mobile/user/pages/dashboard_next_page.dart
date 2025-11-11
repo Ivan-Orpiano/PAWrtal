@@ -34,6 +34,7 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
   ClinicSettings? _clinicSettings;
   bool _isLoadingSettings = true;
   bool _isSaved = false;
+  Clinic? _updatedClinic;
 
   late UnifiedVerificationGuard _verificationGuard;
 
@@ -772,6 +773,49 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
     );
   }
 
+  Future<void> _fetchClinicImageForDashboard() async {
+    if (!mounted) return;
+
+    try {
+      print(
+          'DEBUG - [DASHBOARD] Fetching clinic image for: ${widget.clinic.documentId}');
+
+      if (widget.clinic.documentId == null ||
+          widget.clinic.documentId!.isEmpty) {
+        print('DEBUG - [DASHBOARD] No clinic document ID');
+        return;
+      }
+
+      final clinicDoc =
+          await _authRepo.getClinicById(widget.clinic.documentId!);
+
+      if (!mounted) return;
+
+      if (clinicDoc != null) {
+        final clinicData = clinicDoc.data;
+        print('DEBUG - [DASHBOARD] Clinic data fetched successfully');
+
+        // Create a fresh Clinic object with the latest data (including images)
+        final clinicWithImages = Clinic.fromMap(clinicData);
+        clinicWithImages.documentId = widget.clinic.documentId;
+
+        print('DEBUG - [DASHBOARD] Clinic with images prepared');
+        print(
+            'DEBUG - [DASHBOARD] dashboardPic: ${clinicWithImages.dashboardPic}');
+        print('DEBUG - [DASHBOARD] image: ${clinicWithImages.image}');
+
+        // Store the updated clinic for navigation
+        _updatedClinic = clinicWithImages;
+      } else {
+        print('DEBUG - [DASHBOARD] Clinic document not found');
+        _updatedClinic = widget.clinic; // Fallback to original
+      }
+    } catch (e) {
+      print('DEBUG - [DASHBOARD] Error fetching clinic: $e');
+      _updatedClinic = widget.clinic; // Fallback to original on error
+    }
+  }
+
   Widget _buildReviewCard(RatingAndReview review) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1383,9 +1427,10 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
                   ),
                   onPressed: _canMakeAppointment()
                       ? () async {
-                          // NEW: Check verification before booking
+                          // STEP 1: Get user session
                           final session = Get.find<UserSessionService>();
 
+                          // STEP 2: Check if user is verified to book appointments
                           final canAccess =
                               await _verificationGuard.canAccessFeature(
                             context: context,
@@ -1395,16 +1440,23 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
                             featureName: 'appointment',
                           );
 
+                          // STEP 3: If verified and context is still valid
                           if (canAccess && context.mounted) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ScheduleAppointment(
-                                  clinic: widget.clinic,
-                                  clinicSettings: _clinicSettings,
+                            // STEP 4: Fetch fresh clinic data with images
+                            await _fetchClinicImageForDashboard();
+
+                            // STEP 5: Navigate to appointment booking with updated clinic data
+                            if (context.mounted) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ScheduleAppointment(
+                                    clinic: _updatedClinic ?? widget.clinic,
+                                    clinicSettings: _clinicSettings,
+                                  ),
                                 ),
-                              ),
-                            );
+                              );
+                            }
                           }
                         }
                       : null,
@@ -1478,7 +1530,6 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
         ),
       );
 
-
       final MessagingController messagingController =
           Get.find<MessagingController>();
 
@@ -1496,9 +1547,7 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
         return;
       }
 
-
       if (context.mounted) {
-
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -1511,7 +1560,6 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
             ),
           ),
         );
-
       }
     } catch (e) {
       if (context.mounted) {

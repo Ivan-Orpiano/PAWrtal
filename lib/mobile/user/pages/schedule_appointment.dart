@@ -2,6 +2,7 @@ import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -37,16 +38,23 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
   List<String> availableTimeSlots = [];
   List<String> occupiedTimeSlots = [];
   StreamSubscription<RealtimeMessage>? _appointmentSubscription;
+  String? _clinicProfilePictureUrl;
+  bool _isLoadingClinicImage = true;
 
   PetsController? petsController;
 
   @override
   void initState() {
     super.initState();
+    _fetchClinicImage(); // ADD THIS LINE
     _initializePetsController();
-    _updateAvailableTimeSlots();
     _setupRealtimeSubscription();
     _fetchOccupiedSlots();
+
+    // Auto-select today's date after initialization
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _autoSelectTodayIfNeeded();
+    });
 
     // Add focus listener to refresh pets when page regains focus
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -77,7 +85,18 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
         // When an appointment is created, updated, or deleted, refresh time slots
         _fetchOccupiedSlots();
       });
-    } catch (e) {
+    } catch (e) {}
+  }
+
+  void _autoSelectTodayIfNeeded() {
+    final todayDate = DateTime.now();
+
+    // Check if today is selectable
+    if (_isDateSelectable(todayDate)) {
+      setState(() {
+        today = todayDate;
+      });
+      _updateAvailableTimeSlots();
     }
   }
 
@@ -89,13 +108,11 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
       final slots = await Get.find<AuthRepository>()
           .getOccupiedTimeSlots(clinicId, today);
 
-
       setState(() {
         occupiedTimeSlots = slots;
       });
       _updateAvailableTimeSlots();
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   void _onDaySelected(DateTime day, DateTime focusedDay) {
@@ -135,11 +152,9 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
     // Filter out occupied time slots
     final filteredSlots = slots.where((slot) {
       final isOccupied = occupiedTimeSlots.contains(slot);
-      if (isOccupied) {
-      }
+      if (isOccupied) {}
       return !isOccupied;
     }).toList();
-
 
     setState(() {
       availableTimeSlots = filteredSlots;
@@ -304,11 +319,562 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
       return;
     }
 
+    // Show confirmation dialog
+    _showBookingConfirmation();
+  }
+
+  void _showBookingConfirmation() {
+    // Format date
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    final formattedDate =
+        '${months[today.month - 1]} ${today.day}, ${today.year}';
+
+    // Get selected pet object
+    final selectedPetObj = petsController?.pets.firstWhere(
+      (pet) => pet.name == selectedPet,
+      orElse: () => petsController!.pets.first,
+    );
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header with gradient background
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color.fromARGB(255, 81, 115, 153),
+                        const Color.fromARGB(255, 81, 115, 153)
+                            .withOpacity(0.8),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.calendar_month,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Confirm Appointment',
+                              style: GoogleFonts.inter(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Review your booking details',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: Colors.white.withOpacity(0.9),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Content
+                SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        // Clinic Section with Image - MODIFIED
+                        _buildMobileClinicSection(),
+
+                        const SizedBox(height: 16),
+
+                        // Divider
+                        Divider(color: Colors.grey[300], height: 1),
+
+                        const SizedBox(height: 16),
+
+                        // Pet Section with Image
+                        if (selectedPetObj != null)
+                          _buildMobilePetSection(selectedPetObj),
+
+                        const SizedBox(height: 16),
+
+                        // Service Card
+                        _buildMobileInfoCard(
+                          icon: Icons.medical_services,
+                          iconColor: const Color.fromARGB(255, 81, 115, 153),
+                          label: 'Service',
+                          value: selectedService!,
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        // Date and Time Cards
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildMobileInfoCard(
+                                icon: Icons.calendar_today,
+                                iconColor: Colors.orange,
+                                label: 'Date',
+                                value: formattedDate,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _buildMobileInfoCard(
+                                icon: Icons.access_time,
+                                iconColor: Colors.green,
+                                label: 'Time',
+                                value: selectedTime!,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Action Buttons
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => _showCancelConfirmation(context),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.grey[700],
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              side: BorderSide(color: Colors.grey[300]!),
+                            ),
+                          ),
+                          child: Text(
+                            'Cancel',
+                            style: GoogleFonts.inter(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            _confirmBookAppointment();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                const Color.fromARGB(255, 81, 115, 153),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            elevation: 2,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.check_circle, size: 18),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Confirm',
+                                style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMobileClinicSection() {
+    print('DEBUG - [MOBILE] Building clinic section');
+    print('DEBUG - [MOBILE] Clinic ID: ${widget.clinic.documentId}');
+    print('DEBUG - [MOBILE] Image URL: $_clinicProfilePictureUrl');
+    print('DEBUG - [MOBILE] Loading: $_isLoadingClinicImage');
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Row(
+        children: [
+          // Clinic image
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: _buildMobileClinicImage(),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Veterinary Clinic',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  widget.clinic.clinicName,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    color: Colors.grey[900],
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobilePetSection(dynamic pet) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.blue[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue[100]!),
+      ),
+      child: Row(
+        children: [
+          // Pet image
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.blue[200]!, width: 2),
+            ),
+            child: ClipOval(
+              child: pet.image != null && pet.image!.isNotEmpty
+                  ? Image.network(
+                      pet.image!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Icon(Icons.pets,
+                            color: Colors.blue[300], size: 24);
+                      },
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                            ),
+                          ),
+                        );
+                      },
+                    )
+                  : Icon(Icons.pets, color: Colors.blue[300], size: 24),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Your Pet',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: Colors.blue[700],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  pet.name,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    color: Colors.grey[900],
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${pet.type} • ${pet.breed}',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileInfoCard({
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              size: 18,
+              color: iconColor,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: Colors.grey[900],
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCancelConfirmation(BuildContext parentContext) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          contentPadding: EdgeInsets.zero,
+          content: Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.warning_amber_rounded,
+                    color: Colors.orange[700],
+                    size: 40,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Cancel Booking?',
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[900],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Are you sure you want to cancel this appointment booking?',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.grey[700],
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            side: BorderSide(color: Colors.grey[300]!),
+                          ),
+                        ),
+                        child: Text(
+                          'Go Back',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          Navigator.of(parentContext).pop();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red[600],
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Yes, Cancel',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmBookAppointment() async {
     setState(() {
       isBooking = true;
     });
 
     try {
+      final userId = Get.find<UserSessionService>().userId;
       final selectedDateTime = parseTimeStringToDateTime(today, selectedTime!);
 
       final appointment = Appointment(
@@ -325,7 +891,7 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
       // Create appointment
       await Get.find<AuthRepository>().createAppointment(appointment);
 
-      // NEW: Create notification for admin
+      // Create notification for admin
       try {
         final clinicDoc = await Get.find<AuthRepository>()
             .getClinicById(widget.clinic.documentId ?? '');
@@ -336,7 +902,7 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
           if (adminId != null && adminId.isNotEmpty) {
             final notification = AppNotification.appointmentBooked(
               adminId: adminId,
-              appointmentId: '', // Will be filled by backend
+              appointmentId: '',
               clinicId: widget.clinic.documentId ?? '',
               petName: selectedPet!,
               ownerName: Get.find<UserSessionService>().userName,
@@ -348,11 +914,11 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
           }
         }
       } catch (e) {
+        // Notification failure doesn't stop booking
       }
 
-      // ============= Notify admin of new appointment =============
+      // Notify admin of new appointment
       await _notifyAdminOfNewAppointment(appointment);
-      // ================================================================
 
       // Refresh appointments if controller exists
       if (Get.isRegistered<EnhancedUserAppointmentController>()) {
@@ -371,7 +937,6 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
 
   Future<void> _notifyAdminOfNewAppointment(Appointment appointment) async {
     try {
-
       // Get clinic admin ID
       final clinicDoc = await Get.find<AuthRepository>()
           .getClinicById(widget.clinic.documentId ?? '');
@@ -400,7 +965,6 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
         appointmentDateTime: appointment.dateTime,
         appointmentId: '', // Will be empty for new appointments
       );
-
     } catch (e) {
       // Don't fail booking if notification fails
     }
@@ -909,6 +1473,219 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _fetchClinicImage() async {
+    if (!mounted) return;
+
+    try {
+      setState(() => _isLoadingClinicImage = true);
+
+      print('DEBUG - [MOBILE] ========================================');
+      print('DEBUG - [MOBILE] Starting image fetch');
+      print('DEBUG - [MOBILE] Clinic ID: ${widget.clinic.documentId}');
+
+      if (widget.clinic.documentId == null ||
+          widget.clinic.documentId!.isEmpty) {
+        print('DEBUG - [MOBILE] ❌ No clinic document ID');
+        if (mounted) setState(() => _isLoadingClinicImage = false);
+        return;
+      }
+
+      final authRepo = Get.find<AuthRepository>();
+      final clinicId = widget.clinic.documentId!;
+
+      // STEP 1: Get ClinicSettings
+      print('DEBUG - [MOBILE] Fetching ClinicSettings...');
+      final clinicSettings =
+          await authRepo.getClinicSettingsByClinicId(clinicId);
+
+      if (clinicSettings != null) {
+        print('DEBUG - [MOBILE] ✅ ClinicSettings found');
+        print(
+            'DEBUG - [MOBILE] dashboardPic RAW: "${clinicSettings.dashboardPic}"');
+        print(
+            'DEBUG - [MOBILE] dashboardPic length: ${clinicSettings.dashboardPic.length}');
+        print(
+            'DEBUG - [MOBILE] dashboardPic isEmpty: ${clinicSettings.dashboardPic.isEmpty}');
+      } else {
+        print('DEBUG - [MOBILE] ❌ ClinicSettings NOT found');
+      }
+
+      // STEP 2: Get Clinic document
+      print('DEBUG - [MOBILE] Fetching Clinic document...');
+      final clinicDoc = await authRepo.getClinicById(clinicId);
+
+      if (clinicDoc != null) {
+        print('DEBUG - [MOBILE] ✅ Clinic document found');
+        print(
+            'DEBUG - [MOBILE] All keys in clinic document: ${clinicDoc.data.keys.toList()}');
+        print(
+            'DEBUG - [MOBILE] profilePictureId: "${clinicDoc.data['profilePictureId']}"');
+        print('DEBUG - [MOBILE] image: "${clinicDoc.data['image']}"');
+        print(
+            'DEBUG - [MOBILE] dashboardPic in clinic doc: "${clinicDoc.data['dashboardPic']}"');
+      } else {
+        print('DEBUG - [MOBILE] ❌ Clinic document NOT found');
+      }
+
+      if (!mounted) return;
+
+      String? imageUrl;
+      String? fileId;
+
+      // PRIORITY 1: dashboardPic from ClinicSettings
+      if (clinicSettings != null && clinicSettings.dashboardPic.isNotEmpty) {
+        final dashboardPic = clinicSettings.dashboardPic.trim();
+        print('DEBUG - [MOBILE] 📸 Trying dashboardPic: "$dashboardPic"');
+
+        // Extract file ID
+        if (dashboardPic.contains('/files/')) {
+          final parts = dashboardPic.split('/files/');
+          fileId = parts.last.split('/').first.split('?').first;
+          print('DEBUG - [MOBILE] Extracted file ID from URL: "$fileId"');
+        } else {
+          fileId = dashboardPic;
+          print('DEBUG - [MOBILE] Using dashboardPic as file ID: "$fileId"');
+        }
+
+        imageUrl =
+            'https://cloud.appwrite.io/v1/storage/buckets/${AppwriteConstants.imageBucketID}/files/$fileId/view?project=${AppwriteConstants.projectID}';
+        print(
+            'DEBUG - [MOBILE] ✅ Priority 1 - Constructed URL from dashboardPic');
+        print('DEBUG - [MOBILE] File ID: $fileId');
+        print('DEBUG - [MOBILE] URL: $imageUrl');
+      }
+
+      // PRIORITY 2: profilePictureId from Clinic
+      if ((imageUrl == null || imageUrl.isEmpty) && clinicDoc != null) {
+        final profilePictureId = clinicDoc.data['profilePictureId'] as String?;
+        if (profilePictureId != null && profilePictureId.trim().isNotEmpty) {
+          print(
+              'DEBUG - [MOBILE] 📸 Trying profilePictureId: "$profilePictureId"');
+
+          String cleanId = profilePictureId.trim();
+          if (cleanId.contains('/files/')) {
+            final parts = cleanId.split('/files/');
+            fileId = parts.last.split('/').first.split('?').first;
+            print('DEBUG - [MOBILE] Extracted file ID from URL: "$fileId"');
+          } else {
+            fileId = cleanId;
+            print(
+                'DEBUG - [MOBILE] Using profilePictureId as file ID: "$fileId"');
+          }
+
+          imageUrl =
+              'https://cloud.appwrite.io/v1/storage/buckets/${AppwriteConstants.imageBucketID}/files/$fileId/view?project=${AppwriteConstants.projectID}';
+          print(
+              'DEBUG - [MOBILE] ✅ Priority 2 - Constructed URL from profilePictureId');
+          print('DEBUG - [MOBILE] File ID: $fileId');
+          print('DEBUG - [MOBILE] URL: $imageUrl');
+        }
+      }
+
+      // PRIORITY 3: image field from Clinic
+      if ((imageUrl == null || imageUrl.isEmpty) && clinicDoc != null) {
+        final image = clinicDoc.data['image'] as String?;
+        if (image != null && image.trim().isNotEmpty) {
+          print('DEBUG - [MOBILE] 📸 Trying image field: "$image"');
+
+          String cleanId = image.trim();
+          if (cleanId.contains('/files/')) {
+            final parts = cleanId.split('/files/');
+            fileId = parts.last.split('/').first.split('?').first;
+            print('DEBUG - [MOBILE] Extracted file ID from URL: "$fileId"');
+          } else {
+            fileId = cleanId;
+            print('DEBUG - [MOBILE] Using image as file ID: "$fileId"');
+          }
+
+          imageUrl =
+              'https://cloud.appwrite.io/v1/storage/buckets/${AppwriteConstants.imageBucketID}/files/$fileId/view?project=${AppwriteConstants.projectID}';
+          print(
+              'DEBUG - [MOBILE] ✅ Priority 3 - Constructed URL from image field');
+          print('DEBUG - [MOBILE] File ID: $fileId');
+          print('DEBUG - [MOBILE] URL: $imageUrl');
+        }
+      }
+
+      // FINAL RESULT
+      if (imageUrl == null || imageUrl.isEmpty) {
+        print('DEBUG - [MOBILE] ❌ No image found in any field');
+      } else {
+        print('DEBUG - [MOBILE] ✅ Final image URL: $imageUrl');
+        print('DEBUG - [MOBILE] Final file ID: $fileId');
+      }
+
+      print('DEBUG - [MOBILE] ========================================');
+
+      if (mounted) {
+        setState(() {
+          _clinicProfilePictureUrl = imageUrl;
+          _isLoadingClinicImage = false;
+        });
+      }
+    } catch (e, stackTrace) {
+      print('DEBUG - [MOBILE] ❌ ERROR: $e');
+      print('DEBUG - [MOBILE] Stack trace: $stackTrace');
+      if (mounted) setState(() => _isLoadingClinicImage = false);
+    }
+  }
+
+  Widget _buildMobileClinicImage() {
+    if (_isLoadingClinicImage) {
+      return Center(
+        child: SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Colors.grey[400],
+          ),
+        ),
+      );
+    }
+
+    if (_clinicProfilePictureUrl != null &&
+        _clinicProfilePictureUrl!.isNotEmpty) {
+      return Image.network(
+        _clinicProfilePictureUrl!,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          print('DEBUG - [MOBILE] Image load error: $error');
+          return _buildMobileDefaultIcon();
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) {
+            print('DEBUG - [MOBILE] Image loaded successfully');
+            return child;
+          }
+          return Center(
+            child: SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded /
+                        loadingProgress.expectedTotalBytes!
+                    : null,
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+    return _buildMobileDefaultIcon();
+  }
+
+  Widget _buildMobileDefaultIcon() {
+    return Icon(
+      Icons.local_hospital,
+      color: Colors.grey[400],
+      size: 24,
     );
   }
 }
