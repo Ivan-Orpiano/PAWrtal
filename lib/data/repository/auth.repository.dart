@@ -1298,8 +1298,6 @@ class AuthRepository {
     }
   }
 
-  // Add these methods to AuthRepository class in auth.repository.dart
-
   /// Get all feedback reported by admins
   Future<List<FeedbackAndReport>> getAdminFeedback({
     int limit = 100,

@@ -196,36 +196,59 @@ void _handleFeedbackUpdated(RealtimeMessage event) {
     final feedbackData = event.payload;
     final updatedFeedback = FeedbackAndReport.fromMap(feedbackData);
     
-    // Find and update existing feedback
+    // Find existing feedback
     final index = allFeedback.indexWhere(
       (f) => f.documentId == updatedFeedback.documentId,
     );
     
+    // ✅ CRITICAL: If feedback is now archived, REMOVE it completely
+    if (updatedFeedback.isArchived) {
+      
+      if (index != -1) {
+        allFeedback.removeAt(index);
+      }
+      
+      // Remove from filtered list
+      filteredFeedback.removeWhere((f) => f.documentId == updatedFeedback.documentId);
+      
+      // Remove from pinned IDs
+      pinnedFeedbackIds.remove(updatedFeedback.documentId);
+      
+      // Force refresh
+      allFeedback.refresh();
+      filteredFeedback.refresh();
+      pinnedFeedbackIds.refresh();
+      // Re-apply filters and update stats
+      filterFeedback();
+      updateStatistics();
+      return; // Exit early - don't add it back!
+    }
+    // ✅ If feedback exists and is NOT archived, update it
     if (index != -1) {
       final oldFeedback = allFeedback[index];
       allFeedback[index] = updatedFeedback;
       
-      // CRITICAL: Handle pin status change
+      // Handle pin status change
       if (oldFeedback.isPinned != updatedFeedback.isPinned) {
         if (updatedFeedback.isPinned) {
-          // Feedback was just pinned
           pinnedFeedbackIds.add(updatedFeedback.documentId!);
         } else {
-          // Feedback was just unpinned
           pinnedFeedbackIds.remove(updatedFeedback.documentId!);
         }
       }
-      
-      // Handle archive status change
-      if (!oldFeedback.isArchived && updatedFeedback.isArchived) {
-        // Feedback was archived - remove from both lists
-        allFeedback.removeAt(index);
-        filteredFeedback.removeWhere((f) => f.documentId == updatedFeedback.documentId);
-        pinnedFeedbackIds.remove(updatedFeedback.documentId);
-      }
       // Force refresh
       allFeedback.refresh();
+      
       // Re-apply filters and update stats
+      filterFeedback();
+      updateStatistics();
+    } else {
+      // New feedback that's not archived - add it
+      allFeedback.insert(0, updatedFeedback);
+      
+      if (updatedFeedback.isPinned) {
+        pinnedFeedbackIds.add(updatedFeedback.documentId!);
+      }
       filterFeedback();
       updateStatistics();
     }
@@ -663,35 +686,38 @@ bool _validateFile(PlatformFile file) {
   }
 
   // ============= ADMIN-SIDE METHODS =============
+/// Load all feedback for admin
+Future<void> loadAllFeedback() async {
+  isLoadingFeedback.value = true;
 
-  /// Load all feedback for admin
-  /// Load all feedback for admin
-  Future<void> loadAllFeedback() async {
-    isLoadingFeedback.value = true;
+  try {
+    // ✅ Load ALL feedback from database (including archived)
+    final feedback = await authRepository.getAllFeedback(
+      status: null, 
+      priority: null, 
+    );
 
-    try {
-      // ✅ CHANGED: Pass null to load ALL feedback, then filter locally
-      final feedback = await authRepository.getAllFeedback(
-        status: null, // Don't filter by status in database
-        priority: null, // Don't filter by priority in database
-      );
+    // ✅ CRITICAL: Filter out archived feedback BEFORE storing in allFeedback
+    final nonArchivedFeedback = feedback.where((f) => !f.isArchived).toList();
+    
+    allFeedback.value = nonArchivedFeedback;
 
-      allFeedback.value = feedback;
+    // Load pinned IDs from non-archived feedback only
+    pinnedFeedbackIds.value = nonArchivedFeedback
+        .where((f) => f.isPinned)
+        .map((f) => f.documentId!)
+        .toSet();
 
-      // Load pinned IDs from database
-      pinnedFeedbackIds.value =
-          feedback.where((f) => f.isPinned).map((f) => f.documentId!).toSet();
-
-
-      // ✅ IMPORTANT: Apply filters AFTER loading (preserves user's filter selections)
-      filterFeedback();
-      updateStatistics();
-    } catch (e) {
-      _showError("Failed to load feedback: $e");
-    } finally {
-      isLoadingFeedback.value = false;
-    }
+    // ✅ Apply filters AFTER loading
+    filterFeedback();
+    updateStatistics();
+  } catch (e) {
+ 
+    _showError("Failed to load feedback: $e");
+  } finally {
+    isLoadingFeedback.value = false;
   }
+}
 
   /// Checks subject + description for gibberish, scrambled words, and duplicates per user
   Future<void> autoCleanSpamFeedback() async {
@@ -854,98 +880,76 @@ bool _validateFile(PlatformFile file) {
   }
 
   /// Filter feedback based on current filters
-  void filterFeedback() {
-    var filtered = allFeedback.toList();
+void filterFeedback() {
+  // ✅ CRITICAL: Start with non-archived feedback ONLY
+  var filtered = allFeedback.where((f) => !f.isArchived).toList();
 
-    // Apply search query
-    if (searchQuery.value.isNotEmpty) {
-      filtered = filtered.where((f) {
-        final query = searchQuery.value.toLowerCase();
+  // Apply search query
+  if (searchQuery.value.isNotEmpty) {
+    filtered = filtered.where((f) {
+      final query = searchQuery.value.toLowerCase();
 
-        final subjectMatch = f.subject.toLowerCase().contains(query);
-        final categoryMatch =
-            f.category.displayName.toLowerCase().contains(query);
-        final typeMatch =
-            f.feedbackType.displayName.toLowerCase().contains(query);
-        final nameMatch = f.userName.toLowerCase().contains(query);
-        final emailMatch = f.userEmail.toLowerCase().contains(query);
-        final descriptionMatch = f.description.toLowerCase().contains(query);
+      final subjectMatch = f.subject.toLowerCase().contains(query);
+      final categoryMatch = f.category.displayName.toLowerCase().contains(query);
+      final typeMatch = f.feedbackType.displayName.toLowerCase().contains(query);
+      final nameMatch = f.userName.toLowerCase().contains(query);
+      final emailMatch = f.userEmail.toLowerCase().contains(query);
+      final descriptionMatch = f.description.toLowerCase().contains(query);
 
-        return subjectMatch ||
-            categoryMatch ||
-            typeMatch ||
-            nameMatch ||
-            emailMatch ||
-            descriptionMatch;
-      }).toList();
-    }
-
-    // Apply filters
-    if (statusFilter.value != null) {
-      filtered = filtered.where((f) => f.status == statusFilter.value).toList();
-    }
-
-    if (priorityFilter.value != null) {
-      filtered =
-          filtered.where((f) => f.priority == priorityFilter.value).toList();
-    }
-
-    if (typeFilter.value != null) {
-      filtered =
-          filtered.where((f) => f.feedbackType == typeFilter.value).toList();
-    }
-
-    if (categoryFilter.value != null) {
-      filtered =
-          filtered.where((f) => f.category == categoryFilter.value).toList();
-    }
-
-    filtered.sort((a, b) {
-      // ═══════════════════════════════════════════════════════
-      // PRIORITY 1: Pinned items ALWAYS appear first
-      // ═══════════════════════════════════════════════════════
-      final aPinned = pinnedFeedbackIds.contains(a.documentId);
-      final bPinned = pinnedFeedbackIds.contains(b.documentId);
-
-      if (aPinned && !bPinned)
-        return -1; // a is pinned, b is not → a comes first
-      if (!aPinned && bPinned)
-        return 1; // b is pinned, a is not → b comes first
-
-      // ═══════════════════════════════════════════════════════
-      // PRIORITY 2: Critical priority items (within pinned group or unpinned group)
-      // ═══════════════════════════════════════════════════════
-      final priorityOrder = <Priority, int>{
-        Priority.critical: 0, // Highest priority
-        Priority.high: 1,
-        Priority.medium: 2,
-        Priority.low: 3, // Lowest priority
-      };
-
-      final aPriority = priorityOrder[a.priority] ?? 999;
-      final bPriority = priorityOrder[b.priority] ?? 999;
-
-      if (aPriority != bPriority) {
-        return aPriority.compareTo(bPriority); // Lower number = higher priority
-      }
-
-      // ═══════════════════════════════════════════════════════
-      // PRIORITY 3: Latest submission date (NEWEST FIRST)
-      // ═══════════════════════════════════════════════════════
-      // b.compareTo(a) gives DESCENDING order (latest first)
-      return b.submittedAt.compareTo(a.submittedAt);
-    });
-
-    filteredFeedback.value = filtered;
-
-    // Debug log for verification
-    if (filtered.isNotEmpty) {
-      for (int i = 0; i < (filtered.length > 3 ? 3 : filtered.length); i++) {
-        final f = filtered[i];
-      }
-    }
+      return subjectMatch ||
+          categoryMatch ||
+          typeMatch ||
+          nameMatch ||
+          emailMatch ||
+          descriptionMatch;
+    }).toList();
   }
 
+  // Apply filters
+  if (statusFilter.value != null) {
+    filtered = filtered.where((f) => f.status == statusFilter.value).toList();
+  }
+
+  if (priorityFilter.value != null) {
+    filtered = filtered.where((f) => f.priority == priorityFilter.value).toList();
+  }
+
+  if (typeFilter.value != null) {
+    filtered = filtered.where((f) => f.feedbackType == typeFilter.value).toList();
+  }
+
+  if (categoryFilter.value != null) {
+    filtered = filtered.where((f) => f.category == categoryFilter.value).toList();
+  }
+
+  // ✅ Continue with the existing sort logic...
+  filtered.sort((a, b) {
+    // Your existing sort logic here
+    final aPinned = pinnedFeedbackIds.contains(a.documentId);
+    final bPinned = pinnedFeedbackIds.contains(b.documentId);
+
+    if (aPinned && !bPinned) return -1;
+    if (!aPinned && bPinned) return 1;
+
+    final priorityOrder = <Priority, int>{
+      Priority.critical: 0,
+      Priority.high: 1,
+      Priority.medium: 2,
+      Priority.low: 3,
+    };
+
+    final aPriority = priorityOrder[a.priority] ?? 999;
+    final bPriority = priorityOrder[b.priority] ?? 999;
+
+    if (aPriority != bPriority) {
+      return aPriority.compareTo(bPriority);
+    }
+
+    return b.submittedAt.compareTo(a.submittedAt);
+  });
+
+  filteredFeedback.value = filtered;
+}
   /// Helper method for debug logging (add this to your controller)
   String _formatDebugDate(DateTime date) {
     final now = DateTime.now();
@@ -1037,23 +1041,24 @@ Future<void> archiveFeedback(String documentId) async {
     
     // Get current admin/user info
     final userName = session.userName.isNotEmpty ? session.userName : 'System';
-    
-    
+    // ✅ Archive in database (sets isArchived = true)
     await authRepository.archiveFeedback(documentId, userName);
     
-    // CRITICAL: Remove from BOTH lists
+    // ✅ CRITICAL: Immediately remove from ALL local lists
+    final removedCount = allFeedback.length;
     allFeedback.removeWhere((f) => f.documentId == documentId);
     filteredFeedback.removeWhere((f) => f.documentId == documentId);
-    
-    // Remove from pinned IDs if it was pinned
     pinnedFeedbackIds.remove(documentId);
     
-    // Force refresh both lists
+    
+    // ✅ Force refresh all reactive lists
     allFeedback.refresh();
     filteredFeedback.refresh();
+    pinnedFeedbackIds.refresh();
     
     // Update statistics
     updateStatistics();
+    
     
     _showSuccess('Feedback archived successfully');
     

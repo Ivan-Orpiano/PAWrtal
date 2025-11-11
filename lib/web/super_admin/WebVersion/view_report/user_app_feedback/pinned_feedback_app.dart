@@ -68,14 +68,14 @@ class _PinnedFeedbackPageState extends State<PinnedFeedbackPage> {
         }
       }
 
-        // Get only pinned feedback
+        // Get only pinned AND non-archived feedback
         List<FeedbackAndReport> get pinnedFeedback {
-        final pinned = controller.filteredFeedback.where((f) => f.isPinned).toList();
-        
-        // ⭐ Sort pinned feedback by date (newest first)
-        pinned.sort((a, b) => b.submittedAt.compareTo(a.submittedAt));
-        
-        return pinned;
+          // ✅ CRITICAL: Filter out archived items
+          final pinned = controller.filteredFeedback
+              .where((f) => f.isPinned && !f.isArchived) 
+              .toList();
+          pinned.sort((a, b) => b.submittedAt.compareTo(a.submittedAt));                  
+          return pinned;
         }
 
         @override
