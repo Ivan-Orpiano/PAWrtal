@@ -104,6 +104,7 @@ class LoginController extends GetxController {
       formKey.currentState!.save();
       FullScreenDialogLoader.showDialog();
 
+      _clearExistingControllers();
 
       // Check if input is username or email
       final isEmail = emailOrUsername.contains('@');
@@ -126,9 +127,7 @@ class LoginController extends GetxController {
               'Your account has been deactivated. Please contact your administrator.';
           return;
         }
-
-      } else {
-      }
+      } else {}
 
       // Attempt authentication
       final value = await authRepository.login({
@@ -153,7 +152,6 @@ class LoginController extends GetxController {
       _getStorage.write("userId", userId);
       _getStorage.write("sessionId", session.$id);
 
-
       String role = "";
       bool matched = false;
 
@@ -164,12 +162,10 @@ class LoginController extends GetxController {
         _getStorage.write("clinicId", clinicDoc.$id);
         _getStorage.write("userName", clinicDoc.data["createdBy"] ?? user.name);
         matched = true;
-      } else {
-      }
+      } else {}
 
       // Step 2: Check if account is STAFF
       if (!matched) {
-
         // Try by userId first
         var staff = await authRepository.getStaffByUserId(userId);
 
@@ -181,8 +177,7 @@ class LoginController extends GetxController {
           if (staff != null) {
             await _autoFixStaffUserId(staff, userId);
           }
-        } else if (staff != null) {
-        }
+        } else if (staff != null) {}
 
         if (staff != null) {
           role = staff.role;
@@ -192,8 +187,7 @@ class LoginController extends GetxController {
           _getStorage.write("userName", staff.name);
           _getStorage.write("username", staff.username);
           matched = true;
-        } else {
-        }
+        } else {}
       }
 
       // Step 3: Check if CUSTOMER
@@ -202,26 +196,28 @@ class LoginController extends GetxController {
         if (userDoc != null) {
           role = userDoc.data["role"];
           _getStorage.write("customerId", userDoc.$id);
-          _getStorage.write("userDocumentId", userDoc.$id);  // ✅ Store document ID
+          _getStorage.write(
+              "userDocumentId", userDoc.$id); // ✅ Store document ID
           _getStorage.write("userName", user.name);
-          
+
           // ✅✅ ADD THESE TWO LINES ✅✅
           final phone = userDoc.data["phone"] as String?;
           _getStorage.write("phone", phone ?? "");
-          
+
           // ✅✅ ALSO STORE PROFILE PICTURE ID ✅✅
           final profilePictureId = userDoc.data["profilePictureId"] as String?;
           _getStorage.write("userProfilePictureId", profilePictureId ?? "");
-          
+
           matched = true;
           // ✅ Log it
           // ✅ Log it
-        } else {
-        }
+        } else {}
       }
 
       // Step 4: Check if DEVELOPER
-      if (!matched && (userEmail == "test.developer@gmail.com" || userEmail == "super.developer@gmail.com")) {
+      if (!matched &&
+          (userEmail == "test.developer@gmail.com" ||
+              userEmail == "super.developer@gmail.com")) {
         role = "developer";
         _getStorage.write("userName", user.name);
         matched = true;
@@ -229,7 +225,6 @@ class LoginController extends GetxController {
 
       // If no role matched, deny access
       if (!matched) {
-
         if (sessionId != null) {
           await authRepository.logout(sessionId);
         }
@@ -260,7 +255,6 @@ class LoginController extends GetxController {
             final fcmToken = await notificationService.getFreshToken();
 
             if (fcmToken != null && fcmToken.isNotEmpty) {
-
               // Get AppwriteProvider instance
               final appwriteProvider = Get.find<AppWriteProvider>();
 
@@ -272,14 +266,10 @@ class LoginController extends GetxController {
 
               if (target != null) {
                 _getStorage.write('push_target_id', target.$id);
-              } else {
-              }
-            } else {
-            }
-          } else {
-          }
-        } else {
-        }
+              } else {}
+            } else {}
+          } else {}
+        } else {}
       } catch (e) {
         // Don't fail login if FCM registration fails
       }
@@ -288,10 +278,7 @@ class LoginController extends GetxController {
       try {
         final notificationService = Get.find<InAppNotificationService>();
         await notificationService.initialize();
-      } catch (e) {
-      }
-
-
+      } catch (e) {}
 
       FullScreenDialogLoader.cancelDialog();
       SnackbarHelper.showSuccess(
@@ -312,12 +299,10 @@ class LoginController extends GetxController {
         Get.offAllNamed(Routes.userHome);
       }
     } catch (e) {
-
       if (sessionId != null) {
         try {
           await authRepository.logout(sessionId);
-        } catch (logoutError) {
-        }
+        } catch (logoutError) {}
       }
 
       FullScreenDialogLoader.cancelDialog();
@@ -325,17 +310,17 @@ class LoginController extends GetxController {
       // UNIFIED ERROR MESSAGE: Always show this for any login error
       errorMessage.value =
           'Invalid username/email or password. Please check your credentials.';
+
+      print(e);
     }
   }
 
   Future<void> _autoFixStaffUserId(Staff staff, String correctUserId) async {
     if (staff.userId != correctUserId) {
-
       try {
         await authRepository.fixStaffUserId(staff.documentId!, correctUserId);
         staff.userId = correctUserId;
-      } catch (e) {
-      }
+      } catch (e) {}
     }
   }
 
@@ -345,7 +330,6 @@ class LoginController extends GetxController {
     try {
       isGoogleLoading.value = true;
       errorMessage.value = '';
-
 
       if (kIsWeb) {
         final appWriteProvider = Get.find<AppWriteProvider>();
@@ -374,7 +358,6 @@ class LoginController extends GetxController {
   }
 
   void _initializeSecureSession(String userId, String role) {
-
     // Store session timestamp
     _getStorage.write('sessionTimestamp', DateTime.now().toIso8601String());
 
@@ -390,7 +373,6 @@ class LoginController extends GetxController {
 
     // Clean up old security data periodically
     // SessionManager.cleanupOldData();
-
   }
 
   Future<void> sendPasswordResetEmail() async {
@@ -420,7 +402,6 @@ class LoginController extends GetxController {
         return;
       }
 
-
       // Show loading
       Get.dialog(
         const Center(child: CircularProgressIndicator()),
@@ -434,7 +415,6 @@ class LoginController extends GetxController {
       Get.back();
 
       if (result['success'] == true) {
-
         // Clear the email field
         emailForPasswordResetController.clear();
 
@@ -447,7 +427,6 @@ class LoginController extends GetxController {
           duration: const Duration(seconds: 5),
         );
       } else {
-
         Get.snackbar(
           'Error',
           result['message'] ?? 'Failed to send password reset email',
@@ -456,9 +435,7 @@ class LoginController extends GetxController {
           colorText: Colors.red.shade900,
         );
       }
-
     } catch (e) {
-
       // Hide loading if still showing
       if (Get.isDialogOpen ?? false) {
         Get.back();
@@ -471,6 +448,24 @@ class LoginController extends GetxController {
         backgroundColor: Colors.red.shade100,
         colorText: Colors.red.shade900,
       );
+    }
+  }
+
+  void _clearExistingControllers() {
+    try {
+      // Delete AdminDashboardController if it exists
+      if (Get.isRegistered<dynamic>(tag: 'AdminDashboardController')) {
+        Get.delete<dynamic>(tag: 'AdminDashboardController', force: true);
+      }
+
+      // Try to delete by finding it
+      try {
+        Get.delete(force: true);
+      } catch (e) {
+        // Ignore if not found
+      }
+    } catch (e) {
+      // Continue anyway - not critical
     }
   }
 }

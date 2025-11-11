@@ -3694,7 +3694,6 @@ class AppWriteProvider {
     }
   }
 
-  print('>>> 📊 Total images uploaded: ${uploadedFiles.length}/${files.length}');
   return uploadedFiles;
 }
 
