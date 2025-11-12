@@ -14,6 +14,71 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:get/get.dart';
 
+// Global cache controller for clinic data
+class PawmapCache extends GetxController {
+  static PawmapCache get instance => Get.find<PawmapCache>();
+
+  List<Clinic> allClinics = [];
+  Map<String, ClinicSettings?> clinicSettingsMap = {};
+  Map<String, ClinicRatingStats> ratingStatsCache = {};
+  bool isInitialized = false;
+  bool isLoading = false;
+
+  Future<void> initializeCache() async {
+    if (isInitialized || isLoading) return;
+
+    isLoading = true;
+
+    try {
+      final authRepository = Get.find<AuthRepository>();
+      final clinicsWithSettings = await authRepository.getClinicsWithSettings();
+
+      final clinics = <Clinic>[];
+      final settingsMap = <String, ClinicSettings?>{};
+      final statsCache = <String, ClinicRatingStats>{};
+
+      for (final data in clinicsWithSettings) {
+        final clinic = data['clinic'] as Clinic;
+        final settings = data['settings'] as ClinicSettings?;
+
+        clinics.add(clinic);
+        settingsMap[clinic.documentId ?? ''] = settings;
+
+        // Load rating stats for each clinic
+        try {
+          final stats = await authRepository
+              .getClinicRatingStats(clinic.documentId ?? '');
+          statsCache[clinic.documentId ?? ''] = stats;
+        } catch (e) {
+          statsCache[clinic.documentId ?? ''] = ClinicRatingStats(
+            averageRating: 0.0,
+            totalReviews: 0,
+            ratingDistribution: {1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
+            reviewsWithText: 0,
+            reviewsWithImages: 0,
+          );
+        }
+      }
+
+      allClinics = clinics;
+      clinicSettingsMap = settingsMap;
+      ratingStatsCache = statsCache;
+      isInitialized = true;
+    } catch (e) {
+      print('Error initializing Pawmap cache: $e');
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  void clearCache() {
+    allClinics.clear();
+    clinicSettingsMap.clear();
+    ratingStatsCache.clear();
+    isInitialized = false;
+  }
+}
+
 class Pawmap extends StatefulWidget {
   const Pawmap({super.key});
 
@@ -31,7 +96,7 @@ class _PawmapState extends State<Pawmap> {
   List<Clinic> allClinics = [];
   List<Clinic> filteredClinics = [];
   Map<String, ClinicSettings?> clinicSettingsMap = {};
-  Map<String, ClinicRatingStats> ratingStatsCache = {}; // ADDED
+  Map<String, ClinicRatingStats> ratingStatsCache = {};
   bool isLoading = true;
   String? error;
   String searchQuery = '';
@@ -53,6 +118,27 @@ class _PawmapState extends State<Pawmap> {
   }
 
   Future<void> _initializeMap() async {
+    // Try to use cached data first
+    if (Get.isRegistered<PawmapCache>()) {
+      final cache = PawmapCache.instance;
+
+      if (cache.isInitialized) {
+        // Use cached data immediately
+        setState(() {
+          allClinics = cache.allClinics;
+          clinicSettingsMap = cache.clinicSettingsMap;
+          ratingStatsCache = cache.ratingStatsCache;
+          isLoading = false;
+        });
+
+        // Fetch user location and apply filters
+        await _fetchUserLocation();
+        _applyFilters();
+        return;
+      }
+    }
+
+    // No cache available, fetch fresh data
     await Future.wait([
       _fetchUserLocation(),
       _fetchClinicsData(),
@@ -67,18 +153,24 @@ class _PawmapState extends State<Pawmap> {
         if (!isWithinBounds(fetchedLocation)) {
           fetchedLocation = sanJoseDelMonteBounds.center;
         }
-        setState(() {
-          userLocation = fetchedLocation;
-        });
+        if (mounted) {
+          setState(() {
+            userLocation = fetchedLocation;
+          });
+        }
       } else {
+        if (mounted) {
+          setState(() {
+            userLocation = sanJoseDelMonteBounds.center;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
         setState(() {
           userLocation = sanJoseDelMonteBounds.center;
         });
       }
-    } catch (e) {
-      setState(() {
-        userLocation = sanJoseDelMonteBounds.center;
-      });
     }
   }
 
@@ -94,7 +186,7 @@ class _PawmapState extends State<Pawmap> {
 
       final clinics = <Clinic>[];
       final settingsMap = <String, ClinicSettings?>{};
-      final statsCache = <String, ClinicRatingStats>{}; // ADDED
+      final statsCache = <String, ClinicRatingStats>{};
 
       for (final data in clinicsWithSettings) {
         final clinic = data['clinic'] as Clinic;
@@ -103,7 +195,7 @@ class _PawmapState extends State<Pawmap> {
         clinics.add(clinic);
         settingsMap[clinic.documentId ?? ''] = settings;
 
-        // ADDED: Load rating stats for each clinic
+        // Load rating stats for each clinic
         try {
           final stats = await authRepository
               .getClinicRatingStats(clinic.documentId ?? '');
@@ -123,9 +215,18 @@ class _PawmapState extends State<Pawmap> {
         setState(() {
           allClinics = clinics;
           clinicSettingsMap = settingsMap;
-          ratingStatsCache = statsCache; // ADDED
+          ratingStatsCache = statsCache;
           isLoading = false;
         });
+
+        // Update cache for next time
+        if (Get.isRegistered<PawmapCache>()) {
+          final cache = PawmapCache.instance;
+          cache.allClinics = clinics;
+          cache.clinicSettingsMap = settingsMap;
+          cache.ratingStatsCache = statsCache;
+          cache.isInitialized = true;
+        }
 
         _applyFilters();
       }
@@ -154,7 +255,6 @@ class _PawmapState extends State<Pawmap> {
   }
 
   void _applyFilters() {
-
     var filtered = allClinics.toList();
 
     // Apply search filter
@@ -187,7 +287,6 @@ class _PawmapState extends State<Pawmap> {
 
           final isOpen = settings.isOpen;
           final isOpenNow = settings.isOpenNow();
-
 
           return isOpen && isOpenNow && !isTodayClosedDate;
         }).toList();
@@ -237,7 +336,6 @@ class _PawmapState extends State<Pawmap> {
 
           final aReviews = aStats?.totalReviews ?? 0;
           final bReviews = bStats?.totalReviews ?? 0;
-
 
           // Primary sort: Higher rating first
           if ((bRating - aRating).abs() > 0.01) {
@@ -289,20 +387,14 @@ class _PawmapState extends State<Pawmap> {
     }
 
     // Only include clinics that have location data
-    final beforeLocationFilter = filtered.length;
     filtered = filtered.where((clinic) {
       final settings = clinicSettingsMap[clinic.documentId ?? ''];
-      final hasLocation = settings?.location != null;
-      if (!hasLocation) {
-      }
-      return hasLocation;
+      return settings?.location != null;
     }).toList();
-
 
     setState(() {
       filteredClinics = filtered;
     });
-
   }
 
   int getFilterCount(String filter) {
@@ -400,23 +492,30 @@ class _PawmapState extends State<Pawmap> {
   }
 
   void moveToNearestMarker() {
-    if (userLocation == null || filteredClinics.isEmpty) {
-      _showNoNearestClinicMessage('No clinics available in current filter');
-      return;
-    }
+    if (userLocation == null || filteredClinics.isEmpty) return;
 
     Clinic? nearest;
     double shortestDistance = double.infinity;
-
 
     for (final clinic in filteredClinics) {
       final settings = clinicSettingsMap[clinic.documentId ?? ''];
 
       if (settings?.location != null) {
-        final clinicLocation =
-            LatLng(settings!.location!['lat']!, settings.location!['lng']!);
-        final dist = calculateDistance(userLocation!, clinicLocation);
+        final today = DateTime.now();
+        final todayStr =
+            '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+        final isTodayClosedDate = settings!.closedDates.contains(todayStr);
 
+        final isOpenAndAvailable =
+            settings.isOpen && settings.isOpenNow() && !isTodayClosedDate;
+
+        if (!isOpenAndAvailable) {
+          continue;
+        }
+
+        final clinicLocation =
+            LatLng(settings.location!['lat']!, settings.location!['lng']!);
+        final dist = calculateDistance(userLocation!, clinicLocation);
 
         if (dist < shortestDistance) {
           shortestDistance = dist;
@@ -436,11 +535,11 @@ class _PawmapState extends State<Pawmap> {
           fetchRoute(nearestLocation);
         } else {
           _showNoNearestClinicMessage(
-              'Nearest clinic is outside the service area');
+              'Nearest open clinic is outside the service area');
         }
       }
     } else {
-      _showNoNearestClinicMessage('No clinics available in current filter');
+      _showNoNearestClinicMessage('No open clinics available nearby');
     }
   }
 
@@ -477,7 +576,6 @@ class _PawmapState extends State<Pawmap> {
 
     final markers = <Marker>[];
 
-
     for (final clinic in filteredClinics) {
       final settings = clinicSettingsMap[clinic.documentId ?? ''];
 
@@ -494,7 +592,6 @@ class _PawmapState extends State<Pawmap> {
 
       double distanceInKm = calculateDistance(userLocation!, location);
 
-      // Determine marker color with closed dates support
       Color markerColor;
 
       final today = DateTime.now();
@@ -513,7 +610,6 @@ class _PawmapState extends State<Pawmap> {
       } else {
         markerColor = Colors.red;
       }
-
 
       markers.add(Marker(
         point: location,
@@ -597,8 +693,7 @@ class _PawmapState extends State<Pawmap> {
           });
         }
       }
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   @override
