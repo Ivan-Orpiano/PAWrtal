@@ -13,6 +13,7 @@ import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:appwrite/appwrite.dart';
+import 'package:capstone_app/web/admin_web/components/dashboard/admin_dashboard_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:async';
@@ -60,7 +61,7 @@ class WebAppointmentController extends GetxController {
   final RxMap<String, String> petImagesCache = <String, String>{}.obs;
 
   Timer? _autoDeclineTimer;
-  static const int _autoDeclineCheckInterval = 5;
+  static const int _autoDeclineCheckInterval = 60;
   var isAutoDeclineActive = false.obs;
 
   @override
@@ -77,15 +78,12 @@ class WebAppointmentController extends GetxController {
 
     // NEW: Start auto-decline timer AFTER a small delay to ensure initialization
     Future.delayed(const Duration(seconds: 2), () {
-      debugPrint('[AUTO-DECLINE] 🚀 Initializing auto-decline system...');
       _startAutoDeclineTimer();
     });
   }
 
   @override
   void onClose() {
-    debugPrint(
-        '[AUTO-DECLINE] 🛑 Controller closing, stopping auto-decline timer');
     _autoDeclineTimer?.cancel();
     _autoDeclineTimer = null;
     isAutoDeclineActive.value = false;
@@ -281,8 +279,10 @@ class WebAppointmentController extends GetxController {
   }
 
   void _handleUpdatedAppointment(Appointment appointment) {
-    final index =
-        appointments.indexWhere((a) => a.documentId == appointment.documentId);
+    final index = appointments.indexWhere(
+      (a) => a.documentId == appointment.documentId,
+    );
+
     if (index != -1) {
       appointments[index] = appointment;
       appointments.refresh();
@@ -2529,15 +2529,8 @@ For more details, please check your appointments.
 
   void _startAutoDeclineTimer() {
     try {
-      debugPrint('[AUTO-DECLINE] 🚀 Starting auto-decline timer...');
-      debugPrint('[AUTO-DECLINE] 🌏 Timezone: ${DateTime.now().timeZoneName}');
-      debugPrint(
-          '[AUTO-DECLINE] 🌏 UTC Offset: ${DateTime.now().timeZoneOffset}');
-
-      // Cancel existing timer if any
       _autoDeclineTimer?.cancel();
 
-      // Create new timer - check every 5 seconds (or 60 seconds for production)
       _autoDeclineTimer = Timer.periodic(
         const Duration(seconds: _autoDeclineCheckInterval),
         (timer) {
@@ -2548,253 +2541,198 @@ For more details, please check your appointments.
       );
 
       isAutoDeclineActive.value = true;
-      debugPrint('[AUTO-DECLINE] ✅ Timer started successfully');
 
-      // Run initial check after 3 seconds
+      // Initial check after 3 seconds
       Future.delayed(const Duration(seconds: 3), () {
         if (clinicData.value?.documentId != null) {
           _checkAndDeclineOverlookedAppointments();
         }
       });
     } catch (e) {
-      debugPrint('[AUTO-DECLINE] ❌ Failed to start timer: $e');
+      print('>>> ❌ Failed to start auto-decline timer: $e');
     }
   }
 
   Future<void> _checkAndDeclineOverlookedAppointments() async {
     try {
-      // CRITICAL: Use local time (Philippine Time) for comparison
-      final now = DateTime.now(); // This is in local timezone
+      print('>>> 🔍 AUTO-DECLINE CHECK: Starting scan...');
 
-      debugPrint(
-          '\n[AUTO-DECLINE] ⏰ TIMER TICK #${DateTime.now().millisecondsSinceEpoch % 100}');
-      debugPrint(
-          '[AUTO-DECLINE] 🕐 Current LOCAL time: ${DateFormat('MMM dd, yyyy • hh:mm:ss a').format(now)}');
-      debugPrint(
-          '[AUTO-DECLINE] 🌏 Timezone: ${now.timeZoneName} (UTC${now.timeZoneOffset.inHours >= 0 ? '+' : ''}${now.timeZoneOffset.inHours})');
-      debugPrint('═══════════════════════════════════════════════════');
-      debugPrint('[AUTO-DECLINE] 🔍 Starting check procedure...');
-      debugPrint(
-          '[AUTO-DECLINE] 📍 Clinic ID: ${clinicData.value?.documentId}');
+      final now = DateTime.now();
 
       if (clinicData.value?.documentId == null) {
-        debugPrint('[AUTO-DECLINE] ❌ No clinic ID found - skipping check');
+        print('>>> ⚠️ No clinic data available, skipping check');
         return;
       }
 
-      // Get pending appointments from local cache
+      // Get only PENDING appointments
       final pendingAppointments =
           appointments.where((a) => a.status == 'pending').toList();
 
-      debugPrint(
-          '[AUTO-DECLINE] 📋 Total appointments in cache: ${appointments.length}');
-      debugPrint(
-          '[AUTO-DECLINE] 📋 Pending appointments: ${pendingAppointments.length}');
-
       if (pendingAppointments.isEmpty) {
-        debugPrint('[AUTO-DECLINE] ✅ No pending appointments to check');
+        print('>>> ℹ️ No pending appointments to check');
         return;
       }
 
-      debugPrint('[AUTO-DECLINE] 📝 PENDING APPOINTMENTS LIST:');
-      debugPrint('─────────────────────────────────────────────');
+      print('>>> 📊 Found ${pendingAppointments.length} pending appointments');
 
-      int appointmentNumber = 0;
-      for (var appointment in pendingAppointments) {
-        appointmentNumber++;
-        // Convert to local time for display
-        final localAppointmentTime = appointment.dateTime.toLocal();
-        debugPrint(
-            '$appointmentNumber. ID: ${appointment.documentId?.substring(0, 8)}...');
-        debugPrint('   Pet: ${getPetName(appointment.petId)}');
-        debugPrint(
-            '   Time (Local): ${DateFormat('MMM dd, yyyy • hh:mm:ss a').format(localAppointmentTime)}');
-        debugPrint('   Status: ${appointment.status}');
-      }
-      debugPrint('─────────────────────────────────────────────');
-
-      int checkedCount = 0;
       int declinedCount = 0;
-      int validCount = 0;
+      int errorCount = 0;
 
       for (var appointment in pendingAppointments) {
-        checkedCount++;
+        try {
+          // Parse the appointment time correctly (it's stored in UTC)
+          final storedDateTime = appointment.dateTime;
 
-        // CRITICAL FIX: Convert appointment time to LOCAL timezone for comparison
-        final appointmentTimeUTC = appointment.dateTime;
-        final appointmentTimeLocal = appointmentTimeUTC.toLocal();
+          // Convert to local time for comparison
+          final actualLocalTime = DateTime(
+            storedDateTime.year,
+            storedDateTime.month,
+            storedDateTime.day,
+            storedDateTime.hour,
+            storedDateTime.minute,
+            storedDateTime.second,
+          );
 
-        // Calculate difference using LOCAL times
-        final differenceInMinutes =
-            now.difference(appointmentTimeLocal).inMinutes;
-        final differenceInSeconds =
-            now.difference(appointmentTimeLocal).inSeconds;
+          // Check if appointment time has passed
+          final isPast = actualLocalTime.isBefore(now);
 
-        debugPrint(
-            '[AUTO-DECLINE] 🔎 CHECKING APPOINTMENT #$checkedCount/${pendingAppointments.length}');
-        debugPrint('─────────────────────────────────────────────');
-        debugPrint('   📌 ID: ${appointment.documentId}');
-        debugPrint('   🐾 Pet: ${getPetName(appointment.petId)}');
-        debugPrint(
-            '   📅 Scheduled (UTC): ${DateFormat('MMM dd, yyyy • hh:mm:ss a').format(appointmentTimeUTC)}');
-        debugPrint(
-            '   📅 Scheduled (LOCAL): ${DateFormat('MMM dd, yyyy • hh:mm:ss a').format(appointmentTimeLocal)}');
-        debugPrint(
-            '   🕐 Current (LOCAL): ${DateFormat('MMM dd, yyyy • hh:mm:ss a').format(now)}');
-        debugPrint(
-            '   ⏱️  Difference: $differenceInMinutes minutes ($differenceInSeconds seconds)');
-        debugPrint('   🔍 Time Comparison:');
-        debugPrint('      Now (Local):         ${now.toIso8601String()}');
-        debugPrint(
-            '      Appointment (UTC):   ${appointmentTimeUTC.toIso8601String()}');
-        debugPrint(
-            '      Appointment (Local): ${appointmentTimeLocal.toIso8601String()}');
-        debugPrint(
-            '      Is Past?             ${appointmentTimeLocal.isBefore(now)}');
+          if (isPast) {
+            final minutesOverdue = now.difference(actualLocalTime).inMinutes;
+            print(
+                '>>> ⏰ Appointment ${appointment.documentId} is $minutesOverdue minutes overdue');
 
-        // CRITICAL: Compare using LOCAL times
-        final isPast = appointmentTimeLocal.isBefore(now);
-        final minutesSinceAppointment =
-            now.difference(appointmentTimeLocal).inMinutes;
-        final isOverlooked = isPast && minutesSinceAppointment >= 15;
+            try {
+              // ✅ CRITICAL: Use the EXISTING declineAppointment method
+              // This ensures ALL proper updates happen:
+              // - Database update
+              // - Stats update
+              // - Real-time sync
+              // - Cache update
+              // - In-app notification
+              // - Push notification
+              // - Automated message
+              await _autoDeclineUsingExistingMethod(
+                  appointment, actualLocalTime);
 
-        debugPrint('   ⏰ Minutes Since Appointment: $minutesSinceAppointment');
-        debugPrint('   ❓ Is Overlooked? $isOverlooked');
-
-        if (isOverlooked) {
-          debugPrint(
-              '   ⚠️  DECLINING: Appointment is $minutesSinceAppointment minutes overdue');
-
-          try {
-            await _autoDeclineAppointment(appointment);
-            declinedCount++;
-            debugPrint('   ✅ Successfully declined');
-          } catch (e) {
-            debugPrint('   ❌ Error declining appointment: $e');
+              declinedCount++;
+              print(
+                  '>>> ✅ Successfully auto-declined appointment ${appointment.documentId}');
+            } catch (e) {
+              errorCount++;
+              print(
+                  '>>> ❌ Failed to auto-decline appointment ${appointment.documentId}: $e');
+              // Continue with other appointments
+            }
           }
-        } else {
-          validCount++;
-          if (!isPast) {
-            debugPrint(
-                '   ✓ Still valid (starts in ${(-differenceInMinutes)} minutes)');
-          } else {
-            debugPrint(
-                '   ✓ Still valid (only $minutesSinceAppointment minutes overdue, waiting...)');
-          }
+        } catch (e) {
+          errorCount++;
+          print(
+              '>>> ❌ Error processing appointment ${appointment.documentId}: $e');
+          // Continue with other appointments
         }
-        debugPrint('─────────────────────────────────────────────');
       }
 
-      debugPrint('[AUTO-DECLINE] 📊 CHECK SUMMARY:');
-      debugPrint('─────────────────────────────────────────────');
-      debugPrint('   Total Checked: $checkedCount');
-      debugPrint('   Declined: $declinedCount');
-      debugPrint('   Still Valid: $validCount');
-      debugPrint('─────────────────────────────────────────────');
+      print('>>> 📈 AUTO-DECLINE CHECK COMPLETE:');
+      print('    - Declined: $declinedCount');
+      print('    - Errors: $errorCount');
 
-      // Refresh appointments if any were declined
       if (declinedCount > 0) {
-        debugPrint('[AUTO-DECLINE] 🔄 Refreshing appointments...');
-        await fetchClinicAppointments();
+        // Update filtered appointments to reflect changes
+        updateFilteredAppointments();
+        print('>>> 🔄 Filtered appointments updated');
       }
     } catch (e, stackTrace) {
-      debugPrint('[AUTO-DECLINE] ❌ ERROR: $e');
-      debugPrint('[AUTO-DECLINE] Stack trace: $stackTrace');
+      print(
+          '>>> ❌ CRITICAL ERROR in _checkAndDeclineOverlookedAppointments: $e');
+      print('>>> Stack trace: $stackTrace');
+      // Silent fail - don't crash the app
+    }
+  }
+
+  Future<void> _autoDeclineUsingExistingMethod(
+    Appointment appointment,
+    DateTime actualLocalTime,
+  ) async {
+    try {
+      print('>>> 🔄 AUTO-DECLINING appointment: ${appointment.documentId}');
+
+      // Create a detailed auto-decline reason
+      final formattedTime =
+          DateFormat('MMM dd, yyyy • hh:mm a').format(actualLocalTime);
+      final minutesOverdue =
+          DateTime.now().difference(actualLocalTime).inMinutes;
+
+      final autoDeclineReason =
+          'Auto-declined: Appointment was overlooked, you can rebook.'
+          'The scheduled time was $minutesOverdue minutes ago. '
+          'Please book a new appointment at your convenience.';
+
+      // ✅ CRITICAL: Use the EXISTING declineAppointment method
+      // This method already handles:
+      // 1. Database update (updateFullAppointment)
+      // 2. In-app notification creation
+      // 3. Push notification via _sendAppointmentStatusNotification
+      // 4. Automated message via _sendAutomatedAppointmentMessage
+      // 5. Local state update
+      // 6. Stats refresh via updateFilteredAppointments
+      await declineAppointment(appointment, autoDeclineReason);
+
+      print(
+          '>>> ✅ Auto-decline completed successfully using declineAppointment()');
+    } catch (e, stackTrace) {
+      print('>>> ❌ CRITICAL ERROR in _autoDeclineUsingExistingMethod: $e');
+      print('>>> Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  Future<bool> verifyAppointmentDeclined(String appointmentId) async {
+    try {
+      print('>>> 🔍 VERIFY: Checking appointment $appointmentId in database');
+
+      // Fetch directly from database
+      final freshAppointments = await authRepository
+          .getClinicAppointments(clinicData.value!.documentId!);
+
+      final appointment = freshAppointments.firstWhereOrNull(
+        (a) => a.documentId == appointmentId,
+      );
+
+      if (appointment == null) {
+        print('>>> ⚠️ VERIFY: Appointment not found in database');
+        return false;
+      }
+
+      final isDeclined = appointment.status == 'declined';
+      print(
+          '>>> ℹ️ VERIFY: Appointment status in database: ${appointment.status}');
+      print('>>> ℹ️ VERIFY: Is declined: $isDeclined');
+
+      return isDeclined;
+    } catch (e) {
+      print('>>> ❌ VERIFY: Error checking database: $e');
+      return false;
     }
   }
 
   bool _isAppointmentOverlooked(Appointment appointment) {
     try {
-      final now = DateTime.now(); // Local time
-      final appointmentStartTime =
-          appointment.dateTime.toLocal(); // Convert to local
+      final now = DateTime.now();
 
-      // Check if appointment time has passed
-      final isPast = appointmentStartTime.isBefore(now);
-
-      if (!isPast) {
-        return false;
-      }
-
-      // Check if it's been more than 15 minutes since appointment time
-      final minutesSinceAppointment =
-          now.difference(appointmentStartTime).inMinutes;
-      return minutesSinceAppointment >= 15;
-    } catch (e) {
-      debugPrint('   ❌ Error checking if overlooked: $e');
-      return false;
-    }
-  }
-
-  Future<void> _autoDeclineAppointment(Appointment appointment) async {
-    debugPrint('   🔄 AUTO-DECLINING APPOINTMENT...');
-
-    try {
-      // Use local time for the message
-      final localAppointmentTime = appointment.dateTime.toLocal();
-      final autoDeclineReason =
-          'This appointment was automatically declined because it was not confirmed before the scheduled start time (${DateFormat('MMM dd, yyyy • hh:mm a').format(localAppointmentTime)}). Please book a new appointment at a time that works for you.';
-
-      debugPrint('   📝 Creating updated appointment...');
-      final updatedAppointment = appointment.copyWith(
-        status: 'declined',
-        notes: autoDeclineReason,
-        updatedAt: DateTime.now(),
+      final storedDateTime = appointment.dateTime;
+      final actualLocalTime = DateTime(
+        storedDateTime.year,
+        storedDateTime.month,
+        storedDateTime.day,
+        storedDateTime.hour,
+        storedDateTime.minute,
+        storedDateTime.second,
       );
 
-      debugPrint('   💾 Updating database...');
-      await updateFullAppointment(updatedAppointment);
-      debugPrint('   ✅ Database updated');
-
-      // Create notification
-      debugPrint('   🔔 Creating notification...');
-      try {
-        final notification = AppNotification.appointmentDeclined(
-          userId: appointment.userId,
-          appointmentId: appointment.documentId!,
-          clinicId: appointment.clinicId,
-          clinicName: clinicData.value?.clinicName ?? 'Clinic',
-          petName: getPetName(appointment.petId),
-          declineReason: autoDeclineReason,
-        );
-
-        await authRepository.createNotification(notification);
-        debugPrint('   ✅ Notification created');
-      } catch (e) {
-        debugPrint('   ⚠️  Notification failed: $e');
-      }
-
-      // Send status notification
-      debugPrint('   📧 Sending status notification...');
-      try {
-        await _sendAppointmentStatusNotification(
-          updatedAppointment,
-          'declined',
-          declineReason: autoDeclineReason,
-        );
-        debugPrint('   ✅ Status notification sent');
-      } catch (e) {
-        debugPrint('   ⚠️  Status notification failed: $e');
-      }
-
-      // Send automated message
-      debugPrint('   💬 Sending automated message...');
-      try {
-        await _sendAutomatedAppointmentMessage(
-          appointment: updatedAppointment,
-          messageType: 'auto_declined',
-          declineReason: autoDeclineReason,
-        );
-        debugPrint('   ✅ Message sent');
-      } catch (e) {
-        debugPrint('   ⚠️  Message failed: $e');
-      }
-
-      debugPrint('   ✅ AUTO-DECLINE COMPLETED');
-    } catch (e, stackTrace) {
-      debugPrint('   ❌ DECLINE FAILED: $e');
-      debugPrint('   📚 Stack: $stackTrace');
-      rethrow;
+      return actualLocalTime.isBefore(now);
+    } catch (e) {
+      print('>>> ❌ Error checking if appointment overlooked: $e');
+      return false;
     }
   }
 
@@ -2804,6 +2742,7 @@ For more details, please check your appointments.
         return apt.status == 'pending' && _isAppointmentOverlooked(apt);
       }).length;
     } catch (e) {
+      print('>>> ❌ Error getting overlooked count: $e');
       return 0;
     }
   }
@@ -2814,6 +2753,7 @@ For more details, please check your appointments.
         return apt.status == 'pending' && _isAppointmentOverlooked(apt);
       }).toList();
     } catch (e) {
+      print('>>> ❌ Error getting overlooked appointments: $e');
       return [];
     }
   }
@@ -2821,19 +2761,23 @@ For more details, please check your appointments.
   String getTimeUntilOverlooked(Appointment appointment) {
     try {
       final now = DateTime.now();
-      final appointmentStartTime =
-          appointment.dateTime.toLocal(); // Convert to local
 
-      if (now.isAfter(appointmentStartTime)) {
-        final minutesPassed = now.difference(appointmentStartTime).inMinutes;
-        if (minutesPassed >= 15) {
-          return 'Overlooked ($minutesPassed minutes overdue)';
-        } else {
-          return 'Pending response (${15 - minutesPassed} minutes left)';
-        }
+      final storedDateTime = appointment.dateTime;
+      final actualLocalTime = DateTime(
+        storedDateTime.year,
+        storedDateTime.month,
+        storedDateTime.day,
+        storedDateTime.hour,
+        storedDateTime.minute,
+        storedDateTime.second,
+      );
+
+      if (actualLocalTime.isBefore(now)) {
+        final minutesPassed = now.difference(actualLocalTime).inMinutes;
+        return 'Overlooked ($minutesPassed minutes overdue)';
       }
 
-      final difference = appointmentStartTime.difference(now);
+      final difference = actualLocalTime.difference(now);
 
       if (difference.inDays > 0) {
         return '${difference.inDays}d ${difference.inHours % 24}h until start';
@@ -2845,71 +2789,17 @@ For more details, please check your appointments.
         return 'Starting now';
       }
     } catch (e) {
+      print('>>> ❌ Error getting time until overlooked: $e');
       return 'Unknown';
     }
   }
 
   Future<void> manualCheckOverlookedAppointments() async {
-    debugPrint('\n═══════════════════════════════════════════════════');
-    debugPrint('[AUTO-DECLINE] 🔧 MANUAL TRIGGER');
-    debugPrint('═══════════════════════════════════════════════════\n');
+    print('>>> 🔍 MANUAL CHECK: Starting manual auto-decline check...');
     await _checkAndDeclineOverlookedAppointments();
-  }
-
-  void debugAutoDeclineStatus() {
-    final now = DateTime.now();
-    debugPrint('\n═══════════════════════════════════════════════════');
-    debugPrint('[AUTO-DECLINE] 🔧 STATUS CHECK');
-    debugPrint('═══════════════════════════════════════════════════');
-    debugPrint('Timer Active: ${_autoDeclineTimer?.isActive ?? false}');
-    debugPrint('Is Active Flag: ${isAutoDeclineActive.value}');
-    debugPrint('Check Interval: ${_autoDeclineCheckInterval}s');
-    debugPrint(
-        'Current Time: ${DateFormat('MMM dd, yyyy • hh:mm:ss a').format(now)}');
-    debugPrint(
-        'Timezone: ${now.timeZoneName} (UTC${now.timeZoneOffset.inHours >= 0 ? '+' : ''}${now.timeZoneOffset.inHours})');
-    debugPrint('Clinic ID: ${clinicData.value?.documentId ?? "Not set"}');
-    debugPrint('Total Appointments: ${appointments.length}');
-    debugPrint(
-        'Pending Appointments: ${appointments.where((a) => a.status == "pending").length}');
-    debugPrint('Overlooked Count: ${getOverlookedAppointmentCount()}');
-
-    // List overlooked appointments
-    final overlooked = getOverlookedAppointments();
-    if (overlooked.isNotEmpty) {
-      debugPrint('\n📋 Overlooked Appointments:');
-      for (var apt in overlooked) {
-        final localTime = apt.dateTime.toLocal();
-        debugPrint(
-            '   - ${getPetName(apt.petId)} @ ${DateFormat('MMM dd, hh:mm a').format(localTime)}');
-      }
-    }
-
-    // Show next few pending appointments with their status
-    final pending =
-        appointments.where((a) => a.status == 'pending').take(3).toList();
-    if (pending.isNotEmpty) {
-      debugPrint('\n📅 Next Pending Appointments:');
-      for (var apt in pending) {
-        final localTime = apt.dateTime.toLocal();
-        final minutesUntil = localTime.difference(now).inMinutes;
-        final status = minutesUntil < 0
-            ? '${(-minutesUntil)} min overdue'
-            : '${minutesUntil} min until start';
-        debugPrint(
-            '   - ${getPetName(apt.petId)} @ ${DateFormat('MMM dd, hh:mm a').format(localTime)} ($status)');
-      }
-    }
-
-    debugPrint('═══════════════════════════════════════════════════\n');
   }
 
   Future<void> triggerManualDeclineCheck() async {
-    debugPrint('\n═══════════════════════════════════════════════════');
-    debugPrint('[AUTO-DECLINE] 🔧 MANUAL TRIGGER');
-    debugPrint(
-        '[AUTO-DECLINE] 🌏 Current Timezone: ${DateTime.now().timeZoneName}');
-    debugPrint('═══════════════════════════════════════════════════\n');
-    await _checkAndDeclineOverlookedAppointments();
+    await manualCheckOverlookedAppointments();
   }
 }
