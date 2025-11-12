@@ -745,25 +745,25 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
                   fontWeight: FontWeight.bold),
             ),
           ),
-        Obx(() {
-          final status = _controller.getUserStatus(userData['name'] ?? '');
-          if (status?.isOnline == true) {
-            return Positioned(
-              bottom: 0,
-              right: 0,
-              child: Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
-              ),
-            );
-          }
-          return const SizedBox.shrink();
-        }),
+        // Obx(() {
+        //   final status = _controller.getUserStatus(userData['name'] ?? '');
+        //   if (status?.isOnline == true) {
+        //     return Positioned(
+        //       bottom: 0,
+        //       right: 0,
+        //       child: Container(
+        //         width: 12,
+        //         height: 12,
+        //         decoration: BoxDecoration(
+        //           color: Colors.green,
+        //           shape: BoxShape.circle,
+        //           border: Border.all(color: Colors.white, width: 2),
+        //         ),
+        //       ),
+        //     );
+        //   }
+        //   return const SizedBox.shrink();
+        // }),
       ],
     );
   }
@@ -841,14 +841,14 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
                       style: const TextStyle(
                           fontSize: 16, fontWeight: FontWeight.bold),
                     ),
-                    Obx(() {
-                      final status =
-                          _controller.getUserStatus(_selectedUserId!);
-                      return Text(
-                        status?.statusText ?? 'Offline',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      );
-                    }),
+                    // Obx(() {
+                    //   final status =
+                    //       _controller.getUserStatus(_selectedUserId!);
+                    //   return Text(
+                    //     status?.statusText ?? 'Offline',
+                    //     style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    //   );
+                    // }),
                   ],
                 ),
               ),
@@ -1215,26 +1215,26 @@ class _ConversationTileWidgetState extends State<_ConversationTileWidget> {
                   fontWeight: FontWeight.bold),
             ),
           ),
-        Obx(() {
-          final status =
-              widget.controller.getUserStatus(userData['name'] ?? '');
-          if (status?.isOnline == true) {
-            return Positioned(
-              bottom: 0,
-              right: 0,
-              child: Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
-              ),
-            );
-          }
-          return const SizedBox.shrink();
-        }),
+        // Obx(() {
+        //   final status =
+        //       widget.controller.getUserStatus(userData['name'] ?? '');
+        //   if (status?.isOnline == true) {
+        //     return Positioned(
+        //       bottom: 0,
+        //       right: 0,
+        //       child: Container(
+        //         width: 12,
+        //         height: 12,
+        //         decoration: BoxDecoration(
+        //           color: Colors.green,
+        //           shape: BoxShape.circle,
+        //           border: Border.all(color: Colors.white, width: 2),
+        //         ),
+        //       ),
+        //     );
+        //   }
+        //   return const SizedBox.shrink();
+        // }),
       ],
     );
   }
@@ -1346,17 +1346,17 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Obx(() {
-                        final status =
-                            widget.controller.getUserStatus(widget.userId);
-                        return Text(
-                          status?.statusText ?? 'Offline',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[300],
-                          ),
-                        );
-                      }),
+                      // Obx(() {
+                      //   final status =
+                      //       widget.controller.getUserStatus(widget.userId);
+                      //   return Text(
+                      //     status?.statusText ?? 'Offline',
+                      //     style: TextStyle(
+                      //       fontSize: 12,
+                      //       color: Colors.grey[300],
+                      //     ),
+                      //   );
+                      // }),
                     ],
                   ),
                 ),
@@ -1505,25 +1505,25 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
               ),
             ),
           ),
-        Obx(() {
-          final status = widget.controller.getUserStatus(widget.userId);
-          if (status?.isOnline == true) {
-            return Positioned(
-              bottom: 0,
-              right: 0,
-              child: Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
-              ),
-            );
-          }
-          return const SizedBox.shrink();
-        }),
+        // Obx(() {
+        //   final status = widget.controller.getUserStatus(widget.userId);
+        //   if (status?.isOnline == true) {
+        //     return Positioned(
+        //       bottom: 0,
+        //       right: 0,
+        //       child: Container(
+        //         width: 12,
+        //         height: 12,
+        //         decoration: BoxDecoration(
+        //           color: Colors.green,
+        //           shape: BoxShape.circle,
+        //           border: Border.all(color: Colors.white, width: 2),
+        //         ),
+        //       ),
+        //     );
+        //   }
+        //   return const SizedBox.shrink();
+        // }),
       ],
     );
   }
