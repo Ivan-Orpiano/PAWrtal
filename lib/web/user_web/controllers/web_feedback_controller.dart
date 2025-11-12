@@ -55,6 +55,7 @@ class WebFeedbackController extends GetxController {
   // Pinned feedback IDs
   final RxSet<String> pinnedFeedbackIds = <String>{}.obs;
   /// Toggle pin status
+    /// Toggle pin status with automatic status update
   Future<void> togglePin(String feedbackId) async {
     try {
       // Find the feedback item
@@ -72,7 +73,19 @@ class WebFeedbackController extends GetxController {
       final userName =
           session.userName.isNotEmpty ? session.userName : 'System';
 
-      // Update in database
+      // 🔥 NEW: Auto-update status when pinning
+      FeedbackStatus newStatus = feedback.status;
+      if (newPinStatus && feedback.status == FeedbackStatus.pending) {
+        // Pinning a "Pending" feedback → Make it "In Progress"
+        newStatus = FeedbackStatus.inProgress;
+      }
+
+      // 🔥 CRITICAL: Update status FIRST if needed
+      if (newStatus != feedback.status) {
+        await authRepository.updateFeedbackStatus(feedbackId, newStatus);
+      }
+
+      // Then update pin status in database
       await authRepository.toggleFeedbackPin(
         feedbackId,
         newPinStatus,
@@ -89,11 +102,12 @@ class WebFeedbackController extends GetxController {
       // 🔥 CRITICAL: Force refresh the observable set
       pinnedFeedbackIds.refresh();
 
-      // Update the feedback object in allFeedback
+      // Update the feedback object in allFeedback with BOTH pin and status changes
       allFeedback[feedbackIndex] = feedback.copyWith(
         isPinned: newPinStatus,
         pinnedAt: newPinStatus ? DateTime.now() : null,
         pinnedBy: newPinStatus ? userName : null,
+        status: newStatus, // 🔥 NEW: Update status too
       );
 
       // 🔥 CRITICAL: Force refresh allFeedback list
@@ -102,12 +116,16 @@ class WebFeedbackController extends GetxController {
       // 🔥 CRITICAL: Re-apply filters to update filteredFeedback
       filterFeedback();
 
-      _showSuccess(newPinStatus ? 'Pinned' : 'Unpinned');
-
+      // Show appropriate message
+      if (newPinStatus && newStatus == FeedbackStatus.inProgress) {
+        _showSuccess('Pinned & moved to In Progress');
+      } else {
+        _showSuccess(newPinStatus ? 'Pinned' : 'Unpinned');
+      }
     } catch (e) {
       _showError('Failed to toggle pin');
     }
-  }           
+  }
 
   // Check if feedback is pinned
   bool isPinned(String feedbackId) {

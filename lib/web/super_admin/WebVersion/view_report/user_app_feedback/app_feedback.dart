@@ -1085,7 +1085,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                     const SizedBox(width: 6),
                     _buildClickablePriorityBadge(feedback),
                     const Spacer(),
-                    _buildClickableStatusBadge(feedback),
+                    _buildStatusBadge(feedback.status),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -1179,61 +1179,27 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                   ),
                 ],
                 // Status-based action buttons
-               const SizedBox(height: 8),
-                Row(
-                  children: [
-                    if (feedback.status == FeedbackStatus.pending ||
-                        feedback.status == FeedbackStatus.inProgress)
-                      InkWell(
-                        onTap: () => _markAsCompleted(feedback),
-                        borderRadius: BorderRadius.circular(4),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.green[50],
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: Colors.green[300]!),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.check_box_outline_blank,
-                                size: 16,
-                                color: Colors.green[700],
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Mark Complete',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.green[700],
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
+                // Archive button for completed/closed status
+                if (feedback.status == FeedbackStatus.completed ||
+                    feedback.status == FeedbackStatus.closed) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _archiveFeedback(feedback),
+                      icon: const Icon(Icons.archive, size: 14, color: Colors.white),
+                      label: const Text('Archive', style: TextStyle(fontSize: 12)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange[600],
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                    if (feedback.status == FeedbackStatus.completed ||
-                        feedback.status == FeedbackStatus.closed) ...[
-                      const Spacer(),
-                      ElevatedButton.icon(
-                        onPressed: () => _archiveFeedback(feedback),
-                        icon: const Icon(Icons.archive, size: 14, color: Colors.white),
-                        label: const Text('Archive', style: TextStyle(fontSize: 12)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange[600],
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -1299,7 +1265,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                     const SizedBox(width: 8),
                     _buildCategoryBadge(feedback.category),
                     const Spacer(),
-                    _buildClickableStatusBadge(feedback),
+                    _buildStatusBadge(feedback.status),
                   ],
                 ),
                 if (isPinned) ...[
@@ -1365,28 +1331,21 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                     ],
                   ],
                 ),
-                if (feedback.status == FeedbackStatus.closed ||
-                    feedback.status == FeedbackStatus.completed) ...[
+               if (feedback.status == FeedbackStatus.completed ||
+                    feedback.status == FeedbackStatus.closed) ...[
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      if (feedback.status == FeedbackStatus.closed)
-                        ElevatedButton.icon(
-                          onPressed: () => _archiveFeedback(feedback),
-                          icon: const Icon(Icons.archive,
-                              size: 16, color: Colors.white),
-                          label: const Text('Archive'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange[600],
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 10),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                    ],
+                  ElevatedButton.icon(
+                    onPressed: () => _archiveFeedback(feedback),
+                    icon: const Icon(Icons.archive, size: 16, color: Colors.white),
+                    label: const Text('Archive'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange[600],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
                   ),
                 ],
               ],
@@ -1542,7 +1501,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                     const SizedBox(width: 8),
                     _buildCategoryBadge(feedback.category),
                     const Spacer(),
-                    _buildClickableStatusBadge(feedback),
+                    _buildStatusBadge(feedback.status),
                   ],
                 ),
                 if (isPinned) ...[
@@ -1609,84 +1568,54 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                   ],
                 ),
                 // Status-based action buttons
-             const SizedBox(height: 12),
-              Row(
-                children: [
-                  if (feedback.status == FeedbackStatus.pending ||
-                      feedback.status == FeedbackStatus.inProgress)
-                    InkWell(
-                      onTap: () => _markAsCompleted(feedback),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.green[50],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.green[300]!, width: 1.5),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.check_box_outline_blank,
-                              size: 20,
-                              color: Colors.green[700],
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              'Mark as Complete',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.green[700],
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  if (feedback.status == FeedbackStatus.completed) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.green[50],
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.green[300]!),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.check_circle, size: 20, color: Colors.green[700]),
-                          const SizedBox(width: 10),
-                          Text(
-                            'Issue Resolved',
-                            style: TextStyle(
-                              color: Colors.green[700],
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
+                // Archive button for completed/closed status
+                if (feedback.status == FeedbackStatus.completed ||
+                    feedback.status == FeedbackStatus.closed) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      if (feedback.status == FeedbackStatus.completed)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.green[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.green[300]!),
                           ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                  ],
-                  if (feedback.status == FeedbackStatus.completed ||
-                      feedback.status == FeedbackStatus.closed)
-                    ElevatedButton.icon(
-                      onPressed: () => _archiveFeedback(feedback),
-                      icon: const Icon(Icons.archive, size: 18, color: Colors.white),
-                      label: const Text('Archive', style: TextStyle(fontSize: 14)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange[600],
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.check_circle, size: 20, color: Colors.green[700]),
+                              const SizedBox(width: 10),
+                              Text(
+                                'Issue Resolved',
+                                style: TextStyle(
+                                  color: Colors.green[700],
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (feedback.status == FeedbackStatus.completed)
+                        const SizedBox(width: 16),
+                      ElevatedButton.icon(
+                        onPressed: () => _archiveFeedback(feedback),
+                        icon: const Icon(Icons.archive, size: 18, color: Colors.white),
+                        label: const Text('Archive', style: TextStyle(fontSize: 14)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange[600],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
+                  ),
                 ],
-              ),
               ],
             ),
           ),
@@ -2769,191 +2698,6 @@ Widget _buildMiniTypeBadge(FeedbackType type) {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  void _markAsCompleted(FeedbackAndReport feedback) {
-    final TextEditingController resolutionController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
-        title: Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.green[700], size: 24),
-            const SizedBox(width: 12),
-            const Text(
-              'Mark as Completed',
-              style: TextStyle(
-                color: Colors.black87,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Confirm that this issue has been resolved:',
-              style: TextStyle(
-                color: Colors.grey[800],
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey[300]!),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.subject, size: 16, color: Colors.grey[600]),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          feedback.subject,
-                          style: TextStyle(
-                            color: Colors.grey[800],
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(Icons.person, size: 16, color: Colors.grey[600]),
-                      const SizedBox(width: 8),
-                      Text(
-                        feedback.userName,
-                        style: TextStyle(
-                          color: Colors.grey[700],
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: resolutionController,
-              decoration: InputDecoration(
-                labelText: 'Resolution Notes (Optional)',
-                hintText: 'Describe how the issue was fixed...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide:
-                      const BorderSide(color: Color(0xFF517399), width: 2),
-                ),
-              ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.green[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green[200]!),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline, color: Colors.green[700], size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Once marked as completed, this feedback can be archived.',
-                      style: TextStyle(
-                        color: Colors.green[900],
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              resolutionController.dispose();
-              Navigator.pop(context);
-            },
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ), //
-          ElevatedButton.icon(
-            onPressed: () async {
-              // Update status to completed
-              await controller.updateStatus(
-                feedback.documentId!,
-                FeedbackStatus.completed,
-              );
-
-              // If resolution notes provided, add as reply
-              if (resolutionController.text.trim().isNotEmpty) {
-                await controller.addReply(
-                  feedback.documentId!,
-                  'Resolution: ${resolutionController.text.trim()}',
-                );
-              }
-
-              resolutionController.dispose();
-              Navigator.pop(context);
-
-              // Show success message
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Row(
-                    children: [
-                      Icon(Icons.check_circle, color: Colors.white),
-                      const SizedBox(width: 12),
-                      const Text('Feedback marked as completed!'),
-                    ],
-                  ),
-                  backgroundColor: Colors.green[600],
-                  behavior: SnackBarBehavior.floating,
-                  duration: const Duration(seconds: 3),
-                ),
-              );
-            },
-            icon: const Icon(Icons.check_circle, size: 18),
-            label: const Text('Mark as Completed'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green[600],
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
