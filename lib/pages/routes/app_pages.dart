@@ -20,6 +20,8 @@ import 'package:capstone_app/pages/signup/signup_binding.dart';
 import 'package:capstone_app/pages/signup/signup_page.dart';
 import 'package:capstone_app/pages/splash/splash_binding.dart';
 import 'package:capstone_app/pages/splash/splash_page.dart';
+import 'package:capstone_app/web/pages/archive_account/archived_account_screen.dart';
+import 'package:capstone_app/web/pages/archive_account/archived_clinic_screen.dart';
 
 // Web imports
 import 'package:capstone_app/web/pages/web_login/web_login_binding.dart';
@@ -45,6 +47,8 @@ import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_app_fee
 // SECURITY: Import middleware
 import 'package:capstone_app/middleware/route_guard.dart';
 import 'package:capstone_app/middleware/auth_middleware.dart';
+
+
 
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
@@ -76,6 +80,33 @@ class AppPages {
       name: _Paths.login,
       page: () => kIsWeb ? const WebLoginPage() : const LoginPage(),
       binding: kIsWeb ? WebLoginBinding() : LoginBinding(),
+      // No middleware - public access
+    ),
+
+
+      // Archived Account Screen - Public route
+    GetPage(
+    name: _Paths.archivedAccount,
+    page: () => const ArchivedAccountScreen(
+      userName: '',
+      userEmail: '',
+      scheduledDeletionAt: null,
+      archiveReason: '',
+      daysUntilDeletion: 0,     
+    ),
+    // No middleware - public access
+  ),
+
+    // Archived Clinic Screen - Public route
+    GetPage(
+      name: _Paths.archivedClinic,
+      page: () => const ArchivedClinicScreen(
+        clinicName: '',
+        clinicEmail: '',
+        scheduledDeletionAt: null,
+        archiveReason: '',
+        daysUntilDeletion: 0,
+      ),
       // No middleware - public access
     ),
 

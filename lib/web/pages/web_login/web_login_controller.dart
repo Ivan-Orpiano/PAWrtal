@@ -7,6 +7,8 @@ import 'package:capstone_app/pages/routes/app_pages.dart';
 import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:capstone_app/utils/web_error_handler.dart';
 import 'package:capstone_app/utils/web_loading_helper.dart';
+import 'package:capstone_app/web/pages/archive_account/archived_account_screen.dart';
+import 'package:capstone_app/web/pages/archive_account/archived_clinic_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -107,6 +109,73 @@ class WebLoginController extends GetxController {
         throw Exception("Login failed: Session data is missing");
       }
       final userId = session.userId;
+      try {
+        final archivedUser = await _authRepository.getArchivedUserByUserId(userId);
+        
+        if (archivedUser != null && !archivedUser.isPermanentlyDeleted && !archivedUser.isRecovered) {
+          // User is archived - show archived account screen
+          isLoading.value = false;
+          
+          // Calculate days until deletion
+          final now = DateTime.now();
+          final daysLeft = archivedUser.scheduledDeletionAt.difference(now).inDays;
+          
+          // Navigate to archived account screen
+          Get.off(() => ArchivedAccountScreen(
+            userName: archivedUser.name,
+            userEmail: archivedUser.email,
+            scheduledDeletionAt: archivedUser.scheduledDeletionAt,
+            archiveReason: archivedUser.archiveReason,
+            daysUntilDeletion: daysLeft > 0 ? daysLeft : 0,
+          ));
+          
+          // Logout the session
+          try {
+            await _authRepository.appWriteProvider.webLogout();
+          } catch (logoutError) {
+            print('>>> Error during logout: $logoutError');
+          }
+          
+          return;
+        }
+      } catch (e) {
+        print('>>> Error checking archive status: $e');
+        // Continue with normal login if check fails
+      }
+      // CRITICAL: Check if clinic is archived (for admin accounts)
+        try {
+          final archivedClinic = await _authRepository.getArchivedClinicByAdminId(userId);
+          
+          if (archivedClinic != null && !archivedClinic.isPermanentlyDeleted && !archivedClinic.isRecovered) {
+            // Clinic is archived - show archived clinic screen
+            isLoading.value = false;
+            
+            // Calculate days until deletion
+            final now = DateTime.now();
+            final daysLeft = archivedClinic.scheduledDeletionAt.difference(now).inDays;
+            
+            // Navigate to archived clinic screen
+            Get.off(() => ArchivedClinicScreen(
+              clinicName: archivedClinic.clinicName,
+              clinicEmail: archivedClinic.email,
+              scheduledDeletionAt: archivedClinic.scheduledDeletionAt,
+              archiveReason: archivedClinic.archiveReason,
+              daysUntilDeletion: daysLeft > 0 ? daysLeft : 0,
+            ));
+            
+            // Logout the session
+            try {
+              await _authRepository.appWriteProvider.webLogout();
+            } catch (logoutError) {
+              print('>>> Error during logout: $logoutError');
+            }
+            
+            return;
+          }
+        } catch (e) {
+          print('>>> Error checking clinic archive status: $e');
+          // Continue with normal login if check fails
+        }
 
       final user = value["user"];
       if (user == null) {
