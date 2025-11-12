@@ -660,18 +660,14 @@ class _SuperAdminStaffManagementPageState
     );
   }
 
-  void _showStaffDetails(Staff staff) {
-    showDialog(
-      context: context,
-      builder: (context) => _StaffDetailsDialog(
-        staff: staff,
-        onDelete: () {
-          Navigator.pop(context);
-          _confirmDeleteStaff(staff);
-        },
-      ),
-    );
-  }
+ void _showStaffDetails(Staff staff) {
+  showDialog(
+    context: context,
+    builder: (context) => _StaffDetailsDialog(
+      staff: staff,
+    ),
+  );
+}
 
   void _confirmDeleteStaff(Staff staff) {
     showDialog(
@@ -1189,11 +1185,9 @@ class _StaffCardState extends State<_StaffCard> with SingleTickerProviderStateMi
 // Staff Details Dialog
 class _StaffDetailsDialog extends StatelessWidget {
   final Staff staff;
-  final VoidCallback onDelete;
 
   const _StaffDetailsDialog({
     required this.staff,
-    required this.onDelete,
   });
 
   static const Color primaryColor = Color.fromRGBO(81, 115, 153, 1);
@@ -1422,64 +1416,6 @@ class _StaffDetailsDialog extends StatelessWidget {
                     ]),
                   ],
                 ),
-              ),
-            ),
-
-            // Actions
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [backgroundColor, Colors.white],
-                ),
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
-                border: Border(
-                  top: BorderSide(color: primaryColor.withOpacity(0.1)),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: onDelete,
-                      icon: const Icon(Icons.delete_outline),
-                      label: const Text('Delete Staff'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red, width: 2),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [primaryColor, accentTeal]),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: primaryColor.withOpacity(0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: ElevatedButton.icon(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close, color: Colors.white),
-                        label: const Text('Close', style: TextStyle(color: Colors.white)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
               ),
             ),
           ],

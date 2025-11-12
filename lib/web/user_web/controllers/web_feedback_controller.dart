@@ -54,11 +54,9 @@ class WebFeedbackController extends GetxController {
 
   // Pinned feedback IDs
   final RxSet<String> pinnedFeedbackIds = <String>{}.obs;
-
   /// Toggle pin status
   Future<void> togglePin(String feedbackId) async {
     try {
-
       // Find the feedback item
       final feedbackIndex =
           allFeedback.indexWhere((f) => f.documentId == feedbackId);
@@ -74,7 +72,6 @@ class WebFeedbackController extends GetxController {
       final userName =
           session.userName.isNotEmpty ? session.userName : 'System';
 
-
       // Update in database
       await authRepository.toggleFeedbackPin(
         feedbackId,
@@ -82,28 +79,35 @@ class WebFeedbackController extends GetxController {
         userName,
       );
 
-      // Update local state
+      // 🔥 CRITICAL: Update local state FIRST (this triggers reactive rebuilds)
       if (newPinStatus) {
         pinnedFeedbackIds.add(feedbackId);
       } else {
         pinnedFeedbackIds.remove(feedbackId);
       }
 
-      // Update the feedback object
+      // 🔥 CRITICAL: Force refresh the observable set
+      pinnedFeedbackIds.refresh();
+
+      // Update the feedback object in allFeedback
       allFeedback[feedbackIndex] = feedback.copyWith(
         isPinned: newPinStatus,
         pinnedAt: newPinStatus ? DateTime.now() : null,
         pinnedBy: newPinStatus ? userName : null,
       );
 
+      // 🔥 CRITICAL: Force refresh allFeedback list
       allFeedback.refresh();
+
+      // 🔥 CRITICAL: Re-apply filters to update filteredFeedback
+      filterFeedback();
 
       _showSuccess(newPinStatus ? 'Pinned' : 'Unpinned');
 
     } catch (e) {
       _showError('Failed to toggle pin');
     }
-  }
+  }           
 
   // Check if feedback is pinned
   bool isPinned(String feedbackId) {
@@ -203,7 +207,6 @@ void _handleFeedbackUpdated(RealtimeMessage event) {
     
     // ✅ CRITICAL: If feedback is now archived, REMOVE it completely
     if (updatedFeedback.isArchived) {
-      
       if (index != -1) {
         allFeedback.removeAt(index);
       }
@@ -218,24 +221,30 @@ void _handleFeedbackUpdated(RealtimeMessage event) {
       allFeedback.refresh();
       filteredFeedback.refresh();
       pinnedFeedbackIds.refresh();
+      
       // Re-apply filters and update stats
       filterFeedback();
       updateStatistics();
       return; // Exit early - don't add it back!
     }
+    
     // ✅ If feedback exists and is NOT archived, update it
     if (index != -1) {
       final oldFeedback = allFeedback[index];
       allFeedback[index] = updatedFeedback;
       
-      // Handle pin status change
+    
       if (oldFeedback.isPinned != updatedFeedback.isPinned) {
         if (updatedFeedback.isPinned) {
           pinnedFeedbackIds.add(updatedFeedback.documentId!);
         } else {
           pinnedFeedbackIds.remove(updatedFeedback.documentId!);
         }
+        
+        // 🔥 CRITICAL: Force refresh the set
+        pinnedFeedbackIds.refresh();
       }
+      
       // Force refresh
       allFeedback.refresh();
       
@@ -248,7 +257,9 @@ void _handleFeedbackUpdated(RealtimeMessage event) {
       
       if (updatedFeedback.isPinned) {
         pinnedFeedbackIds.add(updatedFeedback.documentId!);
+        pinnedFeedbackIds.refresh(); // 🔥 NEW: Force refresh
       }
+      
       filterFeedback();
       updateStatistics();
     }
@@ -1041,15 +1052,14 @@ Future<void> archiveFeedback(String documentId) async {
     
     // Get current admin/user info
     final userName = session.userName.isNotEmpty ? session.userName : 'System';
+    
     // ✅ Archive in database (sets isArchived = true)
     await authRepository.archiveFeedback(documentId, userName);
     
     // ✅ CRITICAL: Immediately remove from ALL local lists
-    final removedCount = allFeedback.length;
     allFeedback.removeWhere((f) => f.documentId == documentId);
     filteredFeedback.removeWhere((f) => f.documentId == documentId);
     pinnedFeedbackIds.remove(documentId);
-    
     
     // ✅ Force refresh all reactive lists
     allFeedback.refresh();
@@ -1058,7 +1068,6 @@ Future<void> archiveFeedback(String documentId) async {
     
     // Update statistics
     updateStatistics();
-    
     
     _showSuccess('Feedback archived successfully');
     
