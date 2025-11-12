@@ -153,11 +153,10 @@ class _MobileRatingDialogState extends State<MobileRatingDialog> {
       List<String> imageIds = [];
       if (selectedImages.isNotEmpty) {
         try {
-          final uploadedFiles =
-              await Get.find<AuthRepository>().uploadReviewImages(selectedImages);
+          final uploadedFiles = await Get.find<AuthRepository>()
+              .uploadReviewImages(selectedImages);
           imageIds = uploadedFiles.map((file) => file.$id).toList();
-        } catch (e) {
-        }
+        } catch (e) {}
       }
 
       // Create review
@@ -166,7 +165,8 @@ class _MobileRatingDialogState extends State<MobileRatingDialog> {
         clinicId: widget.appointment.clinicId,
         appointmentId: widget.appointment.documentId!,
         rating: selectedRating,
-        reviewText: reviewController.text.isNotEmpty ? reviewController.text : null,
+        reviewText:
+            reviewController.text.isNotEmpty ? reviewController.text : null,
         images: imageIds,
         userName: userName,
         petName: widget.pet?.name,
@@ -181,7 +181,7 @@ class _MobileRatingDialogState extends State<MobileRatingDialog> {
       // Show success message
       Get.snackbar(
         'Review Submitted!',
-        'Thank you for your feedback. Your ${selectedRating.toStringAsFixed(1)}-star review helps other pet owners.',
+        'Thank you for your feedback. Your ${selectedRating.toStringAsFixed(0)}-star review helps other pet owners.',
         backgroundColor: Colors.green.shade50,
         colorText: Colors.green.shade700,
         icon: const Icon(Icons.check_circle, color: Colors.green),
@@ -269,7 +269,8 @@ class _MobileRatingDialogState extends State<MobileRatingDialog> {
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.local_hospital, color: Colors.blue.shade600, size: 20),
+                              Icon(Icons.local_hospital,
+                                  color: Colors.blue.shade600, size: 20),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
@@ -285,12 +286,15 @@ class _MobileRatingDialogState extends State<MobileRatingDialog> {
                           const SizedBox(height: 8),
                           Text(
                             '${widget.appointment.service} • ${widget.pet?.name ?? widget.appointment.petId}',
-                            style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
+                            style: TextStyle(
+                                color: Colors.grey.shade700, fontSize: 14),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            DateFormat('MMM dd, yyyy').format(widget.appointment.dateTime),
-                            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                            DateFormat('MMM dd, yyyy')
+                                .format(widget.appointment.dateTime),
+                            style: TextStyle(
+                                color: Colors.grey.shade600, fontSize: 12),
                           ),
                         ],
                       ),
@@ -301,7 +305,8 @@ class _MobileRatingDialogState extends State<MobileRatingDialog> {
                     // Rating section
                     const Text(
                       'How would you rate your experience?',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
 
@@ -320,10 +325,8 @@ class _MobileRatingDialogState extends State<MobileRatingDialog> {
                             child: Icon(
                               selectedRating >= starValue
                                   ? Icons.star
-                                  : (selectedRating >= starValue - 0.5
-                                      ? Icons.star_half
-                                      : Icons.star_border),
-                              color: selectedRating >= starValue - 0.5
+                                  : Icons.star_border,
+                              color: selectedRating >= starValue
                                   ? Colors.amber
                                   : Colors.grey.shade400,
                               size: 40,
@@ -340,13 +343,16 @@ class _MobileRatingDialogState extends State<MobileRatingDialog> {
                       value: selectedRating,
                       min: 0.0,
                       max: 5.0,
-                      divisions: 10,
+                      divisions: 5, 
                       activeColor: Colors.amber,
                       inactiveColor: Colors.grey.shade300,
-                      label: selectedRating > 0 ? selectedRating.toStringAsFixed(1) : null,
+                      label: selectedRating > 0
+                          ? selectedRating.toStringAsFixed(0)
+                          : null,
                       onChanged: (value) {
                         setState(() {
-                          selectedRating = value;
+                          selectedRating =
+                              value.roundToDouble(); 
                         });
                       },
                     ),
@@ -356,7 +362,7 @@ class _MobileRatingDialogState extends State<MobileRatingDialog> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            '${selectedRating.toStringAsFixed(1)} stars',
+                            '${selectedRating.toStringAsFixed(0)} stars',
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.grey.shade600,
@@ -379,7 +385,8 @@ class _MobileRatingDialogState extends State<MobileRatingDialog> {
                     // Review text
                     const Text(
                       'Share your experience (Optional)',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 12),
 
@@ -403,7 +410,8 @@ class _MobileRatingDialogState extends State<MobileRatingDialog> {
                     // Photos section
                     const Text(
                       'Add Photos (Optional)',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 12),
 
@@ -412,14 +420,16 @@ class _MobileRatingDialogState extends State<MobileRatingDialog> {
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300, width: 2),
+                          border:
+                              Border.all(color: Colors.grey.shade300, width: 2),
                           borderRadius: BorderRadius.circular(12),
                           color: Colors.grey.shade50,
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.add_photo_alternate, color: Colors.grey.shade600),
+                            Icon(Icons.add_photo_alternate,
+                                color: Colors.grey.shade600),
                             const SizedBox(width: 8),
                             Text(
                               selectedImages.isEmpty
@@ -525,11 +535,14 @@ class _MobileRatingDialogState extends State<MobileRatingDialog> {
                                 width: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
                                 ),
                               )
                             : Text(
-                                selectedRating > 0 ? 'Submit Review' : 'Select a Rating',
+                                selectedRating > 0
+                                    ? 'Submit Review'
+                                    : 'Select a Rating',
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,

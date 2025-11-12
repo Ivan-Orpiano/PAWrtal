@@ -1,8 +1,8 @@
+import 'package:capstone_app/utils/logout_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:capstone_app/pages/routes/app_pages.dart';
-import 'package:capstone_app/data/provider/appwrite_provider.dart';
 
 class AuthMiddleware extends GetMiddleware {
   final GetStorage _storage = GetStorage();
@@ -17,7 +17,6 @@ class AuthMiddleware extends GetMiddleware {
 
   @override
   GetPage? onPageCalled(GetPage? page) {
-    
     // Skip validation for public pages
     if (page?.name == Routes.landing ||
         page?.name == Routes.login || 
@@ -26,51 +25,21 @@ class AuthMiddleware extends GetMiddleware {
       return page;
     }
 
-    // Validate session is still active
-    _validateSession();
+    // CRITICAL FIX: Check if logout is in progress
+    // If so, DON'T validate session - let logout complete
+    if (LogoutHelper.isLoggingOut.value) {
+      print('⏭️ AuthMiddleware: Logout in progress, skipping session validation');
+      return page;
+    }
+
+    // REMOVED: Session validation that causes race conditions
+    // The automatic session validation and timeout has been removed
+    // to prevent conflicts with manual logout and FCM token cleanup
     
     return page;
   }
 
-  /// Validate if the user's session is still active
-  Future<void> _validateSession() async {
-    try {
-      final sessionId = _storage.read('sessionId');
-      
-      if (sessionId == null) {
-        return;
-      }
-
-
-      // Check with Appwrite if session is still valid
-      final appWriteProvider = AppWriteProvider();
-      final isValid = await appWriteProvider.isSessionValid();
-
-      if (!isValid) {
-        _handleInvalidSession();
-      } else {
-      }
-    } catch (e) {
-      _handleInvalidSession();
-    }
-  }
-
-  /// Handle invalid session
-  void _handleInvalidSession() {
-    // Clear storage
-    _storage.erase();
-    
-    // Redirect to landing page
-    Future.delayed(Duration.zero, () {
-      Get.offAllNamed(Routes.landing);
-      Get.snackbar(
-        'Session Expired',
-        'Please log in again',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 3),
-      );
-    });
-  }
+  // REMOVED: _validateSession() method
+  // REMOVED: _handleInvalidSession() method
+  // These caused race conditions during logout and prevented proper FCM cleanup
 }

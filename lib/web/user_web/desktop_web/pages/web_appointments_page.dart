@@ -2139,18 +2139,22 @@ class _EnhancedWebAppointmentsPageState
                                         horizontal: 4),
                                     child: Stack(
                                       children: [
-                                        Icon(
-                                          selectedRating >= starValue
-                                              ? Icons.star
-                                              : (selectedRating >=
-                                                      starValue - 0.5
-                                                  ? Icons.star_half
-                                                  : Icons.star_border),
-                                          color:
-                                              selectedRating >= starValue - 0.5
-                                                  ? Colors.amber
-                                                  : Colors.grey.shade400,
-                                          size: 40,
+                                        IconButton(
+                                          icon: Icon(
+                                            selectedRating >= starValue
+                                                ? Icons.star
+                                                : Icons.star_border,
+                                            color: selectedRating >= starValue
+                                                ? Colors.amber
+                                                : Colors.grey.shade400,
+                                            size: 40,
+                                          ),
+                                          onPressed: () {
+                                            setState(() {
+                                              selectedRating =
+                                                  starValue.toDouble();
+                                            });
+                                          },
                                         ),
                                         Positioned(
                                           left: 0,
@@ -2189,15 +2193,15 @@ class _EnhancedWebAppointmentsPageState
                                 value: selectedRating,
                                 min: 0.0,
                                 max: 5.0,
-                                divisions: 10,
+                                divisions: 5,
                                 activeColor: Colors.amber,
                                 inactiveColor: Colors.grey.shade300,
                                 label: selectedRating > 0
-                                    ? selectedRating.toStringAsFixed(1)
+                                    ? selectedRating.toStringAsFixed(0)
                                     : null,
                                 onChanged: (value) {
                                   setState(() {
-                                    selectedRating = value;
+                                    selectedRating = value.roundToDouble();
                                   });
                                 },
                               ),
@@ -2207,7 +2211,7 @@ class _EnhancedWebAppointmentsPageState
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      '${selectedRating.toStringAsFixed(1)} stars',
+                                      '${selectedRating.toStringAsFixed(0)} stars',
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: Colors.grey.shade600,
@@ -2548,7 +2552,7 @@ class _EnhancedWebAppointmentsPageState
       // Show success message
       Get.snackbar(
         'Review Submitted!',
-        'Thank you for your feedback. Your ${rating.toStringAsFixed(1)}-star review helps other pet owners.',
+        'Thank you for your feedback. Your ${rating.toStringAsFixed(0)}-star review helps other pet owners.',
         backgroundColor: Colors.green.shade50,
         colorText: Colors.green.shade700,
         icon: const Icon(Icons.check_circle, color: Colors.green),

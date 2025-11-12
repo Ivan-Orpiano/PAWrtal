@@ -8,7 +8,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:capstone_app/utils/session_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,45 +26,20 @@ void main() async {
 
 /// Initialize security features
 Future<void> _initializeSecurity() async {
+  print('🔒 Initializing security features...');
 
   final storage = GetStorage();
 
   // Initialize security monitoring
   final violations = storage.read<List>('security_violations') ?? [];
+  print('📋 Found ${violations.length} security violations in history');
 
-  // Check for expired sessions
-  // await _checkExpiredSessions();
+  // REMOVED: Automatic session timeout check
+  // This was causing issues with logout and FCM token cleanup
+  // Users will be logged out only when they explicitly log out
+  // or when they close the app completely
 
-  // Clean up old security data (older than 30 days)
-  // await SessionManager.cleanupOldData();
-
-}
-
-/// Check and clean up expired sessions
-Future<void> _checkExpiredSessions() async {
-  final storage = GetStorage();
-
-  final sessionId = storage.read('sessionId');
-  if (sessionId == null) {
-    return;
-  }
-
-  // Check session timestamp
-  final sessionTimestamp = storage.read('sessionTimestamp');
-  if (sessionTimestamp != null) {
-    try {
-      final lastActivity = DateTime.parse(sessionTimestamp);
-      final now = DateTime.now();
-      final difference = now.difference(lastActivity).inMinutes;
-
-      // If session older than 60 minutes, clear it
-      if (difference > 360) {
-        await storage.erase();
-      } else {
-      }
-    } catch (e) {
-    }
-  }
+  print('✅ Security initialization complete');
 }
 
 class MyApp extends StatefulWidget {
@@ -77,7 +51,6 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   @override
-
   Widget build(BuildContext context) {
     return const GetMaterialApp(
       debugShowCheckedModeBanner: false,
