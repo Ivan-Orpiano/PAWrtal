@@ -1,3 +1,4 @@
+import 'package:capstone_app/utils/logout_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -12,7 +13,6 @@ class RouteGuard extends GetMiddleware {
 
   @override
   RouteSettings? redirect(String? route) {
-
     // Allow public routes (landing, login, signup, splash)
     if (route == Routes.landing ||
         route == Routes.login || 
@@ -21,17 +21,27 @@ class RouteGuard extends GetMiddleware {
       return null;
     }
 
+    // CRITICAL FIX: If logout is in progress, allow navigation
+    // Don't interfere with the logout process
+    if (LogoutHelper.isLoggingOut.value) {
+      print('⏭️ RouteGuard: Logout in progress, allowing navigation');
+      return null;
+    }
+
     // Check if user is logged in
     final userId = _storage.read('userId');
     final sessionId = _storage.read('sessionId');
     final role = _storage.read('role');
 
-
     // If no session, redirect to landing page
     if (userId == null || sessionId == null || role == null) {
+      print('🔒 RouteGuard: No valid session, redirecting to landing');
       
-      // Clear any invalid session data
-      _storage.erase();
+      // IMPORTANT: Don't erase storage here - let logout handle it properly
+      // Only clear if we're NOT in a logout process
+      if (!LogoutHelper.isLoggingOut.value) {
+        _storage.erase();
+      }
       
       return const RouteSettings(name: Routes.landing);
     }
@@ -40,6 +50,7 @@ class RouteGuard extends GetMiddleware {
     final hasAccess = _validateRoleAccess(route, role);
 
     if (!hasAccess) {
+      print('🔒 RouteGuard: Access denied for role $role to route $route');
       
       // Log security violation
       _logSecurityViolation(userId, role, route);
@@ -91,7 +102,7 @@ class RouteGuard extends GetMiddleware {
   /// Log security violation attempts
   void _logSecurityViolation(String userId, String role, String? targetRoute) {
     final timestamp = DateTime.now().toIso8601String();
-    
+    print('⚠️ SECURITY VIOLATION: User $userId (role: $role) attempted to access $targetRoute at $timestamp');
 
     // Store violation in local storage for admin review
     final violations = _storage.read<List>('security_violations') ?? [];

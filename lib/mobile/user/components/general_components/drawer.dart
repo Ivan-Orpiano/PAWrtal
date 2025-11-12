@@ -1,8 +1,6 @@
 import 'package:appwrite/models.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
-import 'package:capstone_app/utils/custom_snack_bar.dart';
 import 'package:capstone_app/web/user_web/responsive_page_handlers/web_settings_and_everything_page_handler.dart';
-import 'package:capstone_app/data/id_verification/screens/id_verification_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:capstone_app/pages/user_home/user_home_controller.dart';
 import 'package:get/get.dart';
@@ -19,7 +17,7 @@ class _MyDrawerState extends State<MyDrawer>
     with SingleTickerProviderStateMixin {
   final UserHomeController controller =
       UserHomeController(Get.find<AuthRepository>());
-  final AppWriteProvider appWriteProvider = AppWriteProvider();
+  final AppWriteProvider appWriteProvider = Get.find<AppWriteProvider>();
   final AuthRepository authRepository = Get.find<AuthRepository>();
 
   late User currentUser;

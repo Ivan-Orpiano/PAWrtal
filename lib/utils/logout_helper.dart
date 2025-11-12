@@ -239,19 +239,19 @@ class LogoutHelper {
       Get.offAllNamed(Routes.login);
 
       // Show appropriate message
-      String message;
-      if (fcmTargetDeleted) {
-        message = "You have been successfully logged out";
-      } else if (pushTargetId != null && pushTargetId.isNotEmpty) {
-        message = "Logged out (Note: Your session was already invalid. You may need to clear app data if you experience issues.)";
-      } else {
-        message = "You have been successfully logged out";
-      }
+      // String message;
+      // if (fcmTargetDeleted) {
+      //   message = "You have been successfully logged out";
+      // } else if (pushTargetId != null && pushTargetId.isNotEmpty) {
+      //   message = "Logged out (Note: Your session was already invalid. You may need to clear app data if you experience issues.)";
+      // } else {
+      //   message = "You have been successfully logged out";
+      // }
       
       SnackbarHelper.showSuccess(
         context: Get.overlayContext,
         title: "Logged Out",
-        message: message
+        message: "You have been successfully logged out"
       );
       
       print('✅ Logout completed successfully');

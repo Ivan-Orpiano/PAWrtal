@@ -18,27 +18,41 @@ import 'package:capstone_app/web/super_admin/WebVersion/services/clinic_archive_
 Future<void> initializeDependencies() async {
   await GetStorage.init();
 
-  Get.put(GetStorage());
-  Get.put(UserSessionService());
-  Get.put(AuthRepository(AppWriteProvider()));
+  // 1
+  if (!Get.isRegistered<GetStorage>()) {
+    Get.put(GetStorage(), 
+    permanent: true);
+  }
 
-  Get.put(AppWriteProvider());
-  Get.put(AuthRepository(Get.find<AppWriteProvider>()));
+  // 2
+  Get.put(AppWriteProvider(), 
+  permanent: true);
+
+  // 3
+  Get.put(AuthRepository(Get.find<AppWriteProvider>()), 
+  permanent: true);
+
+  // 4
+  Get.put(UserSessionService(), 
+  permanent: true);
+
+  // 5
   Get.put(
     ArchiveService(Get.find<AuthRepository>()),
     permanent: true,
   );
-  final authRepo = Get.find<AuthRepository>();
-
   Get.put(
     ClinicArchiveService(Get.find<AuthRepository>()),
     permanent: true,
   );
 
+  // final authRepo = Get.find<AuthRepository>();
+  // Get.put(AuthRepository(AppWriteProvider()));
+
+  // 6
   final notificationService = NotificationService();
   await notificationService.initializeNotifications();
   Get.put(notificationService, permanent: true);
-
   Get.put(
     InAppNotificationService(
       authRepository: Get.find<AuthRepository>(),
@@ -46,7 +60,6 @@ Future<void> initializeDependencies() async {
     ),
     permanent: true,
   );
-
   // Register Notification Preferences Service
   Get.put(
     NotificationPreferencesService(
@@ -54,7 +67,6 @@ Future<void> initializeDependencies() async {
     ),
     permanent: true,
   );
-
   Get.put(
     AppointmentReminderService(
       authRepository: Get.find<AuthRepository>(),
@@ -64,14 +76,16 @@ Future<void> initializeDependencies() async {
     permanent: true,
   );
 
+  // 7
   Get.put(DashboardController());
   Get.put(MessagingController());
   Get.put(AdminMessagingController());
-
   // ADD THIS LINE - Register WebUserHomeController globally
   Get.put(WebUserHomeController(), permanent: true);
 
-  await authRepo.appWriteProvider.migrateReviewsArchiveField();
-
+  // 8
+  await Get.find<AuthRepository>()
+      .appWriteProvider
+      .migrateReviewsArchiveField();
   await Get.find<AuthRepository>().migrateFeedbackArchiveField();
 }
