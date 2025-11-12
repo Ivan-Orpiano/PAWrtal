@@ -1,8 +1,6 @@
-// lib/init/dependency_injection.dart
 import 'package:capstone_app/mobile/admin/controllers/admin_messaging_controller.dart';
 import 'package:capstone_app/mobile/user/components/dashboard_components/dashboard_controller.dart';
 import 'package:capstone_app/mobile/user/controllers/user_messaging_controller.dart';
-import 'package:capstone_app/notification/services/appointment_reminder_service.dart';
 import 'package:capstone_app/notification/services/in_app_notification_service.dart';
 import 'package:capstone_app/notification/services/notification_preferences_service.dart';
 import 'package:capstone_app/notification/services/notification_service.dart';
@@ -18,25 +16,21 @@ import 'package:capstone_app/web/super_admin/WebVersion/services/clinic_archive_
 Future<void> initializeDependencies() async {
   await GetStorage.init();
 
-  // 1
+  // 1. GetStorage
   if (!Get.isRegistered<GetStorage>()) {
-    Get.put(GetStorage(), 
-    permanent: true);
+    Get.put(GetStorage(), permanent: true);
   }
 
-  // 2
-  Get.put(AppWriteProvider(), 
-  permanent: true);
+  // 2. AppWriteProvider
+  Get.put(AppWriteProvider(), permanent: true);
 
-  // 3
-  Get.put(AuthRepository(Get.find<AppWriteProvider>()), 
-  permanent: true);
+  // 3. AuthRepository
+  Get.put(AuthRepository(Get.find<AppWriteProvider>()), permanent: true);
 
-  // 4
-  Get.put(UserSessionService(), 
-  permanent: true);
+  // 4. UserSessionService
+  Get.put(UserSessionService(), permanent: true);
 
-  // 5
+  // 5. Archive Services
   Get.put(
     ArchiveService(Get.find<AuthRepository>()),
     permanent: true,
@@ -46,10 +40,7 @@ Future<void> initializeDependencies() async {
     permanent: true,
   );
 
-  // final authRepo = Get.find<AuthRepository>();
-  // Get.put(AuthRepository(AppWriteProvider()));
-
-  // 6
+  // 6. Notification Services
   final notificationService = NotificationService();
   await notificationService.initializeNotifications();
   Get.put(notificationService, permanent: true);
@@ -60,30 +51,20 @@ Future<void> initializeDependencies() async {
     ),
     permanent: true,
   );
-  // Register Notification Preferences Service
   Get.put(
     NotificationPreferencesService(
       authRepository: Get.find<AuthRepository>(),
     ),
     permanent: true,
   );
-  Get.put(
-    AppointmentReminderService(
-      authRepository: Get.find<AuthRepository>(),
-      notificationPrefsService: Get.find<NotificationPreferencesService>(),
-      appWriteProvider: Get.find<AppWriteProvider>(),
-    ),
-    permanent: true,
-  );
 
-  // 7
+  // 7. Controllers
   Get.put(DashboardController());
   Get.put(MessagingController());
   Get.put(AdminMessagingController());
-  // ADD THIS LINE - Register WebUserHomeController globally
   Get.put(WebUserHomeController(), permanent: true);
 
-  // 8
+  // 8. Migrations
   await Get.find<AuthRepository>()
       .appWriteProvider
       .migrateReviewsArchiveField();

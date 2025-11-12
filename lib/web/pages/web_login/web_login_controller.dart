@@ -1,6 +1,8 @@
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/notification/services/appointment_reminder_service.dart';
 import 'package:capstone_app/notification/services/in_app_notification_service.dart';
+import 'package:capstone_app/notification/services/notification_preferences_service.dart';
 import 'package:capstone_app/pages/routes/app_pages.dart';
 import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:capstone_app/utils/web_error_handler.dart';
@@ -83,7 +85,6 @@ class WebLoginController extends GetxController {
     try {
       isLoading.value = true;
 
-
       // CRITICAL FIX: Clear any existing dashboard controller before login
       _clearExistingControllers();
 
@@ -98,9 +99,7 @@ class WebLoginController extends GetxController {
       try {
         final notificationService = Get.find<InAppNotificationService>();
         await notificationService.initialize();
-      } catch (e) {
-      }
-
+      } catch (e) {}
 
       // Validate response
       final session = value["session"];
@@ -124,7 +123,6 @@ class WebLoginController extends GetxController {
         await _getStorage.write("userName", user.name);
       }
 
-
       // Get role from response (already determined by provider)
       String role = value["role"] ?? "";
 
@@ -134,19 +132,15 @@ class WebLoginController extends GetxController {
 
       // Store role-specific data
       if (role == "admin") {
-
         final clinicId = value["clinicId"];
         if (clinicId != null && clinicId.isNotEmpty) {
           await _getStorage.write("clinicId", clinicId);
-        } else {
-        }
+        } else {}
       } else if (role == "staff") {
-
         final clinicId = value["clinicId"];
         if (clinicId != null && clinicId.isNotEmpty) {
           await _getStorage.write("clinicId", clinicId);
-        } else {
-        }
+        } else {}
 
         if (value["staffDocumentId"] != null) {
           await _getStorage.write("staffId", value["staffDocumentId"]);
@@ -166,6 +160,35 @@ class WebLoginController extends GetxController {
 
       _initializeSecureSession(userId, role);
 
+      if (role == "user") {
+        try {
+          print(
+              '🔔 Initializing appointment reminder service for user (Web)...');
+
+          // Create user-specific reminder service instance
+          final reminderService = AppointmentReminderService(
+            authRepository: _authRepository,
+            notificationPrefsService:
+                Get.find<NotificationPreferencesService>(),
+            appWriteProvider: Get.find<AppWriteProvider>(),
+            userId: userId, // ✅ Pass the logged-in user's ID
+          );
+
+          // Register it in GetX with user-specific tag
+          Get.put(
+            reminderService,
+            tag: 'reminder_$userId', // ✅ User-specific tag
+          );
+
+          // Start the service
+          reminderService.startReminderService();
+
+          print('✅ Appointment reminder service started for user: $userId');
+        } catch (e) {
+          print('⚠️ Failed to start appointment reminder service: $e');
+          // Don't fail login if reminder service fails
+        }
+      }
 
       // Navigate based on role
       _navigateBasedOnRole(role);
@@ -173,7 +196,6 @@ class WebLoginController extends GetxController {
       // Clear controllers
       _clearControllers();
     } catch (e) {
-
       // UNIFIED ERROR MESSAGE: Always show this for any login error
       errorMessage.value =
           'Invalid username/email or password. Please try again.';
@@ -188,7 +210,6 @@ class WebLoginController extends GetxController {
   // CRITICAL FIX: Clear any existing controllers to prevent data persistence
   void _clearExistingControllers() {
     try {
-
       // Delete AdminDashboardController if it exists
       if (Get.isRegistered<dynamic>(tag: 'AdminDashboardController')) {
         Get.delete<dynamic>(tag: 'AdminDashboardController', force: true);
@@ -200,7 +221,6 @@ class WebLoginController extends GetxController {
       } catch (e) {
         // Ignore if not found
       }
-
     } catch (e) {
       // Continue anyway - not critical
     }
@@ -213,7 +233,6 @@ class WebLoginController extends GetxController {
       isGoogleLoading.value = true;
       errorMessage.value = '';
 
-
       final appWriteProvider = Get.find<AppWriteProvider>();
 
       // This will redirect to Google OAuth
@@ -221,7 +240,6 @@ class WebLoginController extends GetxController {
 
       // Code won't reach here due to redirect
     } catch (e) {
-
       isGoogleLoading.value = false;
 
       errorMessage.value =
@@ -235,7 +253,6 @@ class WebLoginController extends GetxController {
     try {
       final email = emailForPasswordResetController.text.trim();
 
-
       WebLoadingHelper.showLoading(message: 'Sending password reset email...');
 
       final result = await _authRepository.sendPasswordResetEmail(email);
@@ -243,58 +260,54 @@ class WebLoginController extends GetxController {
       WebLoadingHelper.hideLoading();
 
       if (result['success'] == true) {
-
         emailForPasswordResetController.clear();
 
         SnackbarHelper.showSuccess(
-          context: Get.overlayContext,
-          title: "Success",
-          message: "Password reset link sent to your email. Please check your inbox.");
+            context: Get.overlayContext,
+            title: "Success",
+            message:
+                "Password reset link sent to your email. Please check your inbox.");
 
         // WebErrorHandler.handleSuccess(
         //   result['message'] ??
         //       'Password reset link sent to your email. Please check your inbox.',
         // );
       } else {
-
         WebErrorHandler.handleError(
           result['message'] ?? 'Failed to send password reset email',
         );
       }
-
     } catch (e) {
-
       WebLoadingHelper.hideLoading();
       WebErrorHandler.handleError(e, context: 'Password Reset');
     }
   }
 
   void _navigateBasedOnRole(String? role) {
-
     switch (role) {
       case "admin":
       case "staff":
         Get.offAllNamed(Routes.adminHome);
         SnackbarHelper.showSuccess(
-          context: Get.overlayContext,
-          title: "Success",
-          message: "Login Successful");
+            context: Get.overlayContext,
+            title: "Success",
+            message: "Login Successful");
         // WebErrorHandler.handleSuccess('Login successful');
         break;
       case "developer":
         Get.offAllNamed(Routes.superAdminHome);
         SnackbarHelper.showSuccess(
-          context: Get.overlayContext,
-          title: "Success",
-          message: "Login Successful");
+            context: Get.overlayContext,
+            title: "Success",
+            message: "Login Successful");
         // WebErrorHandler.handleSuccess('Login successful');
         break;
       case "user":
         Get.offAllNamed(Routes.userHome);
         SnackbarHelper.showSuccess(
-          context: Get.overlayContext,
-          title: "Success",
-          message: "Login Successful");
+            context: Get.overlayContext,
+            title: "Success",
+            message: "Login Successful");
         // WebErrorHandler.handleSuccess('Login successful');
         break;
       default:
@@ -318,7 +331,6 @@ class WebLoginController extends GetxController {
   }
 
   void _initializeSecureSession(String userId, String role) {
-
     // Store session timestamp
     _getStorage.write('sessionTimestamp', DateTime.now().toIso8601String());
 
@@ -334,6 +346,5 @@ class WebLoginController extends GetxController {
 
     // Clean up old security data
     // SessionManager.cleanupOldData();
-
   }
 }

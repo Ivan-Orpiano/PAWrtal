@@ -1,6 +1,7 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/notification/services/in_app_notification_service.dart';
+import 'package:capstone_app/notification/services/notification_preferences_service.dart';
 import 'package:capstone_app/pages/routes/app_pages.dart';
 import 'package:capstone_app/utils/custom_snack_bar.dart';
 import 'package:capstone_app/utils/full_screen_dialog_loader.dart';
@@ -13,7 +14,7 @@ import 'package:capstone_app/utils/mobile_oauth_handler.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:capstone_app/notification/services/notification_service.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
-
+import 'package:capstone_app/notification/services/appointment_reminder_service.dart';
 import 'package:capstone_app/utils/session_manager.dart';
 import 'package:capstone_app/utils/security_monitor.dart';
 
@@ -239,6 +240,36 @@ class LoginController extends GetxController {
       _getStorage.write("email", userEmail);
 
       _initializeSecureSession(userId, role);
+
+      // Initialize appointment reminder service (ONLY for regular users)
+      if (role == "user") {
+        try {
+          print('🔔 Initializing appointment reminder service for user...');
+
+          // Create user-specific reminder service instance
+          final reminderService = AppointmentReminderService(
+            authRepository: authRepository,
+            notificationPrefsService:
+                Get.find<NotificationPreferencesService>(),
+            appWriteProvider: Get.find<AppWriteProvider>(),
+            userId: userId, // ✅ Pass the logged-in user's ID
+          );
+
+          // Register it in GetX with user-specific tag
+          Get.put(
+            reminderService,
+            tag: 'reminder_$userId', // ✅ User-specific tag
+          );
+
+          // Start the service
+          reminderService.startReminderService();
+
+          print('✅ Appointment reminder service started for user: $userId');
+        } catch (e) {
+          print('⚠️ Failed to start appointment reminder service: $e');
+          // Don't fail login if reminder service fails
+        }
+      }
 
       // Register FCM token for push notifications (Mobile only)
 

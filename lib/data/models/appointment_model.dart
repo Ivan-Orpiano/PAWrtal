@@ -1,4 +1,3 @@
-// appointment_model.dart
 class Appointment {
   final String? documentId;
   final String userId;
@@ -11,7 +10,7 @@ class Appointment {
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  // Medical service flag - NEW
+  // Medical service flag
   final bool isMedicalService;
 
   // Cancellation/rejection tracking
@@ -36,6 +35,10 @@ class Appointment {
   // Attachments
   final List<String>? attachments;
 
+  // Reminder tracking
+  final bool reminderSent;
+  final DateTime? reminderSentAt;
+
   Appointment({
     this.documentId,
     required this.userId,
@@ -47,7 +50,7 @@ class Appointment {
     this.notes,
     DateTime? createdAt,
     DateTime? updatedAt,
-    this.isMedicalService = false, // NEW: Default to false
+    this.isMedicalService = false,
     this.cancellationReason,
     this.cancelledBy,
     this.cancelledAt,
@@ -60,6 +63,8 @@ class Appointment {
     this.paymentMethod,
     this.followUpInstructions,
     this.nextAppointmentDate,
+    this.reminderSent = false,
+    this.reminderSentAt,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
 
@@ -74,7 +79,7 @@ class Appointment {
       'notes': notes,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
-      'isMedicalService': isMedicalService, // NEW
+      'isMedicalService': isMedicalService,
       'cancellationReason': cancellationReason,
       'cancelledBy': cancelledBy,
       'cancelledAt': cancelledAt?.toIso8601String(),
@@ -87,6 +92,8 @@ class Appointment {
       'paymentMethod': paymentMethod,
       'followUpInstructions': followUpInstructions,
       'nextAppointmentDate': nextAppointmentDate?.toIso8601String(),
+      'reminderSent': reminderSent,
+      'reminderSentAt': reminderSentAt?.toIso8601String(),
     };
   }
 
@@ -102,7 +109,7 @@ class Appointment {
       notes: map['notes'],
       createdAt: DateTime.parse(map['createdAt']),
       updatedAt: DateTime.parse(map['updatedAt']),
-      isMedicalService: map['isMedicalService'] ?? false, // NEW
+      isMedicalService: map['isMedicalService'] ?? false,
       cancellationReason: map['cancellationReason'],
       cancelledBy: map['cancelledBy'],
       cancelledAt: map['cancelledAt'] != null
@@ -127,6 +134,10 @@ class Appointment {
       nextAppointmentDate: map['nextAppointmentDate'] != null
           ? DateTime.parse(map['nextAppointmentDate'])
           : null,
+      reminderSent: map['reminderSent'] ?? false,
+      reminderSentAt: map['reminderSentAt'] != null
+          ? DateTime.parse(map['reminderSentAt'])
+          : null,
     );
   }
 
@@ -141,7 +152,7 @@ class Appointment {
     String? notes,
     DateTime? createdAt,
     DateTime? updatedAt,
-    bool? isMedicalService, // NEW
+    bool? isMedicalService,
     String? cancellationReason,
     String? cancelledBy,
     DateTime? cancelledAt,
@@ -154,6 +165,8 @@ class Appointment {
     String? paymentMethod,
     String? followUpInstructions,
     DateTime? nextAppointmentDate,
+    bool? reminderSent,
+    DateTime? reminderSentAt,
   }) {
     return Appointment(
       documentId: documentId ?? this.documentId,
@@ -166,7 +179,7 @@ class Appointment {
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      isMedicalService: isMedicalService ?? this.isMedicalService, // NEW
+      isMedicalService: isMedicalService ?? this.isMedicalService,
       cancellationReason: cancellationReason ?? this.cancellationReason,
       cancelledBy: cancelledBy ?? this.cancelledBy,
       cancelledAt: cancelledAt ?? this.cancelledAt,
@@ -179,6 +192,8 @@ class Appointment {
       paymentMethod: paymentMethod ?? this.paymentMethod,
       followUpInstructions: followUpInstructions ?? this.followUpInstructions,
       nextAppointmentDate: nextAppointmentDate ?? this.nextAppointmentDate,
+      reminderSent: reminderSent ?? this.reminderSent,
+      reminderSentAt: reminderSentAt ?? this.reminderSentAt,
     );
   }
 
@@ -199,7 +214,7 @@ class Appointment {
 
   bool get isToday {
     final now = DateTime.now();
-    final localDate = dateTime.toLocal(); // Convert to local time
+    final localDate = dateTime.toLocal();
     return localDate.year == now.year &&
         localDate.month == now.month &&
         localDate.day == now.day;
@@ -207,7 +222,7 @@ class Appointment {
 
   bool get isPast {
     final now = DateTime.now();
-    final localDate = dateTime.toLocal(); // Convert to local time
+    final localDate = dateTime.toLocal();
     final appointmentDate =
         DateTime(localDate.year, localDate.month, localDate.day);
     final today = DateTime(now.year, now.month, now.day);
@@ -298,7 +313,7 @@ class Appointment {
 
       return '${displayHour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $period';
     } catch (e) {
-      return time24; // Return original if parsing fails
+      return time24;
     }
   }
 
@@ -319,7 +334,7 @@ class Appointment {
 
       return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
     } catch (e) {
-      return time12; // Return original if parsing fails
+      return time12;
     }
   }
 }

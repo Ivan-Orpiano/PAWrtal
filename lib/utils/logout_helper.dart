@@ -44,15 +44,15 @@ class LogoutHelper {
       // Don't even check if session is valid - just try to delete it
       // ========================================
       bool fcmTargetDeleted = false;
-      
+
       if (!kIsWeb && pushTargetId != null && pushTargetId.isNotEmpty) {
         try {
           print('🔔 AGGRESSIVELY deleting FCM push target: $pushTargetId');
           final appWriteProvider = Get.find<AppWriteProvider>();
-          
+
           // Try to delete without checking session validity first
           final deleted = await appWriteProvider.deletePushTarget(pushTargetId);
-          
+
           if (deleted) {
             fcmTargetDeleted = true;
             print('✅ FCM push target DELETED: $pushTargetId');
@@ -61,13 +61,14 @@ class LogoutHelper {
           }
         } catch (fcmError) {
           print('❌ Error deleting FCM push target: $fcmError');
-          
+
           // If it failed due to auth error, the session is already dead
           // Log this for debugging
-          if (fcmError.toString().contains('401') || 
+          if (fcmError.toString().contains('401') ||
               fcmError.toString().contains('unauthorized')) {
             print('⚠️ FCM deletion failed due to invalid session');
-            print('⚠️ This means session was invalidated BEFORE logout was called');
+            print(
+                '⚠️ This means session was invalidated BEFORE logout was called');
           }
         }
       }
@@ -112,14 +113,22 @@ class LogoutHelper {
         Get.delete<MessagingController>();
       }
 
-      // Stop appointment reminder service
-      if (Get.isRegistered<AppointmentReminderService>()) {
-        try {
-          final reminderService = Get.find<AppointmentReminderService>();
-          reminderService.stopReminderService();
-          print('✅ Appointment reminder service stopped');
-        } catch (e) {
-          print('⚠️ Error stopping reminder service: $e');
+      // Stop user-specific appointment reminder service
+      if (userId != null && userId.isNotEmpty) {
+        final serviceTag = 'reminder_$userId'; // ✅ User-specific tag
+
+        if (Get.isRegistered<AppointmentReminderService>(tag: serviceTag)) {
+          try {
+            final reminderService =
+                Get.find<AppointmentReminderService>(tag: serviceTag);
+            reminderService.stopReminderService();
+            Get.delete<AppointmentReminderService>(
+                tag: serviceTag, force: true);
+            print(
+                '✅ User-specific appointment reminder service stopped: $serviceTag');
+          } catch (e) {
+            print('⚠️ Error stopping user-specific reminder service: $e');
+          }
         }
       }
 
@@ -174,7 +183,8 @@ class LogoutHelper {
           if (!serverLogoutSuccess) {
             try {
               print('🔐 Attempting to delete current session');
-              await appWriteProvider.account!.deleteSession(sessionId: 'current');
+              await appWriteProvider.account!
+                  .deleteSession(sessionId: 'current');
               serverLogoutSuccess = true;
               print('✅ Current session deleted successfully');
             } catch (e) {
@@ -196,7 +206,8 @@ class LogoutHelper {
 
           if (!serverLogoutSuccess) {
             print('⚠️ All session deletion strategies failed');
-            print('⚠️ Session may have been invalidated before logout was called');
+            print(
+                '⚠️ Session may have been invalidated before logout was called');
           }
         } catch (e) {
           print('⚠️ Appwrite logout error: $e');
@@ -247,19 +258,19 @@ class LogoutHelper {
       // } else {
       //   message = "You have been successfully logged out";
       // }
-      
+
       SnackbarHelper.showSuccess(
-        context: Get.overlayContext,
-        title: "Logged Out",
-        message: "You have been successfully logged out"
-      );
-      
+          context: Get.overlayContext,
+          title: "Logged Out",
+          message: "You have been successfully logged out");
+
       print('✅ Logout completed successfully');
       if (fcmTargetDeleted) {
         print('✅ FCM target was properly deleted');
       } else if (pushTargetId != null && pushTargetId.isNotEmpty) {
         print('⚠️ FCM target was NOT deleted - session was already invalid');
-        print('⚠️ INVESTIGATION NEEDED: Something invalidated the session before logout');
+        print(
+            '⚠️ INVESTIGATION NEEDED: Something invalidated the session before logout');
       }
     } catch (e) {
       print('❌ Critical logout error: $e');
@@ -340,13 +351,21 @@ class LogoutHelper {
         Get.delete<MessagingController>();
       }
 
-      if (Get.isRegistered<AppointmentReminderService>()) {
-        try {
-          final reminderService = Get.find<AppointmentReminderService>();
-          reminderService.stopReminderService();
-          print('✅ Appointment reminder service stopped');
-        } catch (e) {
-          print('⚠️ Error stopping reminder service: $e');
+      if (userId != null && userId.isNotEmpty) {
+        final serviceTag = 'reminder_$userId';
+
+        if (Get.isRegistered<AppointmentReminderService>(tag: serviceTag)) {
+          try {
+            final reminderService =
+                Get.find<AppointmentReminderService>(tag: serviceTag);
+            reminderService.stopReminderService();
+            Get.delete<AppointmentReminderService>(
+                tag: serviceTag, force: true);
+            print(
+                '✅ User-specific appointment reminder service stopped: $serviceTag');
+          } catch (e) {
+            print('⚠️ Error stopping user-specific reminder service: $e');
+          }
         }
       }
 
@@ -374,14 +393,15 @@ class LogoutHelper {
       if (sessionId != null && sessionId.isNotEmpty) {
         try {
           final appWriteProvider = Get.find<AppWriteProvider>();
-          
+
           try {
             await appWriteProvider.account!.deleteSession(sessionId: sessionId);
             print('✅ Session deleted: $sessionId');
           } catch (e) {
             print('⚠️ Specific session deletion failed, trying current');
             try {
-              await appWriteProvider.account!.deleteSession(sessionId: 'current');
+              await appWriteProvider.account!
+                  .deleteSession(sessionId: 'current');
               print('✅ Current session deleted');
             } catch (e2) {
               if (!kIsWeb) {
