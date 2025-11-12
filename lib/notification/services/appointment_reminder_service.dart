@@ -9,44 +9,51 @@ import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
+/// USER-SPECIFIC Appointment Reminder Service
+/// Each logged-in user gets their own instance of this service
 class AppointmentReminderService extends GetxService {
   final AuthRepository authRepository;
   final NotificationPreferencesService notificationPrefsService;
   final AppWriteProvider appWriteProvider;
+  final String userId; // ✅ NEW: User-specific service
 
-  AppointmentReminderService(
-      {required this.authRepository,
-      required this.notificationPrefsService,
-      required this.appWriteProvider});
+  AppointmentReminderService({
+    required this.authRepository,
+    required this.notificationPrefsService,
+    required this.appWriteProvider,
+    required this.userId, // ✅ NEW: Required userId
+  });
 
   Timer? _reminderTimer;
   final Set<String> _remindedAppointments = {};
   final GetStorage _storage = GetStorage();
 
   // Configuration
-  static const Duration checkInterval =
-      Duration(minutes: 10); // Check every 10 minutes
-  static const Duration reminderWindow =
-      Duration(hours: 1); // Remind 1 hour before
+  static const Duration checkInterval = Duration(minutes: 10);
+  static const Duration reminderWindow = Duration(hours: 1);
 
-  @override
-  void onInit() {
-    super.onInit();
-    _loadRemindedAppointments();
-    _startReminderService();
-  }
+  // ✅ REMOVED: onInit() - no automatic initialization
+  // Service will be started manually after login
 
   @override
   void onClose() {
-    _reminderTimer?.cancel();
+    stopReminderService();
     super.onClose();
   }
 
-  /// Start the reminder service
-  void _startReminderService() {
-    print('🔔 Appointment Reminder Service: STARTED');
-    print(
-        '⏰ Checking every ${checkInterval.inMinutes} minutes for appointments within ${reminderWindow.inMinutes} minutes');
+  /// Start the reminder service (called manually after user login)
+  void startReminderService() {
+    if (_reminderTimer != null && _reminderTimer!.isActive) {
+      print('⚠️ Reminder service already running for user: $userId');
+      return;
+    }
+
+    print('🔔 Starting Appointment Reminder Service for user: $userId');
+    print('⏰ Check interval: ${checkInterval.inMinutes} minutes');
+    print('⏰ Reminder window: ${reminderWindow.inMinutes} minutes before appointment');
+
+    // Load previously reminded appointments for this user
+    _loadRemindedAppointments();
 
     // Run initial check
     _checkAndSendReminders();
@@ -55,49 +62,53 @@ class AppointmentReminderService extends GetxService {
     _reminderTimer = Timer.periodic(checkInterval, (timer) {
       _checkAndSendReminders();
     });
+
+    print('✅ Reminder service started successfully for user: $userId');
   }
 
   /// Stop the reminder service
   void stopReminderService() {
     _reminderTimer?.cancel();
     _reminderTimer = null;
-    print('🔔 Appointment Reminder Service: STOPPED');
+    print('🛑 Reminder service stopped for user: $userId');
   }
 
-  /// Main method to check and send reminders
+  /// Main method to check and send reminders (USER-SPECIFIC)
   Future<void> _checkAndSendReminders() async {
     try {
-      print('\n🔍 Checking for upcoming appointments...');
-      // CRITICAL: Use local time for comparison (Philippines timezone)
+      print('\n🔍 Checking upcoming appointments for user: $userId...');
       final now = DateTime.now();
       print('⏰ Current time (Local): $now');
-      print('⏰ Current time (UTC): ${now.toUtc()}');
 
-      // Get all accepted appointments from all clinics
-      final allAppointments = await _getAllAcceptedAppointments();
+      // ✅ OPTIMIZATION: Only get THIS user's accepted appointments
+      final userAppointments = await _getUserAcceptedAppointments();
 
-      if (allAppointments.isEmpty) {
-        print('✓ No accepted appointments found');
+      if (userAppointments.isEmpty) {
+        print('✓ No accepted appointments found for this user');
         return;
       }
 
-      print('📋 Found ${allAppointments.length} accepted appointment(s)');
+      print('📋 Found ${userAppointments.length} accepted appointment(s) for this user');
 
       int remindersCount = 0;
 
-      for (var appointment in allAppointments) {
-        // Skip if already reminded
+      for (var appointment in userAppointments) {
+        // ✅ OPTIMIZATION 1: Skip if already reminded
         if (_remindedAppointments.contains(appointment.documentId)) {
+          print('   ⊘ Already reminded: ${appointment.documentId}');
           continue;
         }
 
-        // CRITICAL WORKAROUND: Appointments are stored incorrectly (PH time as UTC)
-        // So we treat the stored UTC time as if it's actually PH local time
+        // ✅ OPTIMIZATION 2: Skip if reminderSent flag is true
+        if (appointment.reminderSent) {
+          print('   ⊘ Reminder already sent (from DB): ${appointment.documentId}');
+          _remindedAppointments.add(appointment.documentId!);
+          _saveRemindedAppointments();
+          continue;
+        }
 
-        // Get the stored datetime (which has Z suffix but is actually PH time)
+        // Get the stored datetime and treat as local time
         final storedDateTime = appointment.dateTime;
-
-        // Remove the UTC marker and treat as local PH time
         final actualLocalTime = DateTime(
           storedDateTime.year,
           storedDateTime.month,
@@ -105,75 +116,88 @@ class AppointmentReminderService extends GetxService {
           storedDateTime.hour,
           storedDateTime.minute,
           storedDateTime.second,
-        ); // This creates a local DateTime with the same values
+        );
 
         final nowLocal = now;
 
         print('\n📅 Checking appointment ${appointment.documentId}:');
-        print('   - Appointment time (stored): ${appointment.dateTime}');
-        print('   - Appointment time (CORRECTED as local): $actualLocalTime');
-        print('   - Current time (local): $nowLocal');
+        print('   - Pet: ${appointment.petId}');
+        print('   - Appointment time: $actualLocalTime');
+        print('   - Current time: $nowLocal');
 
-        // Calculate time until appointment using corrected local times
+        // Calculate time until appointment
         final timeUntilAppointment = actualLocalTime.difference(nowLocal);
         print('   - Time until: ${timeUntilAppointment.inMinutes} minutes');
 
-        // Check if appointment is within reminder window (1 hour)
-        // and hasn't passed yet
+        // Check if appointment is within reminder window (1 hour) and hasn't passed
         if (timeUntilAppointment > Duration.zero &&
             timeUntilAppointment <= reminderWindow) {
-          print('\n⏰ Appointment within reminder window:');
-          print('   - Pet: ${appointment.petId}');
-          print('   - Time until: ${timeUntilAppointment.inMinutes} minutes');
-          print('   - Appointment ID: ${appointment.documentId}');
+          print('\n⏰ Appointment within reminder window!');
+          print('   - Sending reminder...');
 
           await _sendAppointmentReminder(
-              appointment, timeUntilAppointment.inMinutes);
+            appointment,
+            timeUntilAppointment.inMinutes,
+          );
           remindersCount++;
 
-          // Mark as reminded
+          // ✅ Mark as reminded locally
           _remindedAppointments.add(appointment.documentId!);
           _saveRemindedAppointments();
+
+          // ✅ CRITICAL: Update reminderSent flag in database
+          await _markReminderSent(appointment.documentId!);
         }
       }
 
       if (remindersCount > 0) {
-        print('\n✉️ Sent $remindersCount appointment reminder(s)');
+        print('\n✉️ Sent $remindersCount reminder(s) for user: $userId');
       } else {
         print('✓ No appointments need reminders at this time');
       }
 
-      // Cleanup old reminded appointments (older than 24 hours)
-      _cleanupRemindedAppointments(allAppointments);
+      // Cleanup old reminded appointments
+      _cleanupRemindedAppointments(userAppointments);
     } catch (e) {
-      print('❌ Error checking reminders: $e');
+      print('❌ Error checking reminders for user $userId: $e');
     }
   }
 
-  /// Get all accepted appointments from all clinics
-  Future<List<Appointment>> _getAllAcceptedAppointments() async {
+  /// ✅ NEW: Get only THIS user's accepted appointments
+  Future<List<Appointment>> _getUserAcceptedAppointments() async {
     try {
-      // CRITICAL: Import Query class at the top of the file
-      // Add this import: import 'package:appwrite/appwrite.dart';
-
-      // Get all appointments with status 'accepted'
       final result = await appWriteProvider.databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.appointmentCollectionID,
         queries: [
-          Query.equal("status", "accepted"), // ✅ FIXED - Use Query object
-          Query.limit(1000), // ✅ FIXED - Use Query object
+          Query.equal("userId", userId), // ✅ Filter by THIS user
+          Query.equal("status", "accepted"),
+          Query.limit(100), // Reasonable limit per user
         ],
       );
 
-      print('✅ Fetched ${result.documents.length} accepted appointments');
+      print('✅ Fetched ${result.documents.length} accepted appointments for user: $userId');
 
       return result.documents
           .map((doc) => Appointment.fromMap(doc.data))
           .toList();
     } catch (e) {
-      print('❌ Error fetching accepted appointments: $e');
+      print('❌ Error fetching user appointments: $e');
       return [];
+    }
+  }
+
+  /// ✅ NEW: Mark reminder as sent in database
+  Future<void> _markReminderSent(String appointmentId) async {
+    try {
+      await authRepository.updateFullAppointment(appointmentId, {
+        'reminderSent': true,
+        'reminderSentAt': DateTime.now().toIso8601String(),
+      });
+      print('✅ Marked reminderSent=true for appointment: $appointmentId');
+    } catch (e) {
+      print('⚠️ Failed to mark reminderSent: $e');
+      // Don't throw - notification was still sent
     }
   }
 
@@ -183,8 +207,7 @@ class AppointmentReminderService extends GetxService {
     int minutesUntil,
   ) async {
     try {
-      print(
-          '\n📤 Sending reminder for appointment ${appointment.documentId}...');
+      print('\n📤 Sending reminder for appointment ${appointment.documentId}...');
 
       // Get user details
       final userDoc = await authRepository.getUserById(appointment.userId);
@@ -205,8 +228,7 @@ class AppointmentReminderService extends GetxService {
       print('📬 Email enabled: ${userPreferences.emailNotificationsEnabled}');
 
       // Get clinic and pet details
-      final clinicDoc =
-          await authRepository.getClinicById(appointment.clinicId);
+      final clinicDoc = await authRepository.getClinicById(appointment.clinicId);
       final clinicName = clinicDoc?.data['clinicName'] ?? 'Clinic';
 
       // Try to get pet name
@@ -250,8 +272,7 @@ class AppointmentReminderService extends GetxService {
 
         await authRepository.appWriteProvider.sendPushNotification(
           title: '⏰ Appointment Reminder',
-          body:
-              '$petName\'s appointment at $clinicName is coming up $timeMessage!',
+          body: '$petName\'s appointment at $clinicName is coming up $timeMessage!',
           userIds: [appointment.userId],
           data: {
             'type': 'appointment_reminder',
@@ -269,28 +290,28 @@ class AppointmentReminderService extends GetxService {
       print('✅ Reminder sent successfully!');
     } catch (e) {
       print('❌ Error sending reminder: $e');
-      // Don't throw - continue with other reminders
     }
   }
 
-  /// Load reminded appointments from storage
+  /// Load reminded appointments from storage (USER-SPECIFIC)
   void _loadRemindedAppointments() {
     try {
-      final reminded = _storage.read<List>('reminded_appointments');
+      final key = 'reminded_appointments_$userId'; // ✅ User-specific key
+      final reminded = _storage.read<List>(key);
       if (reminded != null) {
         _remindedAppointments.addAll(reminded.cast<String>());
-        print(
-            '📝 Loaded ${_remindedAppointments.length} reminded appointment(s) from storage');
+        print('📂 Loaded ${_remindedAppointments.length} reminded appointments for user: $userId');
       }
     } catch (e) {
       print('⚠️ Error loading reminded appointments: $e');
     }
   }
 
-  /// Save reminded appointments to storage
+  /// Save reminded appointments to storage (USER-SPECIFIC)
   void _saveRemindedAppointments() {
     try {
-      _storage.write('reminded_appointments', _remindedAppointments.toList());
+      final key = 'reminded_appointments_$userId'; // ✅ User-specific key
+      _storage.write(key, _remindedAppointments.toList());
     } catch (e) {
       print('⚠️ Error saving reminded appointments: $e');
     }
@@ -303,10 +324,8 @@ class AppointmentReminderService extends GetxService {
         .where((id) => id != null)
         .toSet();
 
-    // Remove reminded appointments that are no longer in current appointments
     _remindedAppointments.removeWhere((id) => !appointmentIds.contains(id));
 
-    // Also remove appointments older than 24 hours
     final cutoffTime = DateTime.now().subtract(const Duration(hours: 24));
     final toRemove = <String>[];
 
@@ -322,13 +341,13 @@ class AppointmentReminderService extends GetxService {
     if (toRemove.isNotEmpty) {
       _remindedAppointments.removeAll(toRemove);
       _saveRemindedAppointments();
-      print('🧹 Cleaned up ${toRemove.length} old reminded appointment(s)');
+      print('🧹 Cleaned up ${toRemove.length} old reminded appointments');
     }
   }
 
   /// Manually trigger reminder check (for testing)
   Future<void> manualCheckReminders() async {
-    print('\n🔄 Manual reminder check triggered...');
+    print('\n🔄 Manual reminder check triggered for user: $userId...');
     await _checkAndSendReminders();
   }
 
@@ -336,12 +355,13 @@ class AppointmentReminderService extends GetxService {
   void clearRemindedAppointments() {
     _remindedAppointments.clear();
     _saveRemindedAppointments();
-    print('🗑️ Cleared all reminded appointments');
+    print('🗑️ Cleared all reminded appointments for user: $userId');
   }
 
   /// Get reminder statistics
   Map<String, dynamic> getReminderStats() {
     return {
+      'userId': userId,
       'isRunning': _reminderTimer != null && _reminderTimer!.isActive,
       'checkIntervalMinutes': checkInterval.inMinutes,
       'reminderWindowMinutes': reminderWindow.inMinutes,
