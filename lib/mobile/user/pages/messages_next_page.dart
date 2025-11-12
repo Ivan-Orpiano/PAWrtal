@@ -172,25 +172,25 @@ Widget build(BuildContext context) {
                     children: [
                       _buildProfileImage(40),
                       // Online status indicator
-                      Obx(() {
-                        final status = _messagingController.getUserStatus(widget.receiverId);
-                        if (status?.isOnline == true) {
-                          return Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Container(
-                              width: 12,
-                              height: 12,
-                              decoration: BoxDecoration(
-                                color: Colors.green,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 2),
-                              ),
-                            ),
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      }),
+                      // Obx(() {
+                      //   final status = _messagingController.getUserStatus(widget.receiverId);
+                      //   if (status?.isOnline == true) {
+                      //     return Positioned(
+                      //       bottom: 0,
+                      //       right: 0,
+                      //       child: Container(
+                      //         width: 12,
+                      //         height: 12,
+                      //         decoration: BoxDecoration(
+                      //           color: Colors.green,
+                      //           shape: BoxShape.circle,
+                      //           border: Border.all(color: Colors.white, width: 2),
+                      //         ),
+                      //       ),
+                      //     );
+                      //   }
+                      //   return const SizedBox.shrink();
+                      // }),
                     ],
                   ),
                   const SizedBox(width: 10),
@@ -205,16 +205,16 @@ Widget build(BuildContext context) {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Obx(() {
-                          final status = _messagingController.getUserStatus(widget.receiverId);
-                          return Text(
-                            status?.statusText ?? 'Offline',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          );
-                        }),
+                        // Obx(() {
+                        //   final status = _messagingController.getUserStatus(widget.receiverId);
+                        //   return Text(
+                        //     status?.statusText ?? 'Offline',
+                        //     style: TextStyle(
+                        //       fontSize: 12,
+                        //       color: Colors.grey[600],
+                        //     ),
+                        //   );
+                        // }),
                       ],
                     ),
                   ),

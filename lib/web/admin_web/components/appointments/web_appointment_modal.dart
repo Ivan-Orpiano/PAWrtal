@@ -428,7 +428,7 @@ class WebAppointmentModal extends StatelessWidget {
               // Keep workflow stats
               if (appointment.waitingTime != null ||
                   appointment.serviceDuration != null) ...[
-                _buildTimingStatistics(),
+                // _buildTimingStatistics(),
               ],
             ],
           ),
@@ -778,76 +778,76 @@ class WebAppointmentModal extends StatelessWidget {
     }
   }
 
-  Widget _buildTimingStatistics() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Timing Statistics',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Color.fromARGB(255, 81, 115, 153),
-            ),
-          ),
-          const SizedBox(height: 12),
-          if (appointment.waitingTime != null)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.orange[100],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.access_time, size: 18, color: Colors.orange[700]),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Waiting time: ${_formatDuration(appointment.waitingTime!)}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.orange[700],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          if (appointment.serviceDuration != null) ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.green[100],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.timer, size: 18, color: Colors.green[700]),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Service duration: ${_formatDuration(appointment.serviceDuration!)}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.green[700],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
+  // Widget _buildTimingStatistics() {
+  //   return Container(
+  //     padding: const EdgeInsets.all(16),
+  //     decoration: BoxDecoration(
+  //       color: Colors.grey[50],
+  //       borderRadius: BorderRadius.circular(12),
+  //       border: Border.all(color: Colors.grey[200]!),
+  //     ),
+  //     child: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         const Text(
+  //           'Timing Statistics',
+  //           style: TextStyle(
+  //             fontSize: 16,
+  //             fontWeight: FontWeight.bold,
+  //             color: Color.fromARGB(255, 81, 115, 153),
+  //           ),
+  //         ),
+  //         const SizedBox(height: 12),
+  //         if (appointment.waitingTime != null)
+  //           Container(
+  //             padding: const EdgeInsets.all(12),
+  //             decoration: BoxDecoration(
+  //               color: Colors.orange[100],
+  //               borderRadius: BorderRadius.circular(8),
+  //             ),
+  //             child: Row(
+  //               children: [
+  //                 Icon(Icons.access_time, size: 18, color: Colors.orange[700]),
+  //                 const SizedBox(width: 8),
+  //                 Text(
+  //                   'Waiting time: ${_formatDuration(appointment.waitingTime!)}',
+  //                   style: TextStyle(
+  //                     fontSize: 14,
+  //                     color: Colors.orange[700],
+  //                     fontWeight: FontWeight.w500,
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //         if (appointment.serviceDuration != null) ...[
+  //           const SizedBox(height: 8),
+  //           Container(
+  //             padding: const EdgeInsets.all(12),
+  //             decoration: BoxDecoration(
+  //               color: Colors.green[100],
+  //               borderRadius: BorderRadius.circular(8),
+  //             ),
+  //             child: Row(
+  //               children: [
+  //                 Icon(Icons.timer, size: 18, color: Colors.green[700]),
+  //                 const SizedBox(width: 8),
+  //                 Text(
+  //                   'Service duration: ${_formatDuration(appointment.serviceDuration!)}',
+  //                   style: TextStyle(
+  //                     fontSize: 14,
+  //                     color: Colors.green[700],
+  //                     fontWeight: FontWeight.w500,
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //         ],
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildDetailRow(IconData icon, String label, String value) {
     return Row(
@@ -931,65 +931,65 @@ class WebAppointmentModal extends StatelessWidget {
           ),
           if (appointment.waitingTime != null ||
               appointment.serviceDuration != null) ...[
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 16),
-            const Text(
-              'Timing Statistics',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color.fromARGB(255, 81, 115, 153),
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (appointment.waitingTime != null)
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.orange[100],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.access_time,
-                        size: 18, color: Colors.orange[700]),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Waiting time: ${_formatDuration(appointment.waitingTime!)}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.orange[700],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            if (appointment.serviceDuration != null) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.green[100],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.timer, size: 18, color: Colors.green[700]),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Service duration: ${_formatDuration(appointment.serviceDuration!)}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.green[700],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            const SizedBox(height: 8),
+            // const Divider(),
+            // const SizedBox(height: 16),
+            // const Text(
+            //   'Timing Statistics',
+            //   style: TextStyle(
+            //     fontSize: 16,
+            //     fontWeight: FontWeight.bold,
+            //     color: Color.fromARGB(255, 81, 115, 153),
+            //   ),
+            // ),
+            // const SizedBox(height: 12),
+            // if (appointment.waitingTime != null)
+            //   Container(
+            //     padding: const EdgeInsets.all(12),
+            //     decoration: BoxDecoration(
+            //       color: Colors.orange[100],
+            //       borderRadius: BorderRadius.circular(8),
+            //     ),
+            //     child: Row(
+            //       children: [
+            //         Icon(Icons.access_time,
+            //             size: 18, color: Colors.orange[700]),
+            //         const SizedBox(width: 8),
+            //         Text(
+            //           'Waiting time: ${_formatDuration(appointment.waitingTime!)}',
+            //           style: TextStyle(
+            //             fontSize: 14,
+            //             color: Colors.orange[700],
+            //             fontWeight: FontWeight.w500,
+            //           ),
+            //         ),
+            //       ],
+            //     ),
+            //   ),
+            // if (appointment.serviceDuration != null) ...[
+            //   const SizedBox(height: 8),
+            //   Container(
+            //     padding: const EdgeInsets.all(12),
+            //     decoration: BoxDecoration(
+            //       color: Colors.green[100],
+            //       borderRadius: BorderRadius.circular(8),
+            //     ),
+            //     child: Row(
+            //       children: [
+            //         Icon(Icons.timer, size: 18, color: Colors.green[700]),
+            //         const SizedBox(width: 8),
+            //         Text(
+            //           'Service duration: ${_formatDuration(appointment.serviceDuration!)}',
+            //           style: TextStyle(
+            //             fontSize: 14,
+            //             color: Colors.green[700],
+            //             fontWeight: FontWeight.w500,
+            //           ),
+            //         ),
+            //       ],
+            //     ),
+            //   ),
+            // ],
           ],
         ],
       ),
