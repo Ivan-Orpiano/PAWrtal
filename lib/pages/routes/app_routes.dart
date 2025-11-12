@@ -10,11 +10,13 @@ abstract class Routes {
   static const superAdminHome = _Paths.superAdminHome;
   static const login = _Paths.login;
   static const createStaff = _Paths.createStaff;
-  static const staffHome = _Paths.staffHome; // ADD THIS
+  static const staffHome = _Paths.staffHome; 
   static const oauthSuccess = _Paths.oauthSuccess;
   static const oauthFailure = _Paths.oauthFailure;
   static const oauthCallback = _Paths.oauthCallback;
   static const resetPassword = _Paths.resetPassword;
+  static const archivedAccount = _Paths.archivedAccount;
+  static const archivedClinic = _Paths.archivedClinic;
 }
 
 abstract class _Paths {
@@ -26,9 +28,11 @@ abstract class _Paths {
   static const superAdminHome = '/superAdminHome';
   static const login = '/login';
   static const createStaff = '/createStaff';
-  static const staffHome = '/staffHome'; // ADD THIS
+  static const staffHome = '/staffHome'; 
   static const oauthSuccess = '/auth/success';
   static const oauthFailure = '/auth/failure';
   static const oauthCallback = '/auth/callback';
   static const resetPassword = '/reset-password';
+  static const archivedAccount = '/archived-account';
+  static const archivedClinic = '/archived-clinic';
 }
