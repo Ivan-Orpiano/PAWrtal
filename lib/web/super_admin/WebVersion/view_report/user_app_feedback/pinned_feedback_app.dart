@@ -875,7 +875,7 @@ class _PinnedFeedbackPageState extends State<PinnedFeedbackPage> {
                               const SizedBox(width: 6),
                               _buildClickablePriorityBadge(feedback),
                               const Spacer(),
-                              _buildClickableStatusBadge(feedback),
+                             _buildStatusBadge(feedback.status),
                             ],
                           ),
                           const SizedBox(height: 10),
@@ -1051,7 +1051,7 @@ class _PinnedFeedbackPageState extends State<PinnedFeedbackPage> {
                         const SizedBox(width: 8),
                         _buildCategoryBadge(feedback.category),
                         const Spacer(),
-                        _buildClickableStatusBadge(feedback),
+                       _buildStatusBadge(feedback.status),
                       ],
                     ),
                     
@@ -1279,7 +1279,7 @@ class _PinnedFeedbackPageState extends State<PinnedFeedbackPage> {
                       const Spacer(),
                       
                       // Status Badge
-                      _buildClickableStatusBadge(feedback),
+                     _buildStatusBadge(feedback.status),
                     ],
                   ),
                   
@@ -1478,26 +1478,25 @@ class _PinnedFeedbackPageState extends State<PinnedFeedbackPage> {
               );
             }
 
-            Widget _buildClickableStatusBadge(FeedbackAndReport feedback) {
-              Color color = _getStatusColor(feedback.status);
-
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: color.withOpacity(0.3)),
+          Widget _buildStatusBadge(FeedbackStatus status) {
+            Color color = _getStatusColor(status);
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: color.withOpacity(0.3)),
+              ),
+              child: Text(
+                status.displayName,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: color,
                 ),
-                child: Text(
-                  feedback.status.displayName,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: color,
-                  ),
-                ),
-              );
-            }
+              ),
+            );
+          }
 
             Widget _buildTypeBadge(FeedbackType type) {
               Color color = _getTypeColor(type);
