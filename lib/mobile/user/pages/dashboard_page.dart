@@ -22,6 +22,19 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
     controller = Get.put(DashboardController());
+
+    // Initialize Pawmap cache in background
+    _initializePawmapCache();
+  }
+
+  Future<void> _initializePawmapCache() async {
+    // Register cache controller if not already registered
+    if (!Get.isRegistered<PawmapCache>()) {
+      Get.put(PawmapCache());
+    }
+
+    // Initialize cache in background (non-blocking)
+    PawmapCache.instance.initializeCache();
   }
 
   @override
@@ -31,7 +44,14 @@ class _DashboardPageState extends State<DashboardPage> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       body: RefreshIndicator(
-        onRefresh: () => controller.fetchClinics(),
+        onRefresh: () async {
+          await controller.fetchClinics();
+          // Also refresh Pawmap cache
+          if (Get.isRegistered<PawmapCache>()) {
+            PawmapCache.instance.clearCache();
+            await PawmapCache.instance.initializeCache();
+          }
+        },
         child: Obx(() {
           if (controller.isLoading.value) {
             return const Center(child: CircularProgressIndicator());
@@ -92,7 +112,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 const SizedBox(height: 10),
 
                 // Results Summary
-                if (controller.searchQuery.value.isNotEmpty || 
+                if (controller.searchQuery.value.isNotEmpty ||
                     controller.selectedFilter.value != 'All')
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -106,9 +126,9 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
 
                 // Clinic List
-                if (controller.filteredClinics.isEmpty && 
-                    (controller.searchQuery.value.isNotEmpty || 
-                     controller.selectedFilter.value != 'All'))
+                if (controller.filteredClinics.isEmpty &&
+                    (controller.searchQuery.value.isNotEmpty ||
+                        controller.selectedFilter.value != 'All'))
                   Center(
                     child: Padding(
                       padding: const EdgeInsets.all(32),
@@ -121,9 +141,9 @@ class _DashboardPageState extends State<DashboardPage> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            controller.searchQuery.value.isNotEmpty 
-                              ? "No clinics found for '${controller.searchQuery.value}'"
-                              : "No clinics match the selected filter",
+                            controller.searchQuery.value.isNotEmpty
+                                ? "No clinics found for '${controller.searchQuery.value}'"
+                                : "No clinics match the selected filter",
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 16,
@@ -144,17 +164,14 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                   )
                 else
-                  ...controller.filteredClinics.map((clinic) => 
-                    MyDashboardTile(
-                      clinic: clinic,
-                      clinicSettings: controller.clinicSettingsMap[clinic.documentId ?? ''],
-                      ratingStats: controller.ratingStatsCache[clinic.documentId ?? ''], // CRITICAL: Pass cached stats
-                    )
-                  ),
-                  Container(
-                    color: Colors.transparent,
-                    height: 100
-                  ),
+                  ...controller.filteredClinics.map((clinic) => MyDashboardTile(
+                        clinic: clinic,
+                        clinicSettings: controller
+                            .clinicSettingsMap[clinic.documentId ?? ''],
+                        ratingStats: controller
+                            .ratingStatsCache[clinic.documentId ?? ''],
+                      )),
+                Container(color: Colors.transparent, height: 100),
               ],
             );
           });

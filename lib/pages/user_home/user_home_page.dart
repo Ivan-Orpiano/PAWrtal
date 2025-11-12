@@ -57,18 +57,28 @@ class _UserHomePageState extends State<UserHomePage> {
       drawer: const MyDrawer(),
       body: Stack(
         children: [
-          // Page content
-          _pages[_currentIndex],
+          // Page content - show map OR current page
+          Obx(() {
+            final bool showMapView = webController?.showMapView.value ?? false;
+            
+            // If map view is active, show Pawmap regardless of current tab
+            if (showMapView) {
+              return const Pawmap();
+            }
+            
+            // Otherwise show the current page
+            return _pages[_currentIndex];
+          }),
+          
           // Bottom navigation overlay
           Stack(
             alignment: Alignment.bottomCenter,
             children: [
               // Nav bar - conditionally shown
               Obx(() {
-                // Determine if we should show the navigation bar
-                // Hide it when on dashboard (index 0) AND map view is active
+                // Hide nav bar when map view is active
                 final bool showMapView = webController?.showMapView.value ?? false;
-                final bool showNavBar = !(_currentIndex == 0 && showMapView);
+                final bool showNavBar = !showMapView;
 
                 return Stack(
                   alignment: Alignment.bottomCenter,
@@ -104,11 +114,11 @@ class _UserHomePageState extends State<UserHomePage> {
                         heroTag: "userHomeLoc",
                         shape: const CircleBorder(),
                         onPressed: () {
-                          // If on dashboard (index 0) and controller exists, toggle map view
-                          if (_currentIndex == 0 && webController != null) {
+                          // Toggle map view if controller exists
+                          if (webController != null) {
                             webController.toggleMapView();
                           } else {
-                            // Otherwise navigate to standalone Pawmap
+                            // Fallback: Navigate to standalone Pawmap
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -117,12 +127,15 @@ class _UserHomePageState extends State<UserHomePage> {
                             );
                           }
                         },
-                        child: Icon(
-                          (_currentIndex == 0 && showMapView)
-                              ? Icons.list_rounded
-                              : Icons.location_on_rounded,
-                          color: Colors.black,
-                        ),
+                        child: Obx(() {
+                          final bool showMapView = webController?.showMapView.value ?? false;
+                          return Icon(
+                            showMapView
+                                ? Icons.list_rounded
+                                : Icons.location_on_rounded,
+                            color: Colors.black,
+                          );
+                        }),
                       ),
                     )
                   ],
@@ -142,6 +155,11 @@ class _UserHomePageState extends State<UserHomePage> {
           _currentIndex = index;
         });
         widget.onItemSelected?.call(index);
+        
+        // Close map view when switching tabs
+        if (Get.isRegistered<WebUserHomeController>()) {
+          Get.find<WebUserHomeController>().setMapView(false);
+        }
       },
       icon: icon,
       iconSize: 30,
