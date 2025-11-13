@@ -243,6 +243,7 @@ class LoginController extends GetxController {
 
       // Initialize appointment reminder service (ONLY for regular users)
       if (role == "user") {
+        await authRepository.syncAuthNameOnLogin(user.$id);
         try {
           print('🔔 Initializing appointment reminder service for user...');
 

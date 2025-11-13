@@ -306,7 +306,6 @@ class _WebSettingsAndEverythingPageState
     final userRole = storage.read("role") ?? "user";
     final userPhone = storage.read("phone") ?? "09XX XXX XXXX";
     final userId = storage.read("userId") ?? "";
-    // Use the consistent key name
     final profilePictureId = storage.read("userProfilePictureId") as String?;
 
     // Initialize profile picture controller
@@ -377,7 +376,29 @@ class _WebSettingsAndEverythingPageState
             email: userEmail,
             userRole: userRole,
             showButton: true,
-            onVerificationComplete: () {
+            onVerificationComplete: () async {
+              // Sync name from verified ID
+              final userDocId = storage.read("userDocumentId") as String?;
+              if (userDocId != null) {
+                final authRepository = Get.find<AuthRepository>();
+                final synced = await authRepository
+                    .syncVerifiedNameToUserProfile(userId, userDocId);
+
+                if (synced) {
+                  final verifiedName = await authRepository
+                      .getVerifiedNameFromIdVerification(userId);
+                  if (verifiedName != null && verifiedName.isNotEmpty) {
+                    await storage.write("userName", verifiedName);
+
+                    // ✅ Also update idVerified flag in GetStorage
+                    await storage.write("idVerified", true);
+
+                    setState(() {});
+                    _showSuccess('Profile updated with verified name');
+                  }
+                }
+              }
+
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Verification submitted successfully!'),
@@ -494,6 +515,69 @@ class _WebSettingsAndEverythingPageState
                                     fontWeight: FontWeight.w700,
                                     letterSpacing: -0.5,
                                   ),
+                                ),
+                                const SizedBox(height: 6),
+// Add verification badge for name
+                                FutureBuilder<Map<String, dynamic>>(
+                                  future: Get.find<AuthRepository>()
+                                      .getUserVerificationStatus(userId),
+                                  builder: (context, snapshot) {
+                                    if (snapshot.hasData) {
+                                      final isVerified = snapshot.data?['user']
+                                              ?['idVerified'] ==
+                                          true;
+                                      final verifyByClinic =
+                                          snapshot.data?['verificationDoc']
+                                              ?['verifyByClinic'] as String?;
+                                      final isPAWrtalVerified = isVerified &&
+                                          (verifyByClinic == null ||
+                                              verifyByClinic.isEmpty);
+
+                                      if (isVerified) {
+                                        return Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 4),
+                                          margin:
+                                              const EdgeInsets.only(bottom: 6),
+                                          decoration: BoxDecoration(
+                                            color: isPAWrtalVerified
+                                                ? Colors.green.withOpacity(0.1)
+                                                : Colors.blue.withOpacity(0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                isPAWrtalVerified
+                                                    ? Icons.verified_user
+                                                    : Icons.local_hospital,
+                                                size: 12,
+                                                color: isPAWrtalVerified
+                                                    ? Colors.green[700]
+                                                    : Colors.blue[700],
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                isPAWrtalVerified
+                                                    ? 'ID Verified'
+                                                    : 'Clinic Verified',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: isPAWrtalVerified
+                                                      ? Colors.green[700]
+                                                      : Colors.blue[700],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      }
+                                    }
+                                    return const SizedBox.shrink();
+                                  },
                                 ),
                                 const SizedBox(height: 6),
                                 Row(
@@ -1632,7 +1716,7 @@ class _WebSettingsAndEverythingPageState
                               ),
                             ],
                           ),
-                        const SizedBox(height: 12),
+                          const SizedBox(height: 12),
                           Text(
                             'Images only. Max 5 images, 5MB each.',
                             style: TextStyle(
@@ -1672,9 +1756,9 @@ class _WebSettingsAndEverythingPageState
                                     Text(
                                       'Click to upload images',
                                       style: TextStyle(
-                                      color: Colors.grey[700],
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
+                                        color: Colors.grey[700],
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
@@ -1752,7 +1836,7 @@ class _WebSettingsAndEverythingPageState
                                   ),
                                 )),
                             const SizedBox(height: 8),
-                         if (feedbackController.selectedFiles.length < 5)
+                            if (feedbackController.selectedFiles.length < 5)
                               OutlinedButton.icon(
                                 onPressed: () => feedbackController.pickFiles(),
                                 icon: const Icon(Icons.add, size: 16),
@@ -2228,11 +2312,38 @@ class _WebSettingsAndEverythingPageState
     );
   }
 
-  void _showEditProfileDialog() {
+  void _showEditProfileDialog() async {
+    final userId = storage.read("userId") ?? "";
+    final userDocId = storage.read("userDocumentId") as String?;
+    final currentName = storage.read("userName") ?? "";
+
+    // Check verification status
+    final authRepository = Get.find<AuthRepository>();
+    final verificationStatus =
+        await authRepository.getUserVerificationStatus(userId);
+
+    final isVerified = verificationStatus['isVerified'] == true;
+    final isPAWrtalVerified = verificationStatus['isPAWrtalVerified'] == true;
+    final isClinicVerified = verificationStatus['isClinicVerified'] == true;
+
+    // If PAWrtal verified, sync name first
+    if (isPAWrtalVerified && userDocId != null) {
+      final synced =
+          await authRepository.syncVerifiedNameToUserProfile(userId, userDocId);
+      if (synced) {
+        final verifiedName =
+            await authRepository.getVerifiedNameFromIdVerification(userId);
+        if (verifiedName != null && verifiedName.isNotEmpty) {
+          await storage.write("userName", verifiedName);
+          setState(() {}); // Refresh UI
+          _showSuccess('Name updated from verified ID');
+        }
+      }
+    }
+
     final nameController =
         TextEditingController(text: storage.read("userName") ?? "");
 
-    // Set default to 09 if phone is empty or null
     String currentPhone = storage.read("phone") ?? "09";
     if (currentPhone.isEmpty || currentPhone.trim().isEmpty) {
       currentPhone = "09";
@@ -2243,21 +2354,18 @@ class _WebSettingsAndEverythingPageState
     final phoneError = Rx<String?>(null);
     final isLoading = false.obs;
 
-    // Phone validation function with Philippines format
+    // Phone validation
     String? validatePhone(String phone) {
       if (phone.isEmpty) {
         return 'Phone number is required';
       }
 
-      // Remove spaces for validation
       final cleanPhone = phone.replaceAll(' ', '');
 
-      // Check if it starts with 09 (Philippines mobile format)
       if (!cleanPhone.startsWith('09')) {
         return 'Please use Philippines format: 09XX XXX XXXX';
       }
 
-      // Check if it's a valid Philippine mobile format (09 followed by 9 digits = 11 total)
       if (!RegExp(r'^09\d{9}$').hasMatch(cleanPhone)) {
         return 'Invalid Philippine phone number format';
       }
@@ -2265,27 +2373,22 @@ class _WebSettingsAndEverythingPageState
       return null;
     }
 
-    // Format phone number with spaces for display
+    // Format phone number
     String formatPhoneNumber(String phone) {
-      // Remove all spaces first
       String cleaned = phone.replaceAll(' ', '');
 
-      // If empty or just "0", return "09"
       if (cleaned.isEmpty || cleaned == '0') {
         return '09';
       }
 
-      // If starts with 0 but not 09, force 09
       if (cleaned.startsWith('0') && !cleaned.startsWith('09')) {
         cleaned = '09${cleaned.substring(1)}';
       }
 
-      // If doesn't start with 0, prepend 09
       if (!cleaned.startsWith('0')) {
         cleaned = '09$cleaned';
       }
 
-      // Apply formatting: 0XXX XXX XXXX
       if (cleaned.length <= 4) {
         return cleaned;
       } else if (cleaned.length <= 7) {
@@ -2293,12 +2396,11 @@ class _WebSettingsAndEverythingPageState
       } else if (cleaned.length <= 11) {
         return '${cleaned.substring(0, 4)} ${cleaned.substring(4, 7)} ${cleaned.substring(7)}';
       } else {
-        // Limit to 11 digits
         return '${cleaned.substring(0, 4)} ${cleaned.substring(4, 7)} ${cleaned.substring(7, 11)}';
       }
     }
 
-    // Name validation function
+    // Name validation
     String? validateName(String name) {
       if (name.isEmpty) {
         return 'Name is required';
@@ -2315,9 +2417,8 @@ class _WebSettingsAndEverythingPageState
       return null;
     }
 
-    // Update profile function
+    // Update profile
     Future<void> updateProfile() async {
-      // Clear previous errors
       nameError.value = null;
       phoneError.value = null;
 
@@ -2326,14 +2427,15 @@ class _WebSettingsAndEverythingPageState
 
       bool hasError = false;
 
-      // Validate name
-      final nameValidation = validateName(name);
-      if (nameValidation != null) {
-        nameError.value = nameValidation;
-        hasError = true;
+      // Only validate name if user can edit it
+      if (!isVerified) {
+        final nameValidation = validateName(name);
+        if (nameValidation != null) {
+          nameError.value = nameValidation;
+          hasError = true;
+        }
       }
 
-      // Validate phone
       final phoneValidation = validatePhone(phone);
       if (phoneValidation != null) {
         phoneError.value = phoneValidation;
@@ -2345,41 +2447,42 @@ class _WebSettingsAndEverythingPageState
       try {
         isLoading.value = true;
 
-        final userDocId = storage.read("userDocumentId") as String?;
-
         if (userDocId == null || userDocId.isEmpty) {
           throw Exception('User document ID not found. Please log in again.');
         }
 
+        // Prepare update data
+        final updateData = <String, dynamic>{
+          'phone': phone,
+        };
 
-        // Update in Appwrite
-        final authRepository = Get.find<AuthRepository>();
+        // Only update name if user is not verified
+        if (!isVerified) {
+          updateData['name'] = name;
+        }
+
         await authRepository.updateUserProfile(
           documentId: userDocId,
-          fields: {
-            'name': name,
-            'phone': phone,
-          },
+          fields: updateData,
         );
 
+        if (!isVerified && updateData.containsKey('name')) {
+          await authRepository.updateAuthAccountName(updateData['name']);
+        }
 
-        // Update GetStorage
-        await storage.write("userName", name);
+        // Update GetStorage (name only if not verified)
+        if (!isVerified) {
+          await storage.write("userName", name);
+        }
         await storage.write("phone", phone);
-
 
         isLoading.value = false;
 
-        // Close dialog
         Navigator.of(context).pop();
-
-        // Refresh UI
         setState(() {});
 
-        // Show success message
         _showSuccess('Profile updated successfully');
 
-        // Dispose controllers
         nameController.dispose();
         phoneController.dispose();
       } catch (e) {
@@ -2438,26 +2541,124 @@ class _WebSettingsAndEverythingPageState
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Verification status banner
+                  if (isVerified) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: isPAWrtalVerified
+                              ? [Colors.green[50]!, Colors.green[100]!]
+                              : [Colors.blue[50]!, Colors.blue[100]!],
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isPAWrtalVerified
+                              ? Colors.green[300]!
+                              : Colors.blue[300]!,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            isPAWrtalVerified
+                                ? Icons.verified_user
+                                : Icons.local_hospital,
+                            color: isPAWrtalVerified
+                                ? Colors.green[700]
+                                : Colors.blue[700],
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  isPAWrtalVerified
+                                      ? 'PAWrtal Verified Account'
+                                      : 'Clinic Verified Account',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: isPAWrtalVerified
+                                        ? Colors.green[800]
+                                        : Colors.blue[800],
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  isPAWrtalVerified
+                                      ? 'Your name is locked and matches your verified ID'
+                                      : 'Your name is locked as verified by clinic staff',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isPAWrtalVerified
+                                        ? Colors.green[700]
+                                        : Colors.blue[700],
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+
                   // Name Field
                   Obx(() => TextField(
                         controller: nameController,
+                        enabled: !isVerified, // Disable if verified
                         maxLength: 100,
-                        style: const TextStyle(color: Colors.black87),
+                        style: TextStyle(
+                          color: isVerified ? Colors.grey[600] : Colors.black87,
+                        ),
                         decoration: InputDecoration(
                           labelText: 'Full Name',
                           labelStyle: TextStyle(color: Colors.grey[600]),
                           errorText: nameError.value,
                           errorMaxLines: 2,
                           counterText: '',
+                          filled: isVerified,
+                          fillColor: isVerified ? Colors.grey[100] : null,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide:
-                                const BorderSide(color: Colors.blue, width: 2),
+                            borderSide: BorderSide(
+                              color:
+                                  isVerified ? Colors.grey[300]! : Colors.blue,
+                              width: 2,
+                            ),
                           ),
-                          prefixIcon: const Icon(Icons.person_outline),
+                          disabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          prefixIcon: Icon(
+                            isVerified ? Icons.lock : Icons.person_outline,
+                            color: isVerified ? Colors.grey[500] : null,
+                          ),
+                          suffixIcon: isVerified
+                              ? Tooltip(
+                                  message: isPAWrtalVerified
+                                      ? 'Name verified by PAWrtal ID verification'
+                                      : 'Name verified by clinic staff',
+                                  child: Icon(
+                                    isPAWrtalVerified
+                                        ? Icons.verified_user
+                                        : Icons.local_hospital,
+                                    color: isPAWrtalVerified
+                                        ? Colors.green[600]
+                                        : Colors.blue[600],
+                                    size: 20,
+                                  ),
+                                )
+                              : null,
                         ),
                         onChanged: (value) {
                           if (nameError.value != null) {
@@ -2467,11 +2668,10 @@ class _WebSettingsAndEverythingPageState
                       )),
                   const SizedBox(height: 20),
 
-                  // Phone Field with PH prefix
+                  // Phone Field
                   Obx(() => TextField(
                         controller: phoneController,
-                        maxLength:
-                            13, // "0XXX XXX XXXX" = 13 characters with spaces
+                        maxLength: 13,
                         style: const TextStyle(color: Colors.black87),
                         keyboardType: TextInputType.phone,
                         decoration: InputDecoration(
@@ -2496,7 +2696,6 @@ class _WebSettingsAndEverythingPageState
                           prefixIcon: const Icon(Icons.phone_outlined),
                         ),
                         onChanged: (value) {
-                          // Format the phone number as user types
                           final formatted = formatPhoneNumber(value);
                           if (formatted != value) {
                             phoneController.value = TextEditingValue(
@@ -2513,36 +2712,37 @@ class _WebSettingsAndEverythingPageState
                   const SizedBox(height: 16),
 
                   // Info box
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: Colors.blue.withOpacity(0.2),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          size: 16,
-                          color: Colors.blue[700],
+                  if (!isVerified)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Colors.blue.withOpacity(0.2),
+                          width: 1,
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Changes will be saved to your account',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.blue[700],
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 16,
+                            color: Colors.blue[700],
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Your name can be changed until you verify your account',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.blue[700],
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -2679,14 +2879,12 @@ class _WebSettingsAndEverythingPageState
       try {
         isLoading.value = true;
 
-
         // Appwrite's updatePassword automatically verifies old password
         final authRepository = Get.find<AuthRepository>();
         await authRepository.appWriteProvider.account!.updatePassword(
           password: newPassword,
           oldPassword: currentPassword,
         );
-
 
         isLoading.value = false;
 
@@ -3039,48 +3237,48 @@ class _WebSettingsAndEverythingPageState
     );
   }
 
-         Widget _buildWebFileItemWithPreview(PlatformFile file) {
-            final extension = file.extension?.toLowerCase() ?? '';
-            final isImage =
-                ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(extension);
+  Widget _buildWebFileItemWithPreview(PlatformFile file) {
+    final extension = file.extension?.toLowerCase() ?? '';
+    final isImage =
+        ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(extension);
 
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.grey[300]!),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey[300]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Preview thumbnail
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.blue[100]!, Colors.blue[50]!],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              child: Row(
-                children: [
-                  // Preview thumbnail
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.blue[100]!, Colors.blue[50]!],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Center(
-                      child: Icon(
-                        Icons.photo_rounded,
-                        color: Colors.blue[700],
-                        size: 28,
-                      ),
-                    ),
-                  ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Center(
+              child: Icon(
+                Icons.photo_rounded,
+                color: Colors.blue[700],
+                size: 28,
+              ),
+            ),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -3099,9 +3297,9 @@ class _WebSettingsAndEverythingPageState
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                   Container(
+                    Container(
                       padding: const EdgeInsets.symmetric(
-                       horizontal: 8, vertical: 4),
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.blue.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(6),
