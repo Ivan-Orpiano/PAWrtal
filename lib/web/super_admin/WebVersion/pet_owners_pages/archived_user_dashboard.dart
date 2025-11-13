@@ -6,6 +6,7 @@ import 'package:capstone_app/web/super_admin/WebVersion/services/user_archive_se
 import 'package:intl/intl.dart';
 import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/utils/image_helper.dart'; 
+import 'package:capstone_app/data/models/user_model.dart';
 
 /// Super Admin Dashboard for Archived Users
 class ArchivedUsersDashboard extends StatefulWidget {

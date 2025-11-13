@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:appwrite/appwrite.dart';
+import 'dart:typed_data';
 import 'package:get/get.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 
