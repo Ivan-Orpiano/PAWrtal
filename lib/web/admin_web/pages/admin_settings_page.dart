@@ -72,21 +72,21 @@ You can also reschedule appointments from this view.''',
 
 Each staff member can be assigned specific authorities based on their role.''',
   ),
-  FAQItem(
-    question: 'How do I view clinic analytics?',
-    answer: '''To view your clinic analytics:
+//   FAQItem(
+//     question: 'How do I view clinic analytics?',
+//     answer: '''To view your clinic analytics:
 
-1. Go to Dashboard
-2. View appointment statistics:
-   • Total appointments
-   • This month's appointments
-   • Pending, accepted, and declined counts
-3. View staff statistics
-4. Monitor customer satisfaction through reviews
-5. Export reports for further analysis
+// 1. Go to Dashboard
+// 2. View appointment statistics:
+//    • Total appointments
+//    • This month's appointments
+//    • Pending, accepted, and declined counts
+// 3. View staff statistics
+// 4. Monitor customer satisfaction through reviews
+// 5. Export reports for further analysis
 
-Analytics update in real-time as appointments are processed.''',
-  ),
+// Analytics update in real-time as appointments are processed.''',
+//   ),
 ];
 
 class AdminSettingsPage extends StatefulWidget {
@@ -954,30 +954,30 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
             iconColor: Colors.purple,
             children: [
               _buildModernInfoTile(
-                icon: Icons.person_outline,
-                label: 'Full Name',
-                value: userName,
-                iconColor: Colors.purple,
+                icon: Icons.local_hospital_outlined,
+                label: 'Clinic Name',
+                value: clinicName,
+                iconColor: Colors.green,
               ),
+              // _buildModernInfoTile(
+              //   icon: Icons.person_outline,
+              //   label: 'Full Name',
+              //   value: userName,
+              //   iconColor: Colors.purple,
+              // ),
               _buildModernInfoTile(
                 icon: Icons.email_outlined,
                 label: 'Email Address',
                 value: userEmail, // NOW CORRECTLY SHOWS STAFF EMAIL OR "N/A"
                 iconColor: Colors.blue,
               ),
-              _buildModernInfoTile(
-                icon: Icons.local_hospital_outlined,
-                label: 'Clinic Name',
-                value: clinicName,
-                iconColor: Colors.green,
-              ),
-              _buildModernInfoTile(
-                icon: Icons.calendar_today_outlined,
-                label: 'Member Since',
-                value: userJoinDate,
-                iconColor: Colors.orange,
-                isLast: true,
-              ),
+              // _buildModernInfoTile(
+              //   icon: Icons.calendar_today_outlined,
+              //   label: 'Member Since',
+              //   value: userJoinDate,
+              //   iconColor: Colors.orange,
+              //   isLast: true,
+              // ),
             ],
           ),
 
@@ -1322,36 +1322,36 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
             ],
           ),
         ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.green[100]!, Colors.green[50]!],
-            ),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.green[200]!, width: 1),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: Colors.green[600],
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.green.withOpacity(0.5),
-                      blurRadius: 4,
-                      spreadRadius: 1,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+        // Container(
+        //   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        //   decoration: BoxDecoration(
+        //     gradient: LinearGradient(
+        //       colors: [Colors.green[100]!, Colors.green[50]!],
+        //     ),
+        //     borderRadius: BorderRadius.circular(20),
+        //     border: Border.all(color: Colors.green[200]!, width: 1),
+        //   ),
+        //   child: Row(
+        //     mainAxisSize: MainAxisSize.min,
+        //     children: [
+        //       Container(
+        //         width: 8,
+        //         height: 8,
+        //         decoration: BoxDecoration(
+        //           color: Colors.green[600],
+        //           shape: BoxShape.circle,
+        //           boxShadow: [
+        //             BoxShadow(
+        //               color: Colors.green.withOpacity(0.5),
+        //               blurRadius: 4,
+        //               spreadRadius: 1,
+        //             ),
+        //           ],
+        //         ),
+        //       ),
+        //     ],
+        //   ),
+        // ),
       ],
     );
   }
@@ -1447,59 +1447,59 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
             ],
           ),
           const SizedBox(height: 20),
-          _buildModernCard(
-            title: 'Notifications',
-            icon: Icons.notifications_outlined,
-            iconColor: Colors.orange,
-            children: [
-              _buildModernSettingTile(
-                icon: Icons.notifications_active_outlined,
-                title: 'New Appointments',
-                subtitle: 'Receive alerts for new appointment requests',
-                iconColor: Colors.orange,
-                value: true,
-              ),
-              const SizedBox(height: 12),
-              _buildModernSettingTile(
-                icon: Icons.feedback_outlined,
-                title: 'Feedback Notifications',
-                subtitle: 'Get notified about new feedback or reports',
-                iconColor: Colors.red,
-                value: true,
-              ),
-              const SizedBox(height: 12),
-              _buildModernSettingTile(
-                icon: Icons.people_outline,
-                title: 'Staff Updates',
-                subtitle: 'Notify about staff status changes',
-                iconColor: Colors.blue,
-                value: false,
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          _buildModernCard(
-            title: 'Privacy & Security',
-            icon: Icons.shield_outlined,
-            iconColor: Colors.green,
-            children: [
-              _buildModernSettingTile(
-                icon: Icons.visibility_outlined,
-                title: 'Data Visibility',
-                subtitle: 'Control what data is visible to staff',
-                iconColor: Colors.blue,
-                value: true,
-              ),
-              const SizedBox(height: 12),
-              _buildModernSettingTile(
-                icon: Icons.lock_outline,
-                title: 'Sensitive Data Protection',
-                subtitle: 'Extra security for appointment details',
-                iconColor: Colors.red,
-                value: true,
-              ),
-            ],
-          ),
+          // _buildModernCard(
+          //   title: 'Notifications',
+          //   icon: Icons.notifications_outlined,
+          //   iconColor: Colors.orange,
+          //   children: [
+          //     _buildModernSettingTile(
+          //       icon: Icons.notifications_active_outlined,
+          //       title: 'New Appointments',
+          //       subtitle: 'Receive alerts for new appointment requests',
+          //       iconColor: Colors.orange,
+          //       value: true,
+          //     ),
+          //     const SizedBox(height: 12),
+          //     _buildModernSettingTile(
+          //       icon: Icons.feedback_outlined,
+          //       title: 'Feedback Notifications',
+          //       subtitle: 'Get notified about new feedback or reports',
+          //       iconColor: Colors.red,
+          //       value: true,
+          //     ),
+          //     const SizedBox(height: 12),
+          //     _buildModernSettingTile(
+          //       icon: Icons.people_outline,
+          //       title: 'Staff Updates',
+          //       subtitle: 'Notify about staff status changes',
+          //       iconColor: Colors.blue,
+          //       value: false,
+          //     ),
+          //   ],
+          // ),
+          // const SizedBox(height: 20),
+          // _buildModernCard(
+          //   title: 'Privacy & Security',
+          //   icon: Icons.shield_outlined,
+          //   iconColor: Colors.green,
+          //   children: [
+          //     _buildModernSettingTile(
+          //       icon: Icons.visibility_outlined,
+          //       title: 'Data Visibility',
+          //       subtitle: 'Control what data is visible to staff',
+          //       iconColor: Colors.blue,
+          //       value: true,
+          //     ),
+          //     const SizedBox(height: 12),
+          //     _buildModernSettingTile(
+          //       icon: Icons.lock_outline,
+          //       title: 'Sensitive Data Protection',
+          //       subtitle: 'Extra security for appointment details',
+          //       iconColor: Colors.red,
+          //       value: true,
+          //     ),
+          //   ],
+          // ),
         ],
       ),
     );

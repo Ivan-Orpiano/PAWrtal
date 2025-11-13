@@ -634,50 +634,50 @@ class _WebSettingsAndEverythingPageState
                                         ],
                                       ),
                                     ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(colors: [
-                                          Colors.green[100]!,
-                                          Colors.green[50]!
-                                        ]),
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(
-                                            color: Colors.green[200]!,
-                                            width: 1),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Container(
-                                            width: 8,
-                                            height: 8,
-                                            decoration: BoxDecoration(
-                                              color: Colors.green[600],
-                                              shape: BoxShape.circle,
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.green
-                                                      .withOpacity(0.5),
-                                                  blurRadius: 4,
-                                                  spreadRadius: 1,
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            'Active',
-                                            style: TextStyle(
-                                              color: Colors.green[700],
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                                    // Container(
+                                    //   padding: const EdgeInsets.symmetric(
+                                    //       horizontal: 12, vertical: 6),
+                                    //   decoration: BoxDecoration(
+                                    //     gradient: LinearGradient(colors: [
+                                    //       Colors.green[100]!,
+                                    //       Colors.green[50]!
+                                    //     ]),
+                                    //     borderRadius: BorderRadius.circular(20),
+                                    //     border: Border.all(
+                                    //         color: Colors.green[200]!,
+                                    //         width: 1),
+                                    //   ),
+                                    //   child: Row(
+                                    //     mainAxisSize: MainAxisSize.min,
+                                    //     children: [
+                                    //       Container(
+                                    //         width: 8,
+                                    //         height: 8,
+                                    //         decoration: BoxDecoration(
+                                    //           color: Colors.green[600],
+                                    //           shape: BoxShape.circle,
+                                    //           boxShadow: [
+                                    //             BoxShadow(
+                                    //               color: Colors.green
+                                    //                   .withOpacity(0.5),
+                                    //               blurRadius: 4,
+                                    //               spreadRadius: 1,
+                                    //             ),
+                                    //           ],
+                                    //         ),
+                                    //       ),
+                                    //       const SizedBox(width: 6),
+                                    //       Text(
+                                    //         'Active',
+                                    //         style: TextStyle(
+                                    //           color: Colors.green[700],
+                                    //           fontSize: 11,
+                                    //           fontWeight: FontWeight.w700,
+                                    //         ),
+                                    //       ),
+                                    //     ],
+                                    //   ),
+                                    // ),
                                   ],
                                 ),
                               ],
@@ -1296,88 +1296,88 @@ class _WebSettingsAndEverythingPageState
                                 ),
                               ),
                               const SizedBox(height: 16),
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.grey[200]!),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Was this helpful?',
-                                      style: TextStyle(
-                                        color: Colors.grey[800],
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: OutlinedButton.icon(
-                                            onPressed: () => _showSuccess(
-                                                'Glad we could help!'),
-                                            icon: Icon(Icons.thumb_up_outlined,
-                                                size: 16,
-                                                color: Colors.green[700]),
-                                            label: Text('Yes',
-                                                style: TextStyle(
-                                                    color: Colors.green[700],
-                                                    fontWeight:
-                                                        FontWeight.w600)),
-                                            style: OutlinedButton.styleFrom(
-                                              side: BorderSide(
-                                                  color: Colors.green[300]!),
-                                              backgroundColor: Colors.green
-                                                  .withOpacity(0.05),
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      vertical: 10),
-                                              shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          10)),
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 10),
-                                        Expanded(
-                                          child: OutlinedButton.icon(
-                                            onPressed: () => _showInfo(
-                                                'We\'ll improve this'),
-                                            icon: Icon(
-                                                Icons.thumb_down_outlined,
-                                                size: 16,
-                                                color: Colors.grey[700]),
-                                            label: Text('No',
-                                                style: TextStyle(
-                                                    color: Colors.grey[700],
-                                                    fontWeight:
-                                                        FontWeight.w600)),
-                                            style: OutlinedButton.styleFrom(
-                                              side: BorderSide(
-                                                  color: Colors.grey[300]!),
-                                              backgroundColor:
-                                                  Colors.grey.withOpacity(0.05),
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      vertical: 10),
-                                              shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          10)),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
+                              // Container(
+                              //   padding: const EdgeInsets.all(16),
+                              //   decoration: BoxDecoration(
+                              //     color: Colors.white,
+                              //     borderRadius: BorderRadius.circular(12),
+                              //     border: Border.all(color: Colors.grey[200]!),
+                              //   ),
+                              //   child: Column(
+                              //     crossAxisAlignment: CrossAxisAlignment.start,
+                              //     children: [
+                              //       Text(
+                              //         'Was this helpful?',
+                              //         style: TextStyle(
+                              //           color: Colors.grey[800],
+                              //           fontSize: 13,
+                              //           fontWeight: FontWeight.w600,
+                              //         ),
+                              //       ),
+                              //       const SizedBox(height: 12),
+                              //       Row(
+                              //         children: [
+                              //           Expanded(
+                              //             child: OutlinedButton.icon(
+                              //               onPressed: () => _showSuccess(
+                              //                   'Glad we could help!'),
+                              //               icon: Icon(Icons.thumb_up_outlined,
+                              //                   size: 16,
+                              //                   color: Colors.green[700]),
+                              //               label: Text('Yes',
+                              //                   style: TextStyle(
+                              //                       color: Colors.green[700],
+                              //                       fontWeight:
+                              //                           FontWeight.w600)),
+                              //               style: OutlinedButton.styleFrom(
+                              //                 side: BorderSide(
+                              //                     color: Colors.green[300]!),
+                              //                 backgroundColor: Colors.green
+                              //                     .withOpacity(0.05),
+                              //                 padding:
+                              //                     const EdgeInsets.symmetric(
+                              //                         vertical: 10),
+                              //                 shape: RoundedRectangleBorder(
+                              //                     borderRadius:
+                              //                         BorderRadius.circular(
+                              //                             10)),
+                              //               ),
+                              //             ),
+                              //           ),
+                              //           const SizedBox(width: 10),
+                              //           Expanded(
+                              //             child: OutlinedButton.icon(
+                              //               onPressed: () => _showInfo(
+                              //                   'We\'ll improve this'),
+                              //               icon: Icon(
+                              //                   Icons.thumb_down_outlined,
+                              //                   size: 16,
+                              //                   color: Colors.grey[700]),
+                              //               label: Text('No',
+                              //                   style: TextStyle(
+                              //                       color: Colors.grey[700],
+                              //                       fontWeight:
+                              //                           FontWeight.w600)),
+                              //               style: OutlinedButton.styleFrom(
+                              //                 side: BorderSide(
+                              //                     color: Colors.grey[300]!),
+                              //                 backgroundColor:
+                              //                     Colors.grey.withOpacity(0.05),
+                              //                 padding:
+                              //                     const EdgeInsets.symmetric(
+                              //                         vertical: 10),
+                              //                 shape: RoundedRectangleBorder(
+                              //                     borderRadius:
+                              //                         BorderRadius.circular(
+                              //                             10)),
+                              //               ),
+                              //             ),
+                              //           ),
+                              //         ],
+                              //       ),
+                              //     ],
+                              //   ),
+                              // ),
                             ],
                           ),
                         ),
