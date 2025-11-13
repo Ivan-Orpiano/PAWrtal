@@ -2,7 +2,6 @@ import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/logout_helper.dart';
 import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
-import 'package:capstone_app/web/admin_web/components/appointments/appointment_view_mode.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/admin_web_appointment_controller.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/web_appointment_stats.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/web_appointment_tile.dart';

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:capstone_app/pages/routes/app_pages.dart';
-import 'package:flutter/services.dart';
 
 class MobileMain extends StatefulWidget {
   const MobileMain({super.key});

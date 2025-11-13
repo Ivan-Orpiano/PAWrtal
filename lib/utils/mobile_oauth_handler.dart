@@ -11,7 +11,6 @@ import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:async';
-import 'dart:math' as Math;
 
 /// Handles OAuth for mobile using Appwrite SDK's built-in OAuth
 /// Includes FCM push notifications, in-app notifications, and all login features

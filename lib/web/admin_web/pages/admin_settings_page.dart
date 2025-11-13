@@ -1,5 +1,4 @@
 import 'package:appwrite/appwrite.dart';
-import 'package:appwrite/models.dart' hide User;
 import 'package:capstone_app/data/models/feedback_and_report_model.dart';
 import 'package:capstone_app/data/models/staff_model.dart';
 import 'package:capstone_app/data/models/user_model.dart';
@@ -15,7 +14,6 @@ import 'package:capstone_app/web/admin_web/components/appbar/staff_change_pass_c
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:capstone_app/utils/logout_helper.dart';
 
