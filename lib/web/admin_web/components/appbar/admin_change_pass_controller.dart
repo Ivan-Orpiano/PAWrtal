@@ -60,6 +60,8 @@ class AdminChangePasswordController extends GetxController {
     if (value == null || value.isEmpty) {
       return 'Please enter your current password';
     }
+    // No format validation - just check it's not empty
+    // The actual password matching will be verified by Appwrite server
     return null;
   }
 
@@ -93,10 +95,7 @@ class AdminChangePasswordController extends GetxController {
       return 'Password must contain at least one special character';
     }
 
-    if (value == currentPasswordController.text) {
-      return 'New password must be different from current password';
-    }
-
+    // Don't compare with current password here
     return null;
   }
 
@@ -173,7 +172,7 @@ class AdminChangePasswordController extends GetxController {
 
   Future<bool> changePassword() async {
     try {
-      // Validate form
+      // Validate form (only checks empty fields and new password format)
       if (!formKey.currentState!.validate()) {
         return false;
       }
@@ -181,18 +180,17 @@ class AdminChangePasswordController extends GetxController {
       isLoading.value = true;
       errorMessage.value = '';
 
-
       final currentPassword = currentPasswordController.text.trim();
       final newPassword = newPasswordController.text.trim();
 
       final account = Account(authRepository.appWriteProvider.appwriteClient);
 
-      // Appwrite's updatePassword only needs new password and old password
+      // This is where the REAL current password verification happens
+      // Appwrite will check if currentPassword matches the user's actual password
       await account.updatePassword(
         password: newPassword,
         oldPassword: currentPassword,
       );
-
 
       isLoading.value = false;
       errorMessage.value = '';
@@ -202,31 +200,35 @@ class AdminChangePasswordController extends GetxController {
 
       return true;
     } on AppwriteException catch (e) {
-
       isLoading.value = false;
 
-      // Handle specific Appwrite errors
-      if (e.code == 401 || e.type == 'user_invalid_credentials') {
+      // Handle specific Appwrite errors - focus on wrong password detection
+      if (e.code == 401) {
+        // 401 Unauthorized = Wrong current password
         errorMessage.value = 'Current password is incorrect. Please try again.';
-      } else if (e.code == 400 || e.type == 'general_argument_invalid') {
-        errorMessage.value =
-            'Invalid password format. Please check the requirements.';
+      } else if (e.type == 'user_invalid_credentials') {
+        // Invalid credentials = Wrong current password
+        errorMessage.value = 'Current password is incorrect. Please try again.';
       } else if (e.message?.toLowerCase().contains('password') == true &&
-          e.message?.toLowerCase().contains('wrong') == true) {
+          (e.message?.toLowerCase().contains('wrong') == true ||
+              e.message?.toLowerCase().contains('incorrect') == true ||
+              e.message?.toLowerCase().contains('invalid') == true)) {
+        // Error message explicitly mentions wrong password
         errorMessage.value = 'Current password is incorrect. Please try again.';
-      } else if (e.message?.toLowerCase().contains('session') == true) {
+      } else if (e.type == 'user_invalid_token' ||
+          e.type == 'user_session_not_found') {
+        // Session errors
         errorMessage.value = 'Session expired. Please log in again.';
       } else {
+        // Any other error
         errorMessage.value =
             e.message ?? 'Failed to change password. Please try again.';
       }
 
       return false;
     } catch (e) {
-
       isLoading.value = false;
       errorMessage.value = 'An unexpected error occurred. Please try again.';
-
       return false;
     }
   }

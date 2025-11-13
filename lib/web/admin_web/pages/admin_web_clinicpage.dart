@@ -5,10 +5,13 @@ import 'package:capstone_app/web/admin_web/components/clinic/admin_pin_maps_page
 import 'package:capstone_app/web/admin_web/components/clinic/admin_clinic_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 class AdminWebClinicpage extends StatefulWidget {
-  const AdminWebClinicpage({super.key});
+  const AdminWebClinicpage({super.key, this.initialTabIndex = 0});
+
+  final int initialTabIndex;
 
   @override
   State<AdminWebClinicpage> createState() => _AdminWebClinicpageState();
@@ -27,10 +30,16 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
   @override
   void initState() {
     super.initState();
-    _initializeTabController();
+
+    // Check if there's a stored initial tab index
+    final storage = GetStorage();
+    final storedTabIndex = storage.read('clinicPageInitialTab') as int?;
+
+    _initializeTabController(
+        initialTab: storedTabIndex ?? widget.initialTabIndex);
   }
 
-  void _initializeTabController() {
+  void _initializeTabController({int initialTab = 0}) {
     try {
       // CRITICAL FIX: Delete old controller if it exists to prevent stale data
       if (Get.isRegistered<ClinicSettingsController>()) {
@@ -46,11 +55,15 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
         permanent: false, // CHANGED: Don't persist across logins
       );
 
-      _tabController = TabController(length: 3, vsync: this);
+      _tabController = TabController(
+        length: 3,
+        vsync: this,
+        initialIndex: initialTab, // ✅ Use the initial tab parameter
+      );
+
       setState(() {
         _initialized = true;
       });
-
     } catch (e) {
       setState(() {
         _initialized = false;
@@ -928,7 +941,8 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                               ),
                               const SizedBox(height: 8),
                               Obx(() => DropdownButtonFormField<int>(
-                                    value: controller.appointmentDuration.value,
+                                    initialValue:
+                                        controller.appointmentDuration.value,
                                     decoration: const InputDecoration(
                                       border: OutlineInputBorder(),
                                       suffixText: "minutes",
@@ -964,7 +978,8 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                               ),
                               const SizedBox(height: 8),
                               Obx(() => DropdownButtonFormField<int>(
-                                    value: controller.maxAdvanceBooking.value,
+                                    initialValue:
+                                        controller.maxAdvanceBooking.value,
                                     decoration: const InputDecoration(
                                       border: OutlineInputBorder(),
                                       suffixText: "days",
@@ -1037,7 +1052,8 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                                 ),
                                 const SizedBox(height: 8),
                                 Obx(() => DropdownButtonFormField<int>(
-                                      value: controller.maxAdvanceBooking.value,
+                                      initialValue:
+                                          controller.maxAdvanceBooking.value,
                                       decoration: const InputDecoration(
                                         border: OutlineInputBorder(),
                                         suffixText: "days",
