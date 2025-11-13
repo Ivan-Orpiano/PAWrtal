@@ -145,7 +145,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
+          gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [Colors.white, backgroundColor],
@@ -479,10 +479,10 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: darkRed.withOpacity(0.3)),
                     ),
-                    child: Row(
+                    child: const Row(
                       children: [
                         Icon(Icons.info_outline, color: darkRed, size: 20),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             'This action is IRREVERSIBLE and will permanently remove all data.',
@@ -510,7 +510,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
                       onPressed: () => Navigator.pop(context, false),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        side: BorderSide(color: primaryColor),
+                        side: const BorderSide(color: primaryColor),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -634,7 +634,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
                 color: successGreen.withOpacity(0.2),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.check_circle, color: successGreen),
+              child: const Icon(Icons.check_circle, color: successGreen),
             ),
             const SizedBox(width: 12),
             const Text('No Deletions Needed'),
@@ -678,7 +678,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
           child: Container(
             constraints: const BoxConstraints(maxWidth: 550),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
+              gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [Colors.white, backgroundColor],
@@ -821,7 +821,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 child: Row(
                                   children: [
-                                    Icon(Icons.person, size: 16, color: darkRed),
+                                    const Icon(Icons.person, size: 16, color: darkRed),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
@@ -857,11 +857,11 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
+                            const Row(
                               children: [
                                 Icon(Icons.keyboard, color: warningOrange, size: 20),
-                                const SizedBox(width: 8),
-                                const Text(
+                                SizedBox(width: 8),
+                                Text(
                                   'Type the following to confirm:',
                                   style: TextStyle(
                                     fontSize: 14,
@@ -881,7 +881,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
                               ),
                               child: SelectableText(
                                 confirmText,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   color: darkRed,
@@ -950,7 +950,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
                           },
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            side: BorderSide(color: primaryColor),
+                            side: const BorderSide(color: primaryColor),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -1040,7 +1040,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  SizedBox(
+                  const SizedBox(
                     width: 50,
                     height: 50,
                     child: CircularProgressIndicator(
@@ -1087,7 +1087,7 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
           children: [
             Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [successGreen, accentTeal],
                 ),
@@ -1126,11 +1126,11 @@ class _ArchivedUsersDashboardState extends State<ArchivedUsersDashboard> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: successGreen.withOpacity(0.3)),
               ),
-              child: Row(
+              child: const Row(
                 children: [
                   Icon(Icons.info_outline, color: successGreen, size: 20),
-                  const SizedBox(width: 8),
-                  const Expanded(
+                  SizedBox(width: 8),
+                  Expanded(
                     child: Text(
                       'All expired archived users have been permanently deleted.',
                       style: TextStyle(fontSize: 12),
@@ -1471,7 +1471,7 @@ Widget _buildResultRow({
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
+                    gradient: const LinearGradient(
                       colors: [Colors.white, backgroundColor],
                     ),
                     borderRadius: BorderRadius.circular(16),
@@ -1514,7 +1514,7 @@ Widget _buildResultRow({
               const SizedBox(width: 12),
               Container(
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
+                  gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [primaryColor, accentTeal],
@@ -1812,11 +1812,11 @@ Widget _buildResultRow({
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: vetGreen.withOpacity(0.3)),
                       ),
-                      child: Row(
+                      child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.verified_user, color: vetGreen, size: 12),
-                          const SizedBox(width: 4),
+                          SizedBox(width: 4),
                           Text(
                             'Verified',
                             style: TextStyle(
@@ -1911,7 +1911,7 @@ Widget _buildResultRow({
                   width: double.infinity,
                   child: Container(
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
+                      gradient: const LinearGradient(
                         colors: [successGreen, accentTeal],
                       ),
                       borderRadius: BorderRadius.circular(8),

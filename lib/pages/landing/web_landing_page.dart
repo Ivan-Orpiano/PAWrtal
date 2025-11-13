@@ -680,8 +680,9 @@ class _LandingDashboardContent extends StatelessWidget {
     String serviceLower = service.toLowerCase();
     if (serviceLower.contains('vaccination')) return Icons.vaccines_outlined;
     if (serviceLower.contains('surgery')) return Icons.local_hospital_outlined;
-    if (serviceLower.contains('checkup'))
+    if (serviceLower.contains('checkup')) {
       return Icons.health_and_safety_outlined;
+    }
     if (serviceLower.contains('grooming')) return Icons.pets_outlined;
     if (serviceLower.contains('dental')) return Icons.medication_outlined;
     return Icons.medical_services_outlined;

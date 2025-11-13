@@ -160,15 +160,15 @@ class WebAppointmentModal extends StatelessWidget {
                             color: Colors.purple.withOpacity(0.3),
                           ),
                         ),
-                        child: Row(
+                        child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.person,
                               size: 18,
                               color: Colors.purple,
                             ),
-                            const SizedBox(width: 4),
+                            SizedBox(width: 4),
                             Text(
                               'Owner Details',
                               style: TextStyle(
@@ -197,21 +197,21 @@ class WebAppointmentModal extends StatelessWidget {
                             color: const Color(0xFF3498DB).withOpacity(0.3),
                           ),
                         ),
-                        child: Row(
+                        child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.credit_card,
                               size: 18,
                               color: Color(0xFF3498DB),
                             ),
-                            const SizedBox(width: 4),
+                            SizedBox(width: 4),
                             Text(
                               'View Card',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
-                                color: const Color(0xFF3498DB),
+                                color: Color(0xFF3498DB),
                               ),
                             ),
                           ],
@@ -338,7 +338,7 @@ class WebAppointmentModal extends StatelessWidget {
         return;
       }
 
-      if (clinicId == null || clinicId.isEmpty) {
+      if (clinicId.isEmpty) {
         SnackbarHelper.showError(
           context: Get.context!,
           title: "Clinic Error",
@@ -368,7 +368,7 @@ class WebAppointmentModal extends StatelessWidget {
         context: Get.context!,
         builder: (context) => WebAppointmentModal(appointment: appointment),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       // Close loading indicator if still open
       if (Get.isDialogOpen ?? false) {
         Get.back();
@@ -764,7 +764,7 @@ class WebAppointmentModal extends StatelessWidget {
           ownerName: ownerName,
         ),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       // Close loading indicator if still open
       if (Get.isDialogOpen ?? false) {
         Get.back();
@@ -1325,10 +1325,10 @@ class WebAppointmentModal extends StatelessWidget {
                     const SizedBox(height: 16),
                     TextField(
                       controller: customReasonController,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'Custom reason (optional)',
                         hintText: 'Enter additional details...',
-                        border: const OutlineInputBorder(),
+                        border: OutlineInputBorder(),
                       ),
                       maxLines: 3,
                       maxLength: 200,
@@ -1502,7 +1502,7 @@ class WebAppointmentModal extends StatelessWidget {
         context: Get.context!,
         builder: (context) => WebAppointmentModal(appointment: appointment),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       // Close loading indicator if still open
       if (Get.isDialogOpen ?? false) {
         Get.back();

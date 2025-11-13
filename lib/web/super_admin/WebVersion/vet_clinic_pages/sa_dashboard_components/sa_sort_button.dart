@@ -25,7 +25,7 @@ class _SuperAdminSortButtonState extends State<SuperAdminSortButton> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [primaryColor, accentTeal],
@@ -59,7 +59,7 @@ class _SuperAdminSortButtonState extends State<SuperAdminSortButton> {
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
+          gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [Colors.white, backgroundColor],

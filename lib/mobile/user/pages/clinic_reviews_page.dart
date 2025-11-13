@@ -359,10 +359,10 @@ class _ReviewCard extends StatelessWidget {
         double starFill = (rating - index).clamp(0.0, 1.0);
         return Stack(
           children: [
-            Icon(Icons.star_border_rounded, size: 16, color: Colors.amber),
+            const Icon(Icons.star_border_rounded, size: 16, color: Colors.amber),
             ClipRect(
               clipper: _StarClipper(starFill),
-              child: Icon(Icons.star_rounded, size: 16, color: Colors.amber),
+              child: const Icon(Icons.star_rounded, size: 16, color: Colors.amber),
             ),
           ],
         );

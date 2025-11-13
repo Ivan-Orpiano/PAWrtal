@@ -3,7 +3,7 @@ import 'package:capstone_app/utils/security_monitor.dart';
 import 'package:intl/intl.dart';
 
 class SecurityDashboard extends StatefulWidget {
-  const SecurityDashboard({Key? key}) : super(key: key);
+  const SecurityDashboard({super.key});
 
   @override
   State<SecurityDashboard> createState() => _SecurityDashboardState();
@@ -304,7 +304,7 @@ class _SecurityDashboardState extends State<SecurityDashboard> {
                   ],
                 ),
               );
-            }).toList(),
+            }),
         ],
       ),
     );

@@ -104,7 +104,6 @@ class WebAppointmentController extends GetxController {
         final petDocs = await authRepository.getUserPets(userId);
         pets.assignAll(petDocs.map((doc) => Pet.fromMap(doc.data)).toList());
       }
-    } catch (e) {
     } finally {
       isLoading.value = false;
     }
@@ -580,7 +579,7 @@ class WebAppointmentController extends GetxController {
       }
 
       return null;
-    } catch (e, stackTrace) {
+    } catch (e) {
       return null;
     }
   }

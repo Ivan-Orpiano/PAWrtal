@@ -30,7 +30,7 @@ class WebLandingClinicPage extends StatefulWidget {
 
 class _WebLandingClinicPageState extends State<WebLandingClinicPage> {
   final ScrollController _scrollController = ScrollController();
-  bool _showWidget = false;
+  final bool _showWidget = false;
   bool _showAppointmentPanel = false;
 
   final galleryKey = GlobalKey();
@@ -468,9 +468,9 @@ class _WebLandingClinicPageState extends State<WebLandingClinicPage> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF5173B8),
-                          borderRadius: const BorderRadius.only(
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF5173B8),
+                          borderRadius: BorderRadius.only(
                             topLeft: Radius.circular(16),
                             topRight: Radius.circular(16),
                           ),
@@ -580,14 +580,14 @@ class _WebLandingClinicPageState extends State<WebLandingClinicPage> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        title: Row(
+        title: const Row(
           children: [
-            const Icon(
+            Icon(
               Icons.login,
               color: Color(0xFF517399),
             ),
-            const SizedBox(width: 12),
-            const Text('Login Required'),
+            SizedBox(width: 12),
+            Text('Login Required'),
           ],
         ),
         content: Text(

@@ -6,7 +6,6 @@ import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/vet_cli
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_hover_underline_text.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/vet_rating_reviews.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterinary_clinics/crude_staff_account.dart';
-import 'package:capstone_app/web/super_admin/desktop/super_admin_desktop_home_page.dart';
 import 'package:flutter/material.dart';
 
 class SuperAdminVetClinicPage extends StatefulWidget {

@@ -580,7 +580,7 @@ class PetCardCreation extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: controller.genderController.text.isEmpty
+            initialValue: controller.genderController.text.isEmpty
                 ? null
                 : controller.genderController.text,
             decoration: InputDecoration(

@@ -321,7 +321,7 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
       final allFeedback = await authRepository.getUserFeedback(userId);
 
       final now = DateTime.now();
-      final last24Hours = now.subtract(Duration(hours: 24));
+      final last24Hours = now.subtract(const Duration(hours: 24));
 
       // Count reports in last 24 hours
       final recentReports = allFeedback.where((feedback) {
@@ -330,7 +330,7 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
 
 
       // Find the oldest report timestamp to use as reset time
-      DateTime lastResetAt = now.subtract(Duration(hours: 24));
+      DateTime lastResetAt = now.subtract(const Duration(hours: 24));
       DateTime? lastReportAt;
 
       if (recentReports.isNotEmpty) {
@@ -355,7 +355,6 @@ void _handleFeedbackDeleted(RealtimeMessage event) {
         dailyTracker.value = tracker;
       }
 
-    } catch (e) {
     } finally {
       isCheckingLimit.value = false;
     }
@@ -631,9 +630,9 @@ bool _validateFile(PlatformFile file) {
         attachmentIds = uploadedFiles.map((f) => f.$id).toList();
       }
 
-      final platform = 'web';
-      final appVersion = '1.0.0';
-      final deviceInfo = 'Web Browser';
+      const platform = 'web';
+      const appVersion = '1.0.0';
+      const deviceInfo = 'Web Browser';
       final now = DateTime.now();
 
       final feedback = FeedbackAndReport(
@@ -679,7 +678,7 @@ bool _validateFile(PlatformFile file) {
       _showSuccess("Feedback submitted! ($remaining reports remaining today)");
 
       return true;
-    } catch (e, stackTrace) {
+    } catch (e) {
       _showError("Failed to submit feedback. Please try again.");
       return false;
     } finally {

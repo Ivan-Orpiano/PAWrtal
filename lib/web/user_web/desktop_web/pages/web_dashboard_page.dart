@@ -225,7 +225,7 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
           _cacheTimestamps['dashboard'] = DateTime.now();
         });
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       if (mounted) {
         setState(() {
           error = "Failed to load clinics data";

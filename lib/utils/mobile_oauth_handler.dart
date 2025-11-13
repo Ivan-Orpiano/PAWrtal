@@ -42,7 +42,7 @@ class MobileOAuthHandler {
 
       // Start polling for session establishment
       return await _pollForSession();
-    } catch (e, stackTrace) {
+    } catch (e) {
 
       _handleOAuthFailure();
       return false;
@@ -77,7 +77,7 @@ class MobileOAuthHandler {
         // Try to get the user - this will succeed if session exists
         final user = await testAccount.get();
 
-        if (user != null && user.$id.isNotEmpty) {
+        if (user.$id.isNotEmpty) {
 
           // CRITICAL: Replace the global AppWriteProvider's client with fresh one
           final appwriteProvider = Get.find<AppWriteProvider>();
@@ -203,7 +203,7 @@ class MobileOAuthHandler {
           }
         } else {
         }
-      } catch (e, stack) {
+      } catch (e) {
         // Don't fail login if FCM registration fails
       }
 
@@ -235,7 +235,7 @@ class MobileOAuthHandler {
         margin: const EdgeInsets.all(16),
       );
 
-    } catch (e, stackTrace) {
+    } catch (e) {
 
       _closeLoadingDialog();
       _handleOAuthFailure();

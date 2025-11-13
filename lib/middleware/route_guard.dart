@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:capstone_app/pages/routes/app_pages.dart';
-import 'package:capstone_app/utils/web_error_handler.dart';
 
 class RouteGuard extends GetMiddleware {
   final GetStorage _storage = GetStorage();

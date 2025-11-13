@@ -442,7 +442,6 @@ class InAppNotificationService extends GetxService {
 
       // Update unread count
       unreadCount.value = notifications.where((n) => n.isUnread).length;
-    } catch (e) {
     } finally {
       isLoading.value = false;
     }

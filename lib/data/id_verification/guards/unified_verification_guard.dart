@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/web/user_web/responsive_page_handlers/web_settings_and_everything_page_handler.dart';
-import 'package:get/get.dart';
 
 /// Unified guard for checking user verification before allowing features
 class UnifiedVerificationGuard {

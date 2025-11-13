@@ -74,7 +74,7 @@ class AdminPetCardViewController extends GetxController {
         for (var record in records) {
         }
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       medicalRecords.clear();
     } finally {
       isLoadingMedicalRecords.value = false;
@@ -162,7 +162,7 @@ class AdminPetCardViewController extends GetxController {
       // Return the user's name
       vetNamesCache[vetId] = userName;
       return userName;
-    } catch (e, stackTrace) {
+    } catch (e) {
       vetNamesCache[vetId] = 'Unknown';
       return 'Unknown';
     }
@@ -239,7 +239,7 @@ class AdminPetCardViewController extends GetxController {
       } else {
       }
 
-    } catch (e, stackTrace) {
+    } catch (e) {
     }
   }
 }

@@ -257,11 +257,11 @@ class SuperAdminDesktopHomePage extends GetView<WebSuperAdminHomeController> {
               color: const Color.fromRGBO(81, 115, 153, 0.2),
               width: 1.5,
             ),
-            boxShadow: [
+            boxShadow: const [
               BoxShadow(
-                color: const Color.fromRGBO(81, 115, 153, 0.1),
+                color: Color.fromRGBO(81, 115, 153, 0.1),
                 blurRadius: 8,
-                offset: const Offset(0, 2),
+                offset: Offset(0, 2),
               ),
             ],
           ),

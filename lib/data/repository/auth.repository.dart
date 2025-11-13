@@ -271,7 +271,7 @@ class AuthRepository {
       }).toList();
 
       return records;
-    } catch (e, stackTrace) {
+    } catch (e) {
       return [];
     }
   }
@@ -1771,7 +1771,7 @@ class AuthRepository {
       }).toList();
 
       return requests;
-    } catch (e, stackTrace) {
+    } catch (e) {
       return [];
     }
   }

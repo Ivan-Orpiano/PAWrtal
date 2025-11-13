@@ -154,7 +154,7 @@ Widget build(BuildContext context) {
                                     ),
                                   ),
                                   const SizedBox(width: 6),
-                                  Text(
+                                  const Text(
                                     "In Progress",
                                     style: TextStyle(
                                       fontSize: 11,

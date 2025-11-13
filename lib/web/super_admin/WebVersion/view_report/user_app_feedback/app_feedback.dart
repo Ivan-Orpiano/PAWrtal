@@ -952,7 +952,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
-      value: selectedValue,
+      initialValue: selectedValue,
       items: [
         DropdownMenuItem<T>(
           value: null,
@@ -1434,8 +1434,9 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                         final isRedundant =
                             snapshot.data!['isRedundant'] ?? false;
 
-                        if (!isSpam && !isRedundant)
+                        if (!isSpam && !isRedundant) {
                           return const SizedBox.shrink();
+                        }
 
                         return Row(
                           mainAxisSize: MainAxisSize.min,
@@ -2756,7 +2757,7 @@ Widget _buildMiniTypeBadge(FeedbackType type) {
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
         child: Container(
-          constraints: BoxConstraints(
+          constraints: const BoxConstraints(
             maxWidth: 800,
             maxHeight: 600,
           ),
@@ -3147,7 +3148,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
         Expanded(
           child: DropdownButtonFormField<FeedbackStatus>(
             dropdownColor: const Color.fromRGBO(248, 253, 255, 1),
-            value: widget.feedback.status,
+            initialValue: widget.feedback.status,
             decoration: InputDecoration(
               labelText: 'Update Status',
               border: OutlineInputBorder(
@@ -3177,7 +3178,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
         Expanded(
           child: DropdownButtonFormField<Priority>(
             dropdownColor: const Color.fromRGBO(248, 253, 255, 1),
-            value: widget.feedback.priority,
+            initialValue: widget.feedback.priority,
             decoration: InputDecoration(
               labelText: 'Update Priority',
               border: OutlineInputBorder(

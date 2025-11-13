@@ -513,7 +513,7 @@ class AppWriteProvider {
       }
 
       return allDocs;
-    } catch (e, st) {
+    } catch (e) {
       return [];
     }
   }
@@ -626,7 +626,7 @@ class AppWriteProvider {
       }
 
       return allDocs;
-    } catch (e, st) {
+    } catch (e) {
       return [];
     }
   }
@@ -1338,7 +1338,7 @@ class AppWriteProvider {
           Query.equal('senderId', senderId),
           Query.equal('messageText', messageText),
           Query.greaterThan('timestamp',
-              DateTime.now().subtract(Duration(seconds: 3)).toIso8601String()),
+              DateTime.now().subtract(const Duration(seconds: 3)).toIso8601String()),
           Query.limit(1),
         ],
       );
@@ -2128,8 +2128,9 @@ class AppWriteProvider {
     if (department != null) updateData['department'] = department;
     if (image != null) updateData['image'] = image;
     if (phone != null) updateData['phone'] = phone;
-    if (isDoctor != null)
+    if (isDoctor != null) {
       updateData['isDoctor'] = isDoctor; // NEW: Include isDoctor
+    }
     if (authorities != null) updateData['authorities'] = authorities;
 
     return await databases!.updateDocument(
@@ -3296,7 +3297,7 @@ class AppWriteProvider {
         data['\$id'] = doc.$id;
         return data;
       }).toList();
-    } catch (e, stackTrace) {
+    } catch (e) {
       return [];
     }
   }
@@ -5028,7 +5029,7 @@ class AppWriteProvider {
       if (result.documents.isNotEmpty) {}
 
       return result.documents;
-    } catch (e, stackTrace) {
+    } catch (e) {
       return [];
     }
   }
@@ -5577,7 +5578,7 @@ class AppWriteProvider {
           Query.equal('senderId', clinicId),
           Query.equal('messageText', responseText),
           Query.greaterThan('timestamp',
-              DateTime.now().subtract(Duration(seconds: 5)).toIso8601String()),
+              DateTime.now().subtract(const Duration(seconds: 5)).toIso8601String()),
           Query.limit(1),
         ],
       );
@@ -6034,7 +6035,7 @@ class AppWriteProvider {
         data['updatedAt'] = doc.$updatedAt;
         return data;
       }).toList();
-    } catch (e, stackTrace) {
+    } catch (e) {
       return [];
     }
   }
@@ -6214,7 +6215,7 @@ class AppWriteProvider {
         data['updatedAt'] = doc.$updatedAt;
         return data;
       }).toList();
-    } catch (e, stackTrace) {
+    } catch (e) {
       return [];
     }
   }
@@ -6476,8 +6477,8 @@ class AppWriteProvider {
       // Filter dates within the specified range
       final filteredDates = allClosedDates.where((dateStr) {
         final date = DateTime.parse(dateStr);
-        return date.isAfter(startDate.subtract(Duration(days: 1))) &&
-            date.isBefore(endDate.add(Duration(days: 1)));
+        return date.isAfter(startDate.subtract(const Duration(days: 1))) &&
+            date.isBefore(endDate.add(const Duration(days: 1)));
       }).toList();
 
       return filteredDates;
@@ -6699,7 +6700,7 @@ class AppWriteProvider {
     try {
       // CRITICAL: Appwrite will append ?userId=xxx&secret=xxx to this URL
       // We need to use a URL format that works with Flutter web hash routing
-      final baseUrl = kIsWeb
+      const baseUrl = kIsWeb
           ? 'https://www.pawrtal.online' // Production web URL
           : 'http://localhost:3000'; // Local development URL
 
