@@ -1,6 +1,7 @@
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:capstone_app/data/models/appointment_model.dart';
+import 'package:capstone_app/web/admin_web/components/appointments/admin_web_appointment_controller.dart';
 import 'package:capstone_app/web/admin_web/components/dashboard/admin_dashboard_controller.dart';
 import 'package:capstone_app/web/pages/web_admin_home/web_admin_home_controller.dart';
 import 'package:flutter/material.dart';
@@ -52,7 +53,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
 
     // CRITICAL: Only create controller if it doesn't exist
     if (!Get.isRegistered<AdminDashboardController>()) {
-
       controller = Get.put(
         AdminDashboardController(
           authRepository: Get.find<AuthRepository>(),
@@ -81,8 +81,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         await authRepo.migrateExistingStaffRecords();
 
         storage.write('staff_migration_completed', true);
-      } catch (e) {
-      }
+      } catch (e) {}
     }
   }
 
@@ -303,225 +302,236 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
   }
 
   Widget _buildHeader(AdminDashboardController controller, bool isMobile) {
-    return Container(
-      padding: EdgeInsets.all(isMobile ? 20 : 24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color.fromARGB(255, 81, 115, 153),
-            Colors.blue.shade400,
+    // Get the appointment controller
+    final appointmentController = Get.find<WebAppointmentController>();
+
+    return Obx(() {
+      // Get today's count from appointment controller stats
+      final todayCount = appointmentController.appointmentStats['today'] ?? 0;
+
+      return Container(
+        padding: EdgeInsets.all(isMobile ? 20 : 24),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color.fromARGB(255, 81, 115, 153),
+              Colors.blue.shade400,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.2),
+              spreadRadius: 2,
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            spreadRadius: 2,
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.dashboard_rounded,
-                    color: Colors.white, size: 32),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      controller.clinicData.value?.clinicName ??
-                          'Admin Dashboard',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: isMobile ? 20 : 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      DateFormat('EEEE, MMMM dd, yyyy').format(DateTime.now()),
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: isMobile ? 14 : 16,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (!isMobile && _canAccessFeature('appointments')) ...[
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
+                  child: const Icon(Icons.dashboard_rounded,
+                      color: Colors.white, size: 32),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.pets, color: Colors.white, size: 24),
-                      const SizedBox(height: 8),
                       Text(
-                        '${controller.todayAppointments.length}',
-                        style: const TextStyle(
+                        controller.clinicData.value?.clinicName ??
+                            'Admin Dashboard',
+                        style: TextStyle(
                           color: Colors.white,
-                          fontSize: 20,
+                          fontSize: isMobile ? 20 : 24,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
-                        "Today's Patients",
+                        DateFormat('EEEE, MMMM dd, yyyy')
+                            .format(DateTime.now()),
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.8),
-                          fontSize: 12,
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: isMobile ? 14 : 16,
                         ),
                       ),
                     ],
                   ),
                 ),
+                if (!isMobile && _canAccessFeature('appointments')) ...[
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.pets, color: Colors.white, size: 24),
+                        const SizedBox(height: 8),
+                        Text(
+                          '$todayCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          "Today's Patients",
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.8),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
-            ],
-          ),
-        ],
-      ),
-    );
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildQuickStats(
       AdminDashboardController controller, bool isMobile, bool isTablet) {
-    final stats = [
-      {
-        'title': 'Today\'s Appointments',
-        'value': controller.todayAppointments.length.toString(),
-        'subtitle': 'Scheduled today',
-        'icon': Icons.event_available,
-        'color': Colors.blue,
-        'permission': 'appointments',
-        'onTap': () => _handleNavigateToAppointments('today'),
-      },
-      {
-        'title': 'Pending Appointments',
-        'value': controller.pendingCount.toString(),
-        'subtitle': 'Need approval',
-        'icon': Icons.pending_actions,
-        'color': Colors.orange,
-        'permission': 'appointments',
-        'onTap': () => _handleNavigateToAppointments('pending'),
-      },
-      {
-        'title': 'Today\'s In Progress',
-        'value': controller.todayAppointments
-            .where((a) => a.status == 'in_progress')
-            .length
-            .toString(),
-        'subtitle': 'Currently being treated',
-        'icon': Icons.medical_services,
-        'color': Colors.purple,
-        'permission': 'appointments',
-        'onTap': () => _handleNavigateToAppointments('in_progress'),
-      },
-      {
-        'title': 'Today\'s Completed',
-        'value': controller.todayAppointments
-            .where((a) => a.status == 'completed')
-            .length
-            .toString(),
-        'subtitle': 'Finished appointments today',
-        'icon': Icons.check_circle,
-        'color': Colors.green,
-        'permission': 'appointments',
-        'onTap': () => _handleNavigateToAppointments('completed'),
-      },
-    ];
+    // Get the appointment controller stats
+    final appointmentController = Get.find<WebAppointmentController>();
 
-    final visibleStats = stats
-        .where((s) => _canAccessFeature(s['permission'] as String))
-        .toList();
+    return Obx(() {
+      // Get stats from appointment controller (these are for TODAY view mode)
+      final stats = appointmentController.appointmentStats;
 
-    if (visibleStats.isEmpty) {
-      return const SizedBox.shrink();
-    }
+      final statsList = [
+        {
+          'title': 'Today\'s Appointments',
+          'value': stats['today']?.toString() ?? '0',
+          'subtitle': 'Scheduled today',
+          'icon': Icons.event_available,
+          'color': Colors.blue,
+          'permission': 'appointments',
+          'onTap': () => _handleNavigateToAppointments('today'),
+        },
+        {
+          'title': 'Pending Appointments',
+          'value': stats['pending']?.toString() ?? '0',
+          'subtitle': 'Need approval',
+          'icon': Icons.pending_actions,
+          'color': Colors.orange,
+          'permission': 'appointments',
+          'onTap': () => _handleNavigateToAppointments('pending'),
+        },
+        {
+          'title': 'Today\'s In Progress',
+          'value': stats['in_progress']?.toString() ?? '0',
+          'subtitle': 'Currently being treated',
+          'icon': Icons.medical_services,
+          'color': Colors.purple,
+          'permission': 'appointments',
+          'onTap': () => _handleNavigateToAppointments('in_progress'),
+        },
+        {
+          'title': 'Today\'s Completed',
+          'value': stats['completed']?.toString() ?? '0',
+          'subtitle': 'Finished appointments today',
+          'icon': Icons.check_circle,
+          'color': Colors.green,
+          'permission': 'appointments',
+          'onTap': () => _handleNavigateToAppointments('completed'),
+        },
+      ];
 
-    if (isMobile) {
-      return Column(
-        children: [
-          Row(
-            children: [
-              if (visibleStats.isNotEmpty)
-                Expanded(child: _buildStatCard(visibleStats[0])),
-              const SizedBox(width: 12),
-              if (visibleStats.length > 1)
-                Expanded(child: _buildStatCard(visibleStats[1]))
-              else
-                Expanded(child: Container()),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              if (visibleStats.length > 2)
-                Expanded(child: _buildStatCard(visibleStats[2])),
-              const SizedBox(width: 12),
-              if (visibleStats.length > 3)
-                Expanded(child: _buildStatCard(visibleStats[3]))
-              else
-                Expanded(child: Container()),
-            ],
-          ),
-        ],
-      );
-    } else if (isTablet) {
-      return Column(
-        children: [
-          Row(
-            children: [
-              if (visibleStats.isNotEmpty)
-                Expanded(child: _buildStatCard(visibleStats[0])),
-              const SizedBox(width: 16),
-              if (visibleStats.length > 1)
-                Expanded(child: _buildStatCard(visibleStats[1]))
-              else
-                Expanded(child: Container()),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              if (visibleStats.length > 2)
-                Expanded(child: _buildStatCard(visibleStats[2])),
-              const SizedBox(width: 16),
-              if (visibleStats.length > 3)
-                Expanded(child: _buildStatCard(visibleStats[3]))
-              else
-                Expanded(child: Container()),
-            ],
-          ),
-        ],
-      );
-    } else {
-      return Row(
-        children: visibleStats.map((stat) {
-          return Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: _buildStatCard(stat),
+      final visibleStats = statsList
+          .where((s) => _canAccessFeature(s['permission'] as String))
+          .toList();
+
+      if (visibleStats.isEmpty) {
+        return const SizedBox.shrink();
+      }
+
+      if (isMobile) {
+        return Column(
+          children: [
+            Row(
+              children: [
+                if (visibleStats.isNotEmpty)
+                  Expanded(child: _buildStatCard(visibleStats[0])),
+                const SizedBox(width: 12),
+                if (visibleStats.length > 1)
+                  Expanded(child: _buildStatCard(visibleStats[1]))
+                else
+                  Expanded(child: Container()),
+              ],
             ),
-          );
-        }).toList(),
-      );
-    }
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                if (visibleStats.length > 2)
+                  Expanded(child: _buildStatCard(visibleStats[2])),
+                const SizedBox(width: 12),
+                if (visibleStats.length > 3)
+                  Expanded(child: _buildStatCard(visibleStats[3]))
+                else
+                  Expanded(child: Container()),
+              ],
+            ),
+          ],
+        );
+      } else if (isTablet) {
+        return Column(
+          children: [
+            Row(
+              children: [
+                if (visibleStats.isNotEmpty)
+                  Expanded(child: _buildStatCard(visibleStats[0])),
+                const SizedBox(width: 16),
+                if (visibleStats.length > 1)
+                  Expanded(child: _buildStatCard(visibleStats[1]))
+                else
+                  Expanded(child: Container()),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                if (visibleStats.length > 2)
+                  Expanded(child: _buildStatCard(visibleStats[2])),
+                const SizedBox(width: 16),
+                if (visibleStats.length > 3)
+                  Expanded(child: _buildStatCard(visibleStats[3]))
+                else
+                  Expanded(child: Container()),
+              ],
+            ),
+          ],
+        );
+      } else {
+        return Row(
+          children: visibleStats.map((stat) {
+            return Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: _buildStatCard(stat),
+              ),
+            );
+          }).toList(),
+        );
+      }
+    });
   }
 
   void _handleNavigateToAppointments(String filter) {
@@ -536,7 +546,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     if (appointmentsIndex == -1) {
       return;
     }
-
 
     permissionController.setSelectedIndex(appointmentsIndex);
     controller.navigateToAppointments(filter);
@@ -559,7 +568,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
       return;
     }
 
-
     // Store the conversation data to be opened
     Get.put(
       PendingConversationData(
@@ -570,10 +578,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
       tag: 'pending_conversation',
     );
 
-
     // Navigate to messages page
     permissionController.setSelectedIndex(messagesIndex);
-
   }
 
   Widget _buildStatCard(Map<String, dynamic> stat) {
@@ -648,7 +654,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     final children = <Widget>[];
 
     if (_canAccessFeature('appointments')) {
-      children.add(_buildTodaySchedule(controller, true));
+      children.add(_buildPendingAppointments(controller, true));
       children.add(const SizedBox(height: 24));
     }
 
@@ -670,7 +676,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     final children = <Widget>[];
 
     if (hasAppointments) {
-      children.add(_buildTodaySchedule(controller, false));
+      children.add(_buildPendingAppointments(controller, false));
       children.add(const SizedBox(height: 24));
     }
 
@@ -707,7 +713,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         flex: 2,
         child: Column(
           children: [
-            _buildTodaySchedule(controller, false),
+            _buildPendingAppointments(controller, false),
             const SizedBox(height: 24),
             _buildUpcomingAppointments(controller, false),
           ],
@@ -742,15 +748,15 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     );
   }
 
-  Widget _buildTodaySchedule(
+  Widget _buildPendingAppointments(
       AdminDashboardController controller, bool isMobile) {
     return _buildDashboardCard(
-      title: 'Today\'s Schedule',
-      subtitle: '${controller.todayAppointments.length} appointments',
-      icon: Icons.today,
+      title: 'Pending Appointments', // Changed from "Today's Schedule"
+      subtitle:
+          '${controller.todayAppointments.length} awaiting approval', // Changed subtitle
+      icon: Icons.pending_actions, // Changed icon
       child: controller.todayAppointments.isEmpty
-          ? _buildEmptyState(
-              'No appointments scheduled for today', Icons.event_available)
+          ? _buildEmptyState('No pending appointments', Icons.pending_actions)
           : Column(
               children: controller.todayAppointments.take(5).map((appointment) {
                 return Padding(
@@ -761,7 +767,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
               }).toList(),
             ),
       actionLabel: 'View All',
-      onAction: () => _handleNavigateToAppointments('today'),
+      onAction: () =>
+          _handleNavigateToAppointments('pending'), // Changed to pending
     );
   }
 
@@ -1081,10 +1088,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     final senderId = message['senderId'] as String;
     final senderName = message['senderName'] as String;
 
-
     return InkWell(
       onTap: () {
-
         _handleNavigateToMessagesWithConversation(
           conversationId,
           senderId,
@@ -1188,8 +1193,7 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
               radius: 20,
               backgroundColor: Colors.grey[200],
               backgroundImage: NetworkImage(profilePictureUrl),
-              onBackgroundImageError: (exception, stackTrace) {
-              },
+              onBackgroundImageError: (exception, stackTrace) {},
               child: Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,

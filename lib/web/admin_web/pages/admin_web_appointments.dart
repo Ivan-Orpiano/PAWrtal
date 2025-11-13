@@ -66,17 +66,22 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
     _tabController.addListener(_onTabControllerChanged);
     _mobileTabController.addListener(_onMobileTabControllerChanged);
 
-    // ✅ NEW: Listen to global logout flag
-    ever(LogoutHelper.isLoggingOut, (isLoggingOut) {
-      if (mounted && isLoggingOut) {
-        setState(() {
-          _isLoggingOut = true;
-        });
+    // Initialize controller
+    _initializeControllerSync();
+
+    // ✅ NEW: Reset to today tab when page loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_controller != null && Get.isRegistered<WebAppointmentController>()) {
+        // OPTION 1: Always reset to today (recommended)
+        // _controller!.resetToTodayTab();
+        // _tabController.index = 0;
+        // _mobileTabController.index = 0;
+
+        // OPTION 2: Keep last selected tab (if you prefer)
+        _controller!
+            .syncTabControllerWithState(_tabController, _mobileTabController);
       }
     });
-
-    // CRITICAL: Initialize controller SYNCHRONOUSLY
-    _initializeControllerSync();
   }
 
 // NEW METHOD: Synchronous initialization
