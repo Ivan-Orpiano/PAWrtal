@@ -2857,26 +2857,55 @@ class AppWriteProvider {
   /// Get verification status for display
   Future<Map<String, dynamic>> getUserVerificationStatus(String userId) async {
     try {
+      // 1. Get user document (source of truth for verification status)
+      final userDocs = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.usersCollectionID,
+        queries: [
+          Query.equal('userId', userId),
+          Query.limit(1),
+        ],
+      );
+
+      bool isVerifiedInUserDoc = false;
+      Map<String, dynamic>? userData;
+
+      if (userDocs.documents.isNotEmpty) {
+        userData = userDocs.documents.first.data;
+        isVerifiedInUserDoc = userData['idVerified'] as bool? ?? false;
+      }
+
+      // 2. Get verification document for additional details
       final verificationDoc = await getIdVerificationByUserId(userId);
 
       if (verificationDoc == null) {
+        // No verification document, but user might be clinic verified
         return {
           'hasVerification': false,
-          'status': 'not_started',
-          'isVerified': false,
+          'status': isVerifiedInUserDoc ? 'approved' : 'not_started',
+          'isVerified': isVerifiedInUserDoc,
+          'user': userData,
+          'verificationDoc': null,
         };
       }
 
       final status = verificationDoc.data['status'] as String? ?? 'pending';
+      final verifyByClinic = verificationDoc.data['verifyByClinic'] as String?;
 
       return {
         'hasVerification': true,
         'status': status,
-        'isVerified': status == 'approved',
+        'isVerified': isVerifiedInUserDoc, // ✅ Use user doc as source of truth
         'verificationDoc': verificationDoc.data,
         'documentId': verificationDoc.$id,
+        'user': userData,
+        'isPAWrtalVerified': isVerifiedInUserDoc &&
+            (verifyByClinic == null || verifyByClinic.isEmpty),
+        'isClinicVerified': isVerifiedInUserDoc &&
+            (verifyByClinic != null && verifyByClinic.isNotEmpty),
       };
     } catch (e) {
+      print('Error getting verification status: $e');
       return {
         'hasVerification': false,
         'status': 'error',

@@ -161,6 +161,7 @@ class WebLoginController extends GetxController {
       _initializeSecureSession(userId, role);
 
       if (role == "user") {
+        await _authRepository.syncAuthNameOnLogin(user.$id);
         try {
           print(
               '🔔 Initializing appointment reminder service for user (Web)...');
