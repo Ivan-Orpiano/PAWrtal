@@ -1436,10 +1436,20 @@ class _WebSettingsAndEverythingPageState
                       ],
                     ),
                   ),
+
+                  // NEW: Daily limit indicator
+                  if (feedbackController.dailyTracker.value != null)
+                    _buildDailyLimitIndicator(feedbackController),
                 ],
               ),
 
               const SizedBox(height: 24),
+              // NEW: Daily limit warning banner (if exceeded)
+              if (feedbackController.dailyTracker.value != null &&
+                  feedbackController.dailyTracker.value!.hasExceededLimit)
+                _buildLimitExceededBanner(feedbackController),
+
+              const SizedBox(height: 16),
 
               const SizedBox(height: 32),
 
@@ -1938,56 +1948,114 @@ class _WebSettingsAndEverythingPageState
     }
   }
 
-  
+  Widget _buildDailyLimitIndicator(WebFeedbackController controller) {
+    final tracker = controller.dailyTracker.value!;
+    final remaining = tracker.remainingReports;
+    final exceeded = tracker.hasExceededLimit;
 
-  // // NEW: Limit exceeded banner
-  // Widget _buildLimitExceededBanner(WebFeedbackController controller) {
-  //   return Container(
-  //     padding: const EdgeInsets.all(20),
-  //     decoration: BoxDecoration(
-  //       color: Colors.red[50],
-  //       borderRadius: BorderRadius.circular(12),
-  //       border: Border.all(color: Colors.red[200]!, width: 1.5),
-  //     ),
-  //     child: Row(
-  //       children: [
-  //         Container(
-  //           padding: const EdgeInsets.all(12),
-  //           decoration: BoxDecoration(
-  //             color: Colors.red[100],
-  //             borderRadius: BorderRadius.circular(10),
-  //           ),
-  //           child: Icon(Icons.info_outline, color: Colors.red[700], size: 24),
-  //         ),
-  //         const SizedBox(width: 16),
-  //         Expanded(
-  //           child: Column(
-  //             crossAxisAlignment: CrossAxisAlignment.start,
-  //             children: [
-  //               Text(
-  //                 'Daily Limit Reached',
-  //                 style: TextStyle(
-  //                   color: Colors.red[900],
-  //                   fontSize: 16,
-  //                   fontWeight: FontWeight.w700,
-  //                 ),
-  //               ),
-  //               const SizedBox(height: 6),
-  //               Text(
-  //                 'You\'ve submitted 3 reports today. You can submit more in ${controller.getTimeUntilReset()}.',
-  //                 style: TextStyle(
-  //                   color: Colors.red[800],
-  //                   fontSize: 14,
-  //                   height: 1.4,
-  //                 ),
-  //               ),
-  //             ],
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
+    Color indicatorColor;
+    IconData indicatorIcon;
+
+    if (exceeded) {
+      indicatorColor = Colors.red;
+      indicatorIcon = Icons.block;
+    } else if (remaining == 1) {
+      indicatorColor = Colors.orange;
+      indicatorIcon = Icons.warning;
+    } else {
+      indicatorColor = Colors.green;
+      indicatorIcon = Icons.check_circle;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: indicatorColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: indicatorColor.withOpacity(0.3), width: 1.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(indicatorIcon, color: indicatorColor, size: 20),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                exceeded ? 'Limit Reached' : '$remaining/3 Remaining',
+                style: TextStyle(
+                  color: indicatorColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (!exceeded) ...[
+                const SizedBox(height: 2),
+                Text(
+                  'Resets in ${controller.getTimeUntilReset()}',
+                  style: TextStyle(
+                    color: indicatorColor.withOpacity(0.8),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // NEW: Limit exceeded banner
+  Widget _buildLimitExceededBanner(WebFeedbackController controller) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.red[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red[200]!, width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.red[100],
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.info_outline, color: Colors.red[700], size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Daily Limit Reached',
+                  style: TextStyle(
+                    color: Colors.red[900],
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'You\'ve submitted 3 reports today. You can submit more in ${controller.getTimeUntilReset()}.',
+                  style: TextStyle(
+                    color: Colors.red[800],
+                    fontSize: 14,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   // Helper Widgets
   Widget _buildModernCard({
