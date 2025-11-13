@@ -1,11 +1,16 @@
 import 'package:capstone_app/pages/routes/app_pages.dart';
+import 'package:capstone_app/web/user_web/desktop_web/components/appbar_components/user_web_notification_icon.dart';
+import 'package:capstone_app/web/user_web/desktop_web/components/appbar_components/user_web_profile_icon.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_appointment_panel.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_clinic_description.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_clinic_location.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_clinic_services.dart';
+import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_like.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_picture_gallery.dart';
+import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_share_button.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_hover_underline_text.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_ratings_and_reviews.dart';
+import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_search_bar.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/web/user_web/controllers/user_web_appointment_controller.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';

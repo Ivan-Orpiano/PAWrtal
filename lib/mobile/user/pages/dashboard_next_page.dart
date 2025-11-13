@@ -11,6 +11,7 @@ import 'package:capstone_app/mobile/user/controllers/user_messaging_controller.d
 import 'package:capstone_app/mobile/user/pages/messages_next_page.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
 import 'package:capstone_app/data/id_verification/guards/unified_verification_guard.dart';
 

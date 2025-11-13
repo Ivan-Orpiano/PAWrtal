@@ -6701,7 +6701,7 @@ class AppWriteProvider {
           : 'http://localhost:3000'; // Local development URL
 
       // Use hash routing compatible format
-      const resetUrl = '$baseUrl/#/reset-password';
+      final resetUrl = '$baseUrl/#/reset-password';
 
       // Use Appwrite's built-in password recovery
       final recovery = await account!.createRecovery(

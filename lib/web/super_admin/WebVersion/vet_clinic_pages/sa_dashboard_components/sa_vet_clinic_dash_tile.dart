@@ -1,6 +1,7 @@
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/utils/image_helper.dart';
+import 'package:capstone_app/web/dimensions.dart';
 import 'package:flutter/material.dart';
 
 class SuperAdminVetClinicTile extends StatefulWidget {

@@ -8,6 +8,7 @@ import 'package:capstone_app/data/models/feedback_and_report_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:appwrite/models.dart' as models;
 import 'package:capstone_app/utils/feedback_spam_detector.dart';
 
 class WebFeedbackController extends GetxController {

@@ -2,6 +2,7 @@ import 'package:capstone_app/pages/landing/landing_controller.dart';
 import 'package:capstone_app/pages/landing/landing_page.dart';
 import 'package:capstone_app/pages/landing/web_landing_clinic_page.dart';
 import 'package:capstone_app/web/dimensions.dart';
+import 'package:capstone_app/web/user_web/desktop_web/pages/web_dashboard_page.dart';
 import 'package:capstone_app/pages/routes/app_pages.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';

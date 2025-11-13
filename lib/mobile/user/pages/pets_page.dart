@@ -2,6 +2,7 @@ import 'package:capstone_app/mobile/user/components/pets_components/floating_act
 import 'package:capstone_app/mobile/user/components/pets_components/pet_tile.dart';
 import 'package:capstone_app/mobile/user/components/pets_components/pets_controller.dart';
 import 'package:capstone_app/mobile/user/controllers/mobile_pets_controller.dart';
+import 'package:capstone_app/mobile/user/pages/pets_next_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
