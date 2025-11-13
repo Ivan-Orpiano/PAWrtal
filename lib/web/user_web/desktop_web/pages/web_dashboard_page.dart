@@ -105,71 +105,71 @@ class _WebDashboardPageState extends State<WebDashboardPage> {
   void _showRealTimeNotification(String message, IconData icon, Color color) {
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: color, size: 22),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Real-Time Update',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      message,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white.withOpacity(0.9),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.wifi_tethering_rounded,
-                  color: Colors.white,
-                  size: 16,
-                ),
-              ),
-            ],
-          ),
-        ),
-        backgroundColor: Colors.black87,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 3),
-        elevation: 8,
-      ),
-    );
+    // ScaffoldMessenger.of(context).showSnackBar(
+    //   SnackBar(
+    //     content: Container(
+    //       padding: const EdgeInsets.symmetric(vertical: 8),
+    //       child: Row(
+    //         children: [
+    //           Container(
+    //             padding: const EdgeInsets.all(10),
+    //             decoration: BoxDecoration(
+    //               color: color.withOpacity(0.2),
+    //               shape: BoxShape.circle,
+    //             ),
+    //             child: Icon(icon, color: color, size: 22),
+    //           ),
+    //           const SizedBox(width: 16),
+    //           Expanded(
+    //             child: Column(
+    //               crossAxisAlignment: CrossAxisAlignment.start,
+    //               mainAxisSize: MainAxisSize.min,
+    //               children: [
+    //                 const Text(
+    //                   'Real-Time Update',
+    //                   style: TextStyle(
+    //                     fontWeight: FontWeight.bold,
+    //                     fontSize: 13,
+    //                     color: Colors.white,
+    //                   ),
+    //                 ),
+    //                 const SizedBox(height: 2),
+    //                 Text(
+    //                   message,
+    //                   style: TextStyle(
+    //                     fontSize: 12,
+    //                     color: Colors.white.withOpacity(0.9),
+    //                     fontWeight: FontWeight.w500,
+    //                   ),
+    //                 ),
+    //               ],
+    //             ),
+    //           ),
+    //           Container(
+    //             padding: const EdgeInsets.all(6),
+    //             decoration: BoxDecoration(
+    //               color: Colors.white.withOpacity(0.2),
+    //               shape: BoxShape.circle,
+    //             ),
+    //             child: const Icon(
+    //               Icons.wifi_tethering_rounded,
+    //               color: Colors.white,
+    //               size: 16,
+    //             ),
+    //           ),
+    //         ],
+    //       ),
+    //     ),
+    //     backgroundColor: Colors.black87,
+    //     behavior: SnackBarBehavior.floating,
+    //     shape: RoundedRectangleBorder(
+    //       borderRadius: BorderRadius.circular(16),
+    //     ),
+    //     margin: const EdgeInsets.all(16),
+    //     duration: const Duration(seconds: 3),
+    //     elevation: 8,
+    //   ),
+    // );
   }
 
   // ✨ OPTIMIZED: Parallel data loading with caching
