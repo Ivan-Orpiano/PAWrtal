@@ -64,6 +64,7 @@ class PawmapCache extends GetxController {
       clinicSettingsMap = settingsMap;
       ratingStatsCache = statsCache;
       isInitialized = true;
+    } catch (e) {
     } finally {
       isLoading = false;
     }

@@ -78,6 +78,7 @@ class LandingController extends GetxController {
       
       applyFilters();
 
+    } catch (e) {
     } finally {
       isLoading.value = false;
     }

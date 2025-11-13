@@ -270,7 +270,7 @@ class AuthRepository {
       }).toList();
 
       return records;
-    } catch (e) {
+    } catch (e, stackTrace) {
       return [];
     }
   }
@@ -1770,7 +1770,7 @@ class AuthRepository {
       }).toList();
 
       return requests;
-    } catch (e) {
+    } catch (e, stackTrace) {
       return [];
     }
   }

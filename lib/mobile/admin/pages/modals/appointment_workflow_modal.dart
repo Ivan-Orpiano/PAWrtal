@@ -1081,7 +1081,7 @@ class AppointmentWorkflowModal extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              initialValue: selectedMethod,
+              value: selectedMethod,
               decoration: const InputDecoration(
                 labelText: 'Payment Method',
               ),

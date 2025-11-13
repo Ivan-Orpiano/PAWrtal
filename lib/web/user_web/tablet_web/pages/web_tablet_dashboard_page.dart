@@ -269,7 +269,7 @@ class _WebTabletDashboardPageUpdatedState
         });
 
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
 
       if (mounted) {
         setState(() {

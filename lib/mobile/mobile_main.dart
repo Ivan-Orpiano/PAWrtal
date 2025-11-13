@@ -34,7 +34,7 @@ class _MobileMainState extends State<MobileMain> {
 
 /// Mobile-specific 404 Page
 class MobileNotFoundPage extends StatelessWidget {
-  const MobileNotFoundPage({super.key});
+  const MobileNotFoundPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

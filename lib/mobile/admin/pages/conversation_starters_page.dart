@@ -250,7 +250,7 @@ class _ConversationStartersPageState extends State<ConversationStartersPage> {
                   onChanged: (value) {
                     _controller.toggleStarterStatus(starter);
                   },
-                  activeThumbColor: const Color.fromARGB(255, 81, 115, 153),
+                  activeColor: const Color.fromARGB(255, 81, 115, 153),
                 ),
                 IconButton(
                   icon: const Icon(Icons.edit,
@@ -294,16 +294,16 @@ class _ConversationStartersPageState extends State<ConversationStartersPage> {
                     width: 1,
                   ),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.auto_awesome,
                       size: 16,
                       color: Color.fromARGB(255, 81, 115, 153),
                     ),
-                    SizedBox(width: 8),
-                    Text(
+                    const SizedBox(width: 8),
+                    const Text(
                       'Active auto-reply for first messages',
                       style: TextStyle(
                         fontSize: 12,
@@ -339,14 +339,14 @@ class _ConversationStartersPageState extends State<ConversationStartersPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(
+            const Icon(
               Icons.auto_awesome,
               color: Color.fromARGB(255, 81, 115, 153),
             ),
-            SizedBox(width: 8),
-            Expanded(
+            const SizedBox(width: 8),
+            const Expanded(
               child: Text('Set Auto-Reply'),
             ),
           ],
@@ -458,7 +458,7 @@ class _ConversationStartersPageState extends State<ConversationStartersPage> {
                 ),
                 const SizedBox(height: 8),
                 Obx(() => DropdownButtonFormField<String>(
-                      initialValue: selectedCategory.value,
+                      value: selectedCategory.value,
                       decoration: InputDecoration(
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),

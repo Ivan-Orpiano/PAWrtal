@@ -149,7 +149,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
           }
         }
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
       _initError = e.toString();
       _controller = null;
 
@@ -196,9 +196,8 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
 
   void _onMobileTabControllerChanged() {
     // ✅ Add _isLoggingOut check to your existing safety checks
-    if (_isDisposed || _isLoggingOut || _mobileTabController.indexIsChanging) {
+    if (_isDisposed || _isLoggingOut || _mobileTabController.indexIsChanging)
       return;
-    }
 
     if (_controller == null || !Get.isRegistered<WebAppointmentController>()) {
       return;
@@ -261,8 +260,8 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const CircularProgressIndicator(
-                color: Color.fromARGB(255, 81, 115, 153),
+              CircularProgressIndicator(
+                color: const Color.fromARGB(255, 81, 115, 153),
               ),
               const SizedBox(height: 24),
               Text(
@@ -352,8 +351,8 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const CircularProgressIndicator(
-                  color: Color.fromARGB(255, 81, 115, 153),
+                CircularProgressIndicator(
+                  color: const Color.fromARGB(255, 81, 115, 153),
                 ),
                 const SizedBox(height: 24),
                 Text(
@@ -446,8 +445,8 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const CircularProgressIndicator(
-                color: Color.fromARGB(255, 81, 115, 153),
+              CircularProgressIndicator(
+                color: const Color.fromARGB(255, 81, 115, 153),
               ),
               const SizedBox(height: 24),
               Text(

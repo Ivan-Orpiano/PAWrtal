@@ -36,7 +36,7 @@ class WebMain extends StatelessWidget {
 
 /// Enhanced 404 Page with security-aware redirection
 class NotFoundPage extends StatelessWidget {
-  const NotFoundPage({super.key});
+  const NotFoundPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

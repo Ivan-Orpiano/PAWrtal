@@ -241,15 +241,15 @@ class _WebNonMedicalAppointmentModalState
                             color: Colors.purple.withOpacity(0.3),
                           ),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.person,
                               size: 16,
                               color: Colors.purple,
                             ),
-                            SizedBox(width: 4),
+                            const SizedBox(width: 4),
                             Text(
                               'Owner',
                               style: TextStyle(
@@ -387,16 +387,16 @@ class _WebNonMedicalAppointmentModalState
               color: Colors.blue.shade600,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
+                const Icon(
                   Icons.content_cut,
                   size: 16,
                   color: Colors.white,
                 ),
-                SizedBox(width: 8),
-                Text(
+                const SizedBox(width: 8),
+                const Text(
                   'Basic Service',
                   style: TextStyle(
                     fontSize: 13,
@@ -664,7 +664,7 @@ class _WebNonMedicalAppointmentModalState
         context: context,
         builder: (context) => OwnerDetailsDialog(owner: owner),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
       // Close loading indicator if still open
       if (Get.isDialogOpen ?? false) {
         Get.back();

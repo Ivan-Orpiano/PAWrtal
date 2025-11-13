@@ -98,7 +98,7 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
       ]);
 
       // ✅ Counts are now available and UI will show correct numbers
-    } catch (e) {}
+    } catch (e, stackTrace) {}
   }
 
   @override

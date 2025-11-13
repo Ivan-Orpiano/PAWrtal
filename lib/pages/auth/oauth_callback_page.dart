@@ -48,6 +48,10 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
       // Step 1: Get authenticated user
       final user = await _appwriteProvider.account!.get();
 
+      if (user == null) {
+        throw Exception('User not found in Appwrite Auth after OAuth');
+      }
+
 
       // Step 2: Get current session
       final session = await _appwriteProvider.account!.getSession(sessionId: 'current');
@@ -102,7 +106,7 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
       Get.offAllNamed(Routes.userHome);
       
 
-    } catch (e) {
+    } catch (e, stackTrace) {
 
       _showErrorDialog();
     }
@@ -145,11 +149,13 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
         // Try to get user with new client
         final user = await newAccount.get();
         
-        // Update provider to use this client
-        _appwriteProvider.client = newClient;
-        _appwriteProvider.account = newAccount;
-        return;
-            } catch (e) {
+        if (user != null) {
+          // Update provider to use this client
+          _appwriteProvider.client = newClient;
+          _appwriteProvider.account = newAccount;
+          return;
+        }
+      } catch (e) {
       }
     }
 
@@ -172,8 +178,10 @@ class _OAuthCallbackPageState extends State<OAuthCallbackPage> {
         // Try to get user
         final user = await _appwriteProvider.account!.get();
         
-        return;
-            } catch (e) {
+        if (user != null) {
+          return;
+        }
+      } catch (e) {
         
         if (attempt == maxAttempts - 1) {
           throw Exception('Session timeout after $maxAttempts attempts');

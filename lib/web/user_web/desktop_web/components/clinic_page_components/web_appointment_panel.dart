@@ -124,7 +124,7 @@ class _EnhancedWebAppointmentPanelState
                   calendarStyle: CalendarStyle(
                     todayDecoration: BoxDecoration(
                       color: const Color(0xFF5173B8).withOpacity(0.6),
-                      border: Border.all(color: const Color(0xFF5173B8)),
+                      border: Border.all(color: Color(0xFF5173B8)),
                       shape: BoxShape.circle,
                     ),
                     selectedDecoration: const BoxDecoration(
@@ -588,10 +588,10 @@ class _EnhancedWebAppointmentPanelState
   void _showClosedDateMessage() {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Row(
+        content: Row(
           children: [
             Icon(Icons.event_busy, color: Colors.white, size: 20),
-            SizedBox(width: 12),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 'This clinic is closed on the selected date. Please choose another day.',
@@ -1256,7 +1256,7 @@ class _EnhancedWebAppointmentPanelState
           _isLoadingClinicImage = false;
         });
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (mounted) setState(() => _isLoadingClinicImage = false);
     }
   }

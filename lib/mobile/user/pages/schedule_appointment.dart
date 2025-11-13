@@ -1276,7 +1276,7 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: DropdownButtonFormField<String>(
-                          initialValue: selectedService,
+                          value: selectedService,
                           decoration: InputDecoration(
                             hintText: 'Choose a service',
                             border: OutlineInputBorder(
@@ -1349,7 +1349,7 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                           }
 
                           return DropdownButtonFormField<String>(
-                            initialValue: selectedPet,
+                            value: selectedPet,
                             decoration: InputDecoration(
                               hintText: 'Choose your pet',
                               border: OutlineInputBorder(
@@ -1583,7 +1583,7 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
           _isLoadingClinicImage = false;
         });
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (mounted) setState(() => _isLoadingClinicImage = false);
     }
   }

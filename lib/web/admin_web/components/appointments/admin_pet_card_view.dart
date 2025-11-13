@@ -73,7 +73,7 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
     try {
       // Load all data
       await controller.loadPetData(widget.pet, widget.clinicId);
-    } catch (e) {}
+    } catch (e, stackTrace) {}
   }
 
   /// NEW: Initialize controller and fetch all data immediately
@@ -88,7 +88,7 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
 
       // âœ… CRITICAL: Pass clinic ID and fetch data immediately
       await adminController.loadPetData(widget.pet, widget.clinicId);
-    } catch (e) {}
+    } catch (e, stackTrace) {}
   }
 
   @override
@@ -143,8 +143,8 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const CircularProgressIndicator(
-                  color: Color(0xFF3498DB),
+                CircularProgressIndicator(
+                  color: const Color(0xFF3498DB),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -187,8 +187,8 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const CircularProgressIndicator(
-                      color: Color(0xFF3498DB),
+                    CircularProgressIndicator(
+                      color: const Color(0xFF3498DB),
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -1104,9 +1104,11 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
         (record) => record.appointmentId == appointmentId,
         orElse: () => throw Exception('Not found'),
       );
-      controller.debugVetIdIssue(
-          medicalRecord.vetId, medicalRecord.appointmentId);
-        } catch (e) {
+      if (medicalRecord != null) {
+        controller.debugVetIdIssue(
+            medicalRecord.vetId, medicalRecord.appointmentId);
+      }
+    } catch (e) {
       // Try fuzzy match
       try {
         medicalRecord = controller.medicalRecords.firstWhere(

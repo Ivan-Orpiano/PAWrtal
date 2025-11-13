@@ -341,7 +341,7 @@ class WebAppointmentTile extends StatelessWidget {
         return;
       }
 
-      if (clinicId.isEmpty) {
+      if (clinicId == null || clinicId.isEmpty) {
         Get.snackbar(
           'Error',
           'Clinic information not available for this appointment',
@@ -896,10 +896,10 @@ class WebAppointmentTile extends StatelessWidget {
                     const SizedBox(height: 16),
                     TextField(
                       controller: customReasonController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Custom reason (optional)',
                         hintText: 'Enter additional details...',
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
                       ),
                       maxLines: 3,
                       maxLength: 200,

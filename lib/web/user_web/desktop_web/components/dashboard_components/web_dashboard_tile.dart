@@ -23,7 +23,7 @@ class WebDashboardTile extends StatefulWidget {
 }
 
 class _WebDashboardTileState extends State<WebDashboardTile> {
-  final bool _isLiked = false;
+  bool _isLiked = false;
   ClinicSettings? _clinicSettings;
   ClinicRatingStats? _ratingStats;
   bool _isLoadingSettings = true;

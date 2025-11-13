@@ -139,7 +139,7 @@ class _SuperAdminStaffManagementPageState
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [Colors.white, backgroundColor],
@@ -343,7 +343,7 @@ class _SuperAdminStaffManagementPageState
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
+                        gradient: LinearGradient(
                           colors: [Colors.white, backgroundColor],
                         ),
                         borderRadius: BorderRadius.circular(16),
@@ -380,7 +380,7 @@ class _SuperAdminStaffManagementPageState
                   const SizedBox(width: 12),
                   Container(
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
+                      gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [primaryColor, accentTeal],
@@ -1029,7 +1029,7 @@ class _StaffCardState extends State<_StaffCard> with SingleTickerProviderStateMi
                       child: Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
+                          gradient: LinearGradient(
                             colors: [backgroundColor, Colors.white],
                           ),
                           borderRadius: BorderRadius.circular(12),
@@ -1343,7 +1343,7 @@ class _StaffDetailsDialog extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
+                        gradient: LinearGradient(
                           colors: [backgroundColor, Colors.white],
                         ),
                         borderRadius: BorderRadius.circular(16),

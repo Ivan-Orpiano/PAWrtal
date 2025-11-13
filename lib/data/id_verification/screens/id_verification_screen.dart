@@ -16,11 +16,11 @@ class IdVerificationScreen extends StatefulWidget {
   final AuthRepository authRepository;
 
   const IdVerificationScreen({
-    super.key,
+    Key? key,
     required this.userId,
     required this.email,
     required this.authRepository,
-  });
+  }) : super(key: key);
 
   @override
   State<IdVerificationScreen> createState() => _IdVerificationScreenState();
