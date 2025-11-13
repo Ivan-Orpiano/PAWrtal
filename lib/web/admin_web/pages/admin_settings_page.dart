@@ -10,6 +10,8 @@ import 'package:capstone_app/web/admin_web/components/appbar/admin_feedback_cont
 import 'package:capstone_app/web/admin_web/components/appbar/admin_pfp_controller.dart';
 import 'package:capstone_app/web/admin_web/components/appbar/admin_verify_user_controller.dart';
 import 'package:capstone_app/web/admin_web/components/appbar/staff_change_pass_controller.dart';
+import 'package:capstone_app/web/admin_web/pages/admin_web_clinicpage.dart';
+import 'package:capstone_app/web/pages/web_admin_home/web_admin_home_controller.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -573,7 +575,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     // Determine if user is staff
     final isStaff = userRole == 'staff';
 
-
     // Initialize profile picture controller with unique tag
     final profilePictureController = Get.put(
       AdminPfpController(authRepository: Get.find<AuthRepository>()),
@@ -614,7 +615,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
               profilePictureId = staff.image;
               userEmail = staff.email.isNotEmpty ? staff.email : 'N/A';
 
-
               // Update storage
               storage.write('staffProfilePictureId', profilePictureId);
               storage.write('email', userEmail);
@@ -624,8 +624,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
               if (profilePictureId.isNotEmpty) {
                 profilePictureController
                     .setCurrentProfilePicture(profilePictureId);
-              } else {
-              }
+              } else {}
             } else {
               // Fallback to storage values
               profilePictureId =
@@ -646,14 +645,12 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
             );
           },
         );
-      } else {
-      }
+      } else {}
     } else {
       // ADMIN: Use clinic profile picture
       final profilePictureId =
           storage.read("clinicProfilePictureId") as String?;
       final userEmail = storage.read("email") as String? ?? "admin@example.com";
-
 
       // Set current profile picture if available
       if (profilePictureId != null && profilePictureId.isNotEmpty) {
@@ -681,7 +678,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     bool isStaff,
   ) {
     return Obx(() {
-
       // If a new file is selected, show it
       if (controller.selectedFile.value != null &&
           controller.selectedFile.value!.bytes != null) {
@@ -713,7 +709,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
         if (currentPictureId.isNotEmpty) {
           final imageUrl =
               Get.find<AuthRepository>().getImageUrl(currentPictureId);
-
 
           return ClipRRect(
             borderRadius: BorderRadius.circular(60),
@@ -774,21 +769,18 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     AdminPfpController controller,
   ) async {
     try {
-
       final authRepository = Get.find<AuthRepository>();
 
       // SIMPLIFIED: Use the new direct method
       final staff = await authRepository.getStaffByDocumentId(staffId);
 
       if (staff != null) {
-
         // Store and set the staff's profile picture ID from the "image" field
         if (staff.image.isNotEmpty) {
           // ✅ Clean the ID before storing
           final cleanedId = _extractFileIdFromUrl(staff.image);
 
-          if (cleanedId != staff.image) {
-          }
+          if (cleanedId != staff.image) {}
 
           storage.write('staffProfilePictureId', cleanedId);
           controller.setCurrentProfilePicture(cleanedId);
@@ -803,9 +795,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
         storage.write('staffProfilePictureId', '');
         storage.write('email', 'N/A');
       }
-
     } catch (e) {
-
       // Set defaults on error
       storage.write('staffProfilePictureId', '');
       storage.write('email', 'N/A');
@@ -1362,6 +1352,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header Section
           Row(
             children: [
               Container(
@@ -1410,6 +1401,8 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
             ],
           ),
           const SizedBox(height: 32),
+
+          // Clinic Settings Card - NOW FUNCTIONAL
           _buildModernCard(
             title: 'Clinic Settings',
             icon: Icons.local_hospital_outlined,
@@ -1421,8 +1414,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                 subtitle: 'Manage clinic information and contact details',
                 iconColor: Colors.purple,
                 isSwitch: false,
-                onTap: () => _showSnackbar(
-                    'Info', 'Clinic profile editor coming soon', Colors.blue),
+                onTap: _navigateToClinicPreview, // ✅ NOW FUNCTIONAL
               ),
               const SizedBox(height: 12),
               _buildModernSettingTile(
@@ -1431,8 +1423,8 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                 subtitle: 'Set clinic working hours',
                 iconColor: Colors.blue,
                 isSwitch: false,
-                onTap: () => _showSnackbar(
-                    'Info', 'Hours manager coming soon', Colors.blue),
+                onTap:
+                    _navigateToClinicScheduleTab, // ✅ NOW FUNCTIONAL - Opens Schedule tab
               ),
               const SizedBox(height: 12),
               _buildModernSettingTile(
@@ -1441,64 +1433,31 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                 subtitle: 'Manage clinic services',
                 iconColor: Colors.green,
                 isSwitch: false,
-                onTap: () => _showSnackbar(
-                    'Info', 'Services manager coming soon', Colors.blue),
+                onTap:
+                    _navigateToClinicPreview, // ✅ NOW FUNCTIONAL - Services shown in preview
               ),
             ],
           ),
           const SizedBox(height: 20),
+
+          // The rest of your settings content continues here...
+          // This includes any other settings cards you have, such as:
+          // - Notifications (if you have it)
+          // - Privacy & Security (if you have it)
+          // - Any other settings sections
+
+          // For example, if you have these sections, they stay the same:
           // _buildModernCard(
           //   title: 'Notifications',
           //   icon: Icons.notifications_outlined,
           //   iconColor: Colors.orange,
-          //   children: [
-          //     _buildModernSettingTile(
-          //       icon: Icons.notifications_active_outlined,
-          //       title: 'New Appointments',
-          //       subtitle: 'Receive alerts for new appointment requests',
-          //       iconColor: Colors.orange,
-          //       value: true,
-          //     ),
-          //     const SizedBox(height: 12),
-          //     _buildModernSettingTile(
-          //       icon: Icons.feedback_outlined,
-          //       title: 'Feedback Notifications',
-          //       subtitle: 'Get notified about new feedback or reports',
-          //       iconColor: Colors.red,
-          //       value: true,
-          //     ),
-          //     const SizedBox(height: 12),
-          //     _buildModernSettingTile(
-          //       icon: Icons.people_outline,
-          //       title: 'Staff Updates',
-          //       subtitle: 'Notify about staff status changes',
-          //       iconColor: Colors.blue,
-          //       value: false,
-          //     ),
-          //   ],
+          //   children: [ ... ],
           // ),
-          // const SizedBox(height: 20),
           // _buildModernCard(
           //   title: 'Privacy & Security',
           //   icon: Icons.shield_outlined,
           //   iconColor: Colors.green,
-          //   children: [
-          //     _buildModernSettingTile(
-          //       icon: Icons.visibility_outlined,
-          //       title: 'Data Visibility',
-          //       subtitle: 'Control what data is visible to staff',
-          //       iconColor: Colors.blue,
-          //       value: true,
-          //     ),
-          //     const SizedBox(height: 12),
-          //     _buildModernSettingTile(
-          //       icon: Icons.lock_outline,
-          //       title: 'Sensitive Data Protection',
-          //       subtitle: 'Extra security for appointment details',
-          //       iconColor: Colors.red,
-          //       value: true,
-          //     ),
-          //   ],
+          //   children: [ ... ],
           // ),
         ],
       ),
@@ -2009,22 +1968,24 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                        Text(
+                          Text(
                             'Screenshots or images (Max 5 images, 5MB each)',
-                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                            style: TextStyle(
+                                color: Colors.grey[600], fontSize: 12),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             'Allowed formats: JPG, PNG, GIF, WEBP',
                             style: TextStyle(
-                              color: Colors.grey[600], 
+                              color: Colors.grey[600],
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                           Text(
                             'Maximum file size: 5MB per image',
-                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                            style: TextStyle(
+                                color: Colors.grey[600], fontSize: 12),
                           ),
                           const SizedBox(height: 16),
                           if (feedbackController.selectedFiles.isEmpty)
@@ -2055,14 +2016,14 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                                       ),
                                     ),
                                     const SizedBox(height: 4),
-                                Text(
-                                  'Images only: JPG, PNG, GIF, WEBP (Max 5MB each)',
-                                  style: TextStyle(
-                                    color: Colors.grey[500], 
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
+                                    Text(
+                                      'Images only: JPG, PNG, GIF, WEBP (Max 5MB each)',
+                                      style: TextStyle(
+                                        color: Colors.grey[500],
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -3392,8 +3353,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
       if (filesIndex != -1 && filesIndex + 1 < pathSegments.length) {
         return pathSegments[filesIndex + 1];
       }
-    } catch (e) {
-    }
+    } catch (e) {}
 
     return urlOrId;
   }
@@ -3470,7 +3430,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     });
 
     try {
-
       final authRepository = Get.find<AuthRepository>();
 
       // Search by email ONLY (more secure)
@@ -3489,7 +3448,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
         final user = User.fromMap(userDoc.data);
         user.documentId = userDoc.$id;
 
-
         setState(() {
           _searchedUser = user;
           _isSearching = false;
@@ -3504,7 +3462,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
         });
       }
     } catch (e) {
-
       setState(() {
         _searchedUser = null;
         _isSearching = false;
@@ -4475,6 +4432,71 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
           Colors.red,
         );
       }
+    }
+  }
+
+  void _navigateToClinicPreview() {
+    // Get the WebAdminHomeController
+    final homeController = Get.find<WebAdminHomeController>();
+
+    // Check permissions
+    if (!homeController.hasAuthority('Clinic')) {
+      homeController.showPermissionDeniedDialog('Clinic Settings');
+      return;
+    }
+
+    // Find the index of the Clinic page
+    final clinicIndex = homeController.navigationLabels.indexOf('Clinic');
+
+    if (clinicIndex != -1) {
+      // Set the selected index to Clinic page
+      homeController.setSelectedIndex(clinicIndex);
+
+      // Close the settings page
+      Navigator.of(context).pop();
+    } else {
+      _showSnackbar(
+        'Error',
+        'Clinic page not available',
+        Colors.red,
+      );
+    }
+  }
+
+  void _navigateToClinicScheduleTab() {
+    // Get the WebAdminHomeController
+    final homeController = Get.find<WebAdminHomeController>();
+
+    // Check permissions
+    if (!homeController.hasAuthority('Clinic')) {
+      homeController.showPermissionDeniedDialog('Operating Hours');
+      return;
+    }
+
+    // Find the index of the Clinic page
+    final clinicIndex = homeController.navigationLabels.indexOf('Clinic');
+
+    if (clinicIndex != -1) {
+      // Set the selected index to Clinic page
+      homeController.setSelectedIndex(clinicIndex);
+
+      // Store the initial tab index for AdminWebClinicpage to read
+      Get.find<GetStorage>()
+          .write('clinicPageInitialTab', 1); // 1 = Schedule tab
+
+      // Close the settings page
+      Navigator.of(context).pop();
+
+      // Clear the stored tab after a short delay
+      Future.delayed(const Duration(milliseconds: 500), () {
+        Get.find<GetStorage>().remove('clinicPageInitialTab');
+      });
+    } else {
+      _showSnackbar(
+        'Error',
+        'Clinic page not available',
+        Colors.red,
+      );
     }
   }
 }
