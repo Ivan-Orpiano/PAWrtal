@@ -307,7 +307,7 @@ class AdminDashboardController extends GetxController {
 
       isRealTimeConnected.value = true;
       lastUpdateTime.value = DateTime.now();
-    } catch (e) {
+    } catch (e, stackTrace) {
       isRealTimeConnected.value = false;
 
       // Setup fallback polling
@@ -354,7 +354,7 @@ class AdminDashboardController extends GetxController {
       if (isCreate && appointment.status == 'pending') {
         _showNewAppointmentNotification(appointment);
       }
-    } catch (e) {}
+    } catch (e, stackTrace) {}
   }
 
   void _handleNewAppointment(Appointment appointment) {
@@ -957,7 +957,7 @@ class AdminDashboardController extends GetxController {
       isRealTimeConnected.value = true;
       lastUpdateTime.value = DateTime.now();
 
-    } catch (e) {
+    } catch (e, stackTrace) {
       isRealTimeConnected.value = false;
 
       // Setup more frequent fallback polling on error
@@ -1131,7 +1131,7 @@ class AdminDashboardController extends GetxController {
       });
 
       recentMessages.refresh();
-    } catch (e) {}
+    } catch (e, stackTrace) {}
   }
 
   void _removeDuplicateAppointments() {
@@ -1181,7 +1181,7 @@ class AdminDashboardController extends GetxController {
         }
       }
 
-      if (clinicId.isNotEmpty) {
+      if (clinicId != null && clinicId.isNotEmpty) {
         final clinicDoc = await authRepository.getClinicById(clinicId);
 
         if (clinicDoc != null) {
@@ -1384,13 +1384,15 @@ class AdminDashboardController extends GetxController {
         }
 
         // If still not found, create fallback
-        pet ??= Pet(
+        if (pet == null) {
+          pet = Pet(
             petId: appointment.petId,
             userId: appointment.userId,
             name: _formatPetName(appointment.petId),
             type: 'Unknown',
             breed: 'Unknown',
           );
+        }
 
         // Cache the pet
         petsCache[appointment.petId] = pet;
@@ -1633,7 +1635,7 @@ class AdminDashboardController extends GetxController {
       // Update observable (should be exactly 3 or less)
       recentMessages.assignAll(messages);
       recentMessages.refresh();
-    } catch (e) {
+    } catch (e, stackTrace) {
       recentMessages.clear();
       recentMessages.refresh();
     }
@@ -2094,10 +2096,10 @@ class AdminDashboardController extends GetxController {
                     const SizedBox(height: 16),
                     TextField(
                       controller: customReasonController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Custom reason (optional)',
                         hintText: 'Enter additional details...',
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
                       ),
                       maxLines: 3,
                       maxLength: 200,

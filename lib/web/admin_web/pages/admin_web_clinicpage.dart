@@ -236,7 +236,7 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                               value: controller.isClinicOpen.value,
                               onChanged: (value) =>
                                   controller.toggleClinicStatus(),
-                              activeThumbColor: Colors.green,
+                              activeColor: Colors.green,
                             ),
                           ),
                         ],
@@ -312,7 +312,7 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                             value: controller.isClinicOpen.value,
                             onChanged: (value) =>
                                 controller.toggleClinicStatus(),
-                            activeThumbColor: Colors.green,
+                            activeColor: Colors.green,
                           ),
                         ],
                       ),
@@ -595,7 +595,7 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                                 ? null
                                 : controller.setDashboardPicture,
                             icon: controller.isSaving.value
-                                ? const SizedBox(
+                                ? SizedBox(
                                     width: 16,
                                     height: 16,
                                     child: CircularProgressIndicator(
@@ -625,7 +625,7 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                                   ? null
                                   : controller.saveDashboardPicture,
                               icon: controller.isSaving.value
-                                  ? const SizedBox(
+                                  ? SizedBox(
                                       width: 16,
                                       height: 16,
                                       child: CircularProgressIndicator(
@@ -1018,7 +1018,7 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                                 ),
                                 const SizedBox(height: 8),
                                 Obx(() => DropdownButtonFormField<int>(
-                                      initialValue:
+                                      value:
                                           controller.appointmentDuration.value,
                                       decoration: const InputDecoration(
                                         border: OutlineInputBorder(),

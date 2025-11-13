@@ -2,6 +2,7 @@ import 'package:capstone_app/pages/landing/landing_controller.dart';
 import 'package:capstone_app/pages/landing/landing_page.dart';
 import 'package:capstone_app/pages/landing/web_landing_clinic_page.dart';
 import 'package:capstone_app/web/dimensions.dart';
+import 'package:capstone_app/web/user_web/desktop_web/pages/web_dashboard_page.dart';
 import 'package:capstone_app/pages/routes/app_pages.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -679,9 +680,8 @@ class _LandingDashboardContent extends StatelessWidget {
     String serviceLower = service.toLowerCase();
     if (serviceLower.contains('vaccination')) return Icons.vaccines_outlined;
     if (serviceLower.contains('surgery')) return Icons.local_hospital_outlined;
-    if (serviceLower.contains('checkup')) {
+    if (serviceLower.contains('checkup'))
       return Icons.health_and_safety_outlined;
-    }
     if (serviceLower.contains('grooming')) return Icons.pets_outlined;
     if (serviceLower.contains('dental')) return Icons.medication_outlined;
     return Icons.medical_services_outlined;

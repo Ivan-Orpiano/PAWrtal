@@ -80,6 +80,7 @@ class DashboardController extends GetxController {
       _cacheTimestamps['clinics'] = DateTime.now();
 
       applyFilters();
+    } catch (e) {
     } finally {
       isLoading.value = false;
     }

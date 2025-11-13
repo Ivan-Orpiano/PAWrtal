@@ -4,7 +4,9 @@ import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_com
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_clinic_description.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_clinic_location.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_clinic_services.dart';
+import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_like.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_picture_gallery.dart';
+import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_share_button.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_hover_underline_text.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_ratings_and_reviews.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_search_bar.dart';
@@ -27,7 +29,7 @@ class WebClinicPageUpdated extends StatefulWidget {
 
 class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
   final ScrollController _scrollController = ScrollController();
-  final bool _showWidget = false;
+  bool _showWidget = false;
   bool _showAppointmentPanel = false;
 
   final galleryKey = GlobalKey();
@@ -480,9 +482,9 @@ class _WebClinicPageUpdatedState extends State<WebClinicPageUpdated> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 12),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF5173B8),
-                          borderRadius: BorderRadius.only(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF5173B8),
+                          borderRadius: const BorderRadius.only(
                             topLeft: Radius.circular(16),
                             topRight: Radius.circular(16),
                           ),

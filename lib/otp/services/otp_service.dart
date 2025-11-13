@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:get_storage/get_storage.dart';
@@ -21,7 +22,7 @@ class OTPService {
 
   /// Store OTP with expiry time
   Future<void> storeOTP(String email, String otp) async {
-    final expiryTime = DateTime.now().add(const Duration(minutes: otpValidityMinutes));
+    final expiryTime = DateTime.now().add(Duration(minutes: otpValidityMinutes));
     
     final otpData = {
       'otp': otp,

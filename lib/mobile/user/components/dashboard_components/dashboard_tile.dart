@@ -1,9 +1,12 @@
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/models/ratings_and_review_model.dart';
+import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/mobile/user/pages/dashboard_next_page.dart';
 import 'package:capstone_app/web/user_web/responsive_page_handlers/web_clinic_page_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:get/get.dart';
 
 class MyDashboardTile extends StatefulWidget {
   final Clinic clinic;
@@ -259,8 +262,8 @@ class _MyDashboardTileState extends State<MyDashboardTile> {
               children: [
                 Container(
                   height: 200,
-                  decoration: const BoxDecoration(
-                    borderRadius: BorderRadius.only(
+                  decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(16),
                       topRight: Radius.circular(16),
                     ),

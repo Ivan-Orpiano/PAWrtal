@@ -238,10 +238,10 @@ class Message {
         return weeks == 1 ? '1w ago' : '${weeks}w ago';
       } else if (difference.inDays < 365) {
         final months = (difference.inDays / 30).floor();
-        return months == 1 ? '1 month ago' : '$months months ago';
+        return months == 1 ? '1 month ago' : '${months} months ago';
       } else {
         final years = (difference.inDays / 365).floor();
-        return years == 1 ? '1 year ago' : '$years years ago';
+        return years == 1 ? '1 year ago' : '${years} years ago';
       }
     } catch (e) {
       return 'Unknown';

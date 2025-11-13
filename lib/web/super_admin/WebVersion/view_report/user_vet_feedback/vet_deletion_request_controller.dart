@@ -162,7 +162,7 @@ Future<void> loadAllDeletionRequests() async {
 
     final request = allRequests[requestIndex];
     final newPinStatus = !request.isPinned;
-    const pinnedBy = 'Developer';
+    final pinnedBy = 'Developer';
 
     // Update in database first
     await authRepository.toggleDeletionRequestPin(
@@ -241,9 +241,11 @@ Future<void> loadAllDeletionRequests() async {
         documentId: reviewId,
       );
 
-      final review = RatingAndReview.fromMap(reviewDoc.data);
-      reviewsCache[reviewId] = review.copyWith(documentId: reviewDoc.$id);
-        } catch (e) {
+      if (reviewDoc != null) {
+        final review = RatingAndReview.fromMap(reviewDoc.data);
+        reviewsCache[reviewId] = review.copyWith(documentId: reviewDoc.$id);
+      }
+    } catch (e) {
     }
   }
 
@@ -376,7 +378,7 @@ Future<void> approveDeletionRequest(
       try {
         
         // Build notification message
-        const notificationTitle = 'Review Deletion Request Approved ✅';
+        final notificationTitle = 'Review Deletion Request Approved ✅';
         final notificationMessage = reviewNotes != null && reviewNotes.isNotEmpty
             ? 'Your review deletion request has been approved. Admin notes: $reviewNotes'
             : 'Your review deletion request for "$clinicName" has been approved.';
@@ -494,7 +496,7 @@ Future<void> rejectDeletionRequest(
       try {
         
         // Build notification message
-        const notificationTitle = 'Review Deletion Request Rejected ❌';
+        final notificationTitle = 'Review Deletion Request Rejected ❌';
         final notificationMessage = reviewNotes != null && reviewNotes.isNotEmpty
             ? 'Your review deletion request has been rejected. Reason: $reviewNotes'
             : 'Your review deletion request for "$clinicName" has been rejected.';

@@ -2,6 +2,8 @@ import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/data/models/medical_record_model.dart';
 import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
+import 'package:capstone_app/data/models/conversation_model.dart';
+import 'package:capstone_app/data/models/message_model.dart';
 import 'package:capstone_app/data/models/vaccination_model.dart';
 import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
@@ -11,6 +13,7 @@ import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:appwrite/appwrite.dart';
+import 'package:capstone_app/web/admin_web/components/dashboard/admin_dashboard_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:async';
@@ -987,7 +990,7 @@ class WebAppointmentController extends GetxController {
         );
       }
 
-    } catch (e) {
+    } catch (e, stackTrace) {
 
       // Show error snackbar only if requested
       if (showSnackbar && Get.context != null) {
@@ -1695,7 +1698,7 @@ class WebAppointmentController extends GetxController {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    getPetName(appointment.petId),
+                    '${getPetName(appointment.petId)}',
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
@@ -2825,7 +2828,7 @@ For more details, please check your appointments.
         updateFilteredAppointments();
 
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       // Silent fail - don't crash the app
     }
   }
@@ -2842,7 +2845,7 @@ For more details, please check your appointments.
       final minutesOverdue =
           DateTime.now().difference(actualLocalTime).inMinutes;
 
-      const autoDeclineReason = 'Appointment was overlooked.';
+      final autoDeclineReason = 'Appointment was overlooked.';
 
       // ✅ CRITICAL: Call declineAppointment WITHOUT snackbars (background operation)
       await declineAppointment(
@@ -2851,7 +2854,7 @@ For more details, please check your appointments.
         showSnackbar: false, // Don't show snackbars for auto-decline
       );
 
-    } catch (e) {
+    } catch (e, stackTrace) {
       // Don't rethrow - we want to continue processing other appointments
     }
   }

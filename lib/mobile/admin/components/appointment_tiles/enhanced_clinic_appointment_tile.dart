@@ -906,7 +906,7 @@ class PatientWorkflowTile extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              initialValue: paymentMethod,
+              value: paymentMethod,
               decoration: const InputDecoration(labelText: 'Payment Method'),
               items: const [
                 DropdownMenuItem(value: 'cash', child: Text('Cash')),

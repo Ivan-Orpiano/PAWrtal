@@ -2,6 +2,7 @@ import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/mobile/user/components/pets_components/pet_creation_controller.dart';
 import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:capstone_app/web/user_web/services/web_image_picker_service.dart';
+import 'package:capstone_app/web/user_web/services/web_snack_bar_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // NEW: For input formatters
 import 'package:get/get.dart';
@@ -278,7 +279,7 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
                                 ),
                                 const SizedBox(height: 8),
                                 DropdownButtonFormField<String>(
-                                  initialValue:
+                                  value:
                                       controller.genderController.text.isEmpty
                                           ? null
                                           : controller.genderController.text,

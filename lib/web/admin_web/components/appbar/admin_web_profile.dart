@@ -1,5 +1,6 @@
 import 'package:capstone_app/utils/logout_helper.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
+import 'package:capstone_app/web/admin_web/components/appointments/admin_web_appointment_controller.dart';
 import 'package:capstone_app/web/admin_web/pages/admin_settings_page.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/web/admin_web/pages/admin_web_appointments.dart';
@@ -155,7 +156,7 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
         }
       }
 
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (mounted && !_isLoggingOut) {
         _isInitialized = true;
       }
@@ -361,7 +362,7 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
         (ancestorState as dynamic)._setLoggingOut(true);
       } else {
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
     }
   }
 

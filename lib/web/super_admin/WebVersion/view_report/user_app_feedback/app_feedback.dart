@@ -2,6 +2,7 @@ import 'package:capstone_app/web/super_admin/WebVersion/services/attachment_view
 import 'package:capstone_app/web/user_web/controllers/web_feedback_controller.dart';
 import 'package:capstone_app/web/responsive_layout.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:capstone_app/data/models/feedback_and_report_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
@@ -951,7 +952,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
-      initialValue: selectedValue,
+      value: selectedValue,
       items: [
         DropdownMenuItem<T>(
           value: null,
@@ -1433,9 +1434,8 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
                         final isRedundant =
                             snapshot.data!['isRedundant'] ?? false;
 
-                        if (!isSpam && !isRedundant) {
+                        if (!isSpam && !isRedundant)
                           return const SizedBox.shrink();
-                        }
 
                         return Row(
                           mainAxisSize: MainAxisSize.min,
@@ -2756,7 +2756,7 @@ Widget _buildMiniTypeBadge(FeedbackType type) {
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
         child: Container(
-          constraints: const BoxConstraints(
+          constraints: BoxConstraints(
             maxWidth: 800,
             maxHeight: 600,
           ),
@@ -3147,7 +3147,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
         Expanded(
           child: DropdownButtonFormField<FeedbackStatus>(
             dropdownColor: const Color.fromRGBO(248, 253, 255, 1),
-            initialValue: widget.feedback.status,
+            value: widget.feedback.status,
             decoration: InputDecoration(
               labelText: 'Update Status',
               border: OutlineInputBorder(
@@ -3177,7 +3177,7 @@ class _FeedbackDetailsDialogState extends State<FeedbackDetailsDialog> {
         Expanded(
           child: DropdownButtonFormField<Priority>(
             dropdownColor: const Color.fromRGBO(248, 253, 255, 1),
-            initialValue: widget.feedback.priority,
+            value: widget.feedback.priority,
             decoration: InputDecoration(
               labelText: 'Update Priority',
               border: OutlineInputBorder(

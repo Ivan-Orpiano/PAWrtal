@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:appwrite/appwrite.dart';
+import 'dart:typed_data';
 import 'package:get/get.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 
@@ -1480,7 +1481,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
       ),
       value: value,
       onChanged: (b) => onChanged(b),
-      activeThumbColor: colors.first,
+      activeColor: colors.first,
       activeTrackColor: colors.first.withOpacity(0.3),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     );
@@ -1625,7 +1626,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
                     _checkForChanges();
                   });
                 },
-                activeThumbColor: Colors.red,
+                activeColor: Colors.red,
                 activeTrackColor: Colors.red.withOpacity(0.3),
               ),
             ],

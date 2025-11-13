@@ -4,6 +4,7 @@ import 'package:capstone_app/data/models/feedback_and_report_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:appwrite/models.dart' as models;
 import 'package:capstone_app/data/models/daily_report_tracker_model.dart';
 
 class MobileFeedbackController extends GetxController {
@@ -82,6 +83,7 @@ class MobileFeedbackController extends GetxController {
       }
       
       
+    } catch (e) {
     } finally {
       isCheckingLimit.value = false;
     }
@@ -355,9 +357,9 @@ bool _validateFile(PlatformFile file) {
       }
 
       // Get device/platform info
-      const platform = 'mobile';
-      const appVersion = '1.0.0';
-      const deviceInfo = 'Mobile Device';
+      final platform = 'mobile';
+      final appVersion = '1.0.0';
+      final deviceInfo = 'Mobile Device';
       final now = DateTime.now(); 
 
       // Create feedback object
@@ -403,7 +405,7 @@ bool _validateFile(PlatformFile file) {
       );
 
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
 
       _showError("Failed to submit feedback. Please try again.");
       return false;

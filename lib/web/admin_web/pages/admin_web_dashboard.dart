@@ -119,8 +119,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const CircularProgressIndicator(
-                color: Color.fromARGB(255, 81, 115, 153),
+              CircularProgressIndicator(
+                color: const Color.fromARGB(255, 81, 115, 153),
               ),
               const SizedBox(height: 24),
               Text(
@@ -161,8 +161,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const CircularProgressIndicator(
-                  color: Color.fromARGB(255, 81, 115, 153),
+                CircularProgressIndicator(
+                  color: const Color.fromARGB(255, 81, 115, 153),
                 ),
                 const SizedBox(height: 24),
                 Text(
@@ -234,9 +234,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
       AdminDashboardController controller, bool isMobile) {
     if (_isLoggingOut) return const SizedBox.shrink();
     try {
-      if (!Get.isRegistered<AdminDashboardController>()) {
+      if (!Get.isRegistered<AdminDashboardController>())
         return const SizedBox.shrink();
-      }
       return _buildHeader(controller, isMobile);
     } catch (e) {
       return const SizedBox.shrink();
@@ -247,12 +246,10 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
       AdminDashboardController controller, bool isMobile, bool isTablet) {
     if (_isLoggingOut) return const SizedBox.shrink();
     try {
-      if (!Get.isRegistered<AdminDashboardController>()) {
+      if (!Get.isRegistered<AdminDashboardController>())
         return const SizedBox.shrink();
-      }
-      if (!Get.isRegistered<WebAppointmentController>()) {
+      if (!Get.isRegistered<WebAppointmentController>())
         return const SizedBox.shrink();
-      }
       return _buildQuickStats(controller, isMobile, isTablet);
     } catch (e) {
       return const SizedBox.shrink();
@@ -263,9 +260,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
       AdminDashboardController controller) {
     if (_isLoggingOut) return const SizedBox.shrink();
     try {
-      if (!Get.isRegistered<AdminDashboardController>()) {
+      if (!Get.isRegistered<AdminDashboardController>())
         return const SizedBox.shrink();
-      }
       return _buildMobileLayout(controller);
     } catch (e) {
       return const SizedBox.shrink();
@@ -276,9 +272,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
       AdminDashboardController controller) {
     if (_isLoggingOut) return const SizedBox.shrink();
     try {
-      if (!Get.isRegistered<AdminDashboardController>()) {
+      if (!Get.isRegistered<AdminDashboardController>())
         return const SizedBox.shrink();
-      }
       return _buildTabletLayout(controller);
     } catch (e) {
       return const SizedBox.shrink();
@@ -289,9 +284,8 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
       AdminDashboardController controller) {
     if (_isLoggingOut) return const SizedBox.shrink();
     try {
-      if (!Get.isRegistered<AdminDashboardController>()) {
+      if (!Get.isRegistered<AdminDashboardController>())
         return const SizedBox.shrink();
-      }
       return _buildDesktopLayout(controller);
     } catch (e) {
       return const SizedBox.shrink();

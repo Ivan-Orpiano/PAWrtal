@@ -11,6 +11,7 @@ import 'package:capstone_app/mobile/user/controllers/user_messaging_controller.d
 import 'package:capstone_app/mobile/user/pages/messages_next_page.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
 import 'package:capstone_app/data/id_verification/guards/unified_verification_guard.dart';
 
@@ -32,7 +33,7 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
   final AuthRepository _authRepo = Get.find<AuthRepository>();
   ClinicSettings? _clinicSettings;
   bool _isLoadingSettings = true;
-  final bool _isSaved = false;
+  bool _isSaved = false;
   Clinic? _updatedClinic;
 
   late UnifiedVerificationGuard _verificationGuard;
@@ -1469,8 +1470,8 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
                 },
                 child: Container(
                   padding: const EdgeInsets.all(12),
-                  decoration: const BoxDecoration(
-                    color: Color.fromARGB(255, 81, 115, 153),
+                  decoration: BoxDecoration(
+                    color: const Color.fromARGB(255, 81, 115, 153),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(

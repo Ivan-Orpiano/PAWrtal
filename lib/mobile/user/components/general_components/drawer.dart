@@ -288,7 +288,7 @@ class _MyDrawerState extends State<MyDrawer>
         : 'U';
     
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: EdgeInsets.all(4),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: const LinearGradient(
@@ -303,7 +303,7 @@ class _MyDrawerState extends State<MyDrawer>
         ],
       ),
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(20),
         decoration: const BoxDecoration(
           shape: BoxShape.circle,
           color: Colors.white,

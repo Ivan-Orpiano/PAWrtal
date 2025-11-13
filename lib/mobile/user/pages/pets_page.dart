@@ -2,6 +2,7 @@ import 'package:capstone_app/mobile/user/components/pets_components/floating_act
 import 'package:capstone_app/mobile/user/components/pets_components/pet_tile.dart';
 import 'package:capstone_app/mobile/user/components/pets_components/pets_controller.dart';
 import 'package:capstone_app/mobile/user/controllers/mobile_pets_controller.dart';
+import 'package:capstone_app/mobile/user/pages/pets_next_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -102,12 +103,12 @@ class _PetsPageState extends State<PetsPage>
               // Header with gradient
               Container(
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Color(0xFF3498DB),
-                      Color(0xFF2C3E50),
+                      const Color(0xFF3498DB),
+                      const Color(0xFF2C3E50),
                     ],
                   ),
                   boxShadow: [

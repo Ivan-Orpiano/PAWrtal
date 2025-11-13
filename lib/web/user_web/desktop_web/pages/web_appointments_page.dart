@@ -9,7 +9,9 @@ import 'package:capstone_app/web/user_web/desktop_web/components/appointment_com
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
+import 'package:appwrite/appwrite.dart';
 
 class EnhancedWebAppointmentsPage extends StatefulWidget {
   const EnhancedWebAppointmentsPage({super.key});

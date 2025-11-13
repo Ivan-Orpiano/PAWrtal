@@ -11,6 +11,7 @@ import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:async';
+import 'dart:math' as Math;
 
 /// Handles OAuth for mobile using Appwrite SDK's built-in OAuth
 /// Includes FCM push notifications, in-app notifications, and all login features
@@ -41,7 +42,7 @@ class MobileOAuthHandler {
 
       // Start polling for session establishment
       return await _pollForSession();
-    } catch (e) {
+    } catch (e, stackTrace) {
 
       _handleOAuthFailure();
       return false;
@@ -76,7 +77,7 @@ class MobileOAuthHandler {
         // Try to get the user - this will succeed if session exists
         final user = await testAccount.get();
 
-        if (user.$id.isNotEmpty) {
+        if (user != null && user.$id.isNotEmpty) {
 
           // CRITICAL: Replace the global AppWriteProvider's client with fresh one
           final appwriteProvider = Get.find<AppWriteProvider>();
@@ -202,7 +203,7 @@ class MobileOAuthHandler {
           }
         } else {
         }
-      } catch (e) {
+      } catch (e, stack) {
         // Don't fail login if FCM registration fails
       }
 
@@ -234,7 +235,7 @@ class MobileOAuthHandler {
         margin: const EdgeInsets.all(16),
       );
 
-    } catch (e) {
+    } catch (e, stackTrace) {
 
       _closeLoadingDialog();
       _handleOAuthFailure();

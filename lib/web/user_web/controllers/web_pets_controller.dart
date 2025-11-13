@@ -1,9 +1,11 @@
+import 'dart:math' as math;
 
 import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:get/get.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/web/user_web/services/web_snack_bar_service.dart';
 import 'package:capstone_app/data/models/medical_record_model.dart';
 import 'package:capstone_app/data/models/vaccination_model.dart';
 
@@ -218,7 +220,7 @@ class WebPetsController extends GetxController {
         for (var record in records) {
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       SnackbarHelper.showError(
         title: "Error",
         message: "Failed to fetch medical records: $e",
@@ -343,7 +345,7 @@ class WebPetsController extends GetxController {
 
       final userName = userDoc.data['name'] ?? 'Unknown';
       return userName;
-    } catch (e) {
+    } catch (e, stackTrace) {
       return 'Unknown';
     }
   }

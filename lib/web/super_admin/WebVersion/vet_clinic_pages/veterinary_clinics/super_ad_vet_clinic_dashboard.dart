@@ -2,10 +2,13 @@ import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/archive_clinics/archived_clinics_dashboard.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterinary_clinics/super_ad_vet_clinic_detail_page.dart';
+import 'package:capstone_app/web/super_admin/desktop/super_admin_desktop_home_page.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/sa_dashboard_components/sa_sort_button.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/sa_dashboard_components/sa_search_bar.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/sa_dashboard_components/sa_vet_clinic_dash_tile.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterinary_clinics/super_ad_vet_clinic_register.dart';
+import 'package:capstone_app/web/super_admin/mobile/super_admin_mobile_home_page.dart';
+import 'package:capstone_app/web/super_admin/tablet/super_admin_tablet_home_page.dart';
 import 'package:capstone_app/web/dimensions.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -606,8 +609,8 @@ class _SuperAdminVetClinicDashboardState
         children: [
           Container(
             padding: EdgeInsets.all(_responsive.scale(24)),
-            decoration: const BoxDecoration(
-              color: Color.fromRGBO(81, 115, 153, 0.1),
+            decoration: BoxDecoration(
+              color: const Color.fromRGBO(81, 115, 153, 0.1),
               shape: BoxShape.circle,
             ),
             child: CircularProgressIndicator(
@@ -648,12 +651,12 @@ class _SuperAdminVetClinicDashboardState
               ),
               padding: EdgeInsets.all(_responsive.headerPadding),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
                     Colors.white,
-                    Color.fromRGBO(81, 115, 153, 0.03),
+                    const Color.fromRGBO(81, 115, 153, 0.03),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(_responsive.headerRadius),
@@ -960,17 +963,17 @@ class _SuperAdminVetClinicDashboardState
                     children: [
                       Container(
                         padding: EdgeInsets.all(_responsive.scale(26)),
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              Color.fromRGBO(81, 115, 153, 0.15),
-                              Color.fromRGBO(81, 115, 153, 0.05),
+                              const Color.fromRGBO(81, 115, 153, 0.15),
+                              const Color.fromRGBO(81, 115, 153, 0.05),
                             ],
                           ),
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Color.fromRGBO(81, 115, 153, 0.2),
+                              color: const Color.fromRGBO(81, 115, 153, 0.2),
                               blurRadius: 20,
                               spreadRadius: 5,
                             ),

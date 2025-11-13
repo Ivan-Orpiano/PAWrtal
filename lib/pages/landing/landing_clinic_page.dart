@@ -88,14 +88,14 @@ class _LandingClinicPageState extends State<LandingClinicPage> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        title: const Row(
+        title: Row(
           children: [
             Icon(
               Icons.login,
-              color: Color(0xFF517399),
+              color: const Color(0xFF517399),
             ),
-            SizedBox(width: 12),
-            Text('Login Required'),
+            const SizedBox(width: 12),
+            const Text('Login Required'),
           ],
         ),
         content: Text(

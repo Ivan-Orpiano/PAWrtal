@@ -3,6 +3,7 @@ import 'package:capstone_app/mobile/user/controllers/mobile_feedback_controller.
 import 'package:capstone_app/notification/services/notification_preferences_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:get/get.dart';
 import 'package:capstone_app/utils/logout_helper.dart';
@@ -934,7 +935,7 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                 child: Switch(
                   value: value,
                   onChanged: onChanged,
-                  activeThumbColor: iconColor,
+                  activeColor: iconColor,
                 ),
               ),
           ],
@@ -1498,7 +1499,7 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                 ),
                 const SizedBox(height: 12),
                 Obx(() => DropdownButtonFormField<FeedbackCategory>(
-                      initialValue: feedbackController.selectedCategory.value,
+                      value: feedbackController.selectedCategory.value,
                       decoration: InputDecoration(
                         hintText: 'Select a category',
                         prefixIcon: const Icon(Icons.category, size: 20),
@@ -1728,7 +1729,7 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                                   ...feedbackController.selectedFiles
                                       .map((file) =>
                                           _buildFileItemWithPreview(file))
-                                      ,
+                                      .toList(),
                                   const SizedBox(height: 8),
                                   if (feedbackController.selectedFiles.length <
                                       5)
@@ -2114,7 +2115,7 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                   child: Switch(
                     value: value,
                     onChanged: (v) => _showSuccess('Setting updated'),
-                    activeThumbColor: iconColor,
+                    activeColor: iconColor,
                   ),
                 )
               else
@@ -2774,7 +2775,7 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
       }
     }
 
-    Widget buildRequirement(String text) {
+    Widget _buildRequirement(String text) {
       return Padding(
         padding: const EdgeInsets.only(left: 4, top: 3),
         child: Row(
@@ -2945,10 +2946,10 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                               ],
                             ),
                             const SizedBox(height: 10),
-                            buildRequirement('At least 8 characters'),
-                            buildRequirement('One uppercase letter (A-Z)'),
-                            buildRequirement('One number (0-9)'),
-                            buildRequirement(
+                            _buildRequirement('At least 8 characters'),
+                            _buildRequirement('One uppercase letter (A-Z)'),
+                            _buildRequirement('One number (0-9)'),
+                            _buildRequirement(
                                 'One special character (!@#\$%^&*)'),
                           ],
                         ),
@@ -3341,7 +3342,7 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
               color: Colors.blue.withOpacity(0.1),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: const Center(
+            child: Center(
               child: Icon(
                 Icons.image,
                 color: Colors.blue,

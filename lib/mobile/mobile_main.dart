@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:capstone_app/pages/routes/app_pages.dart';
+import 'package:flutter/services.dart';
 
 class MobileMain extends StatefulWidget {
   const MobileMain({super.key});
@@ -34,7 +35,7 @@ class _MobileMainState extends State<MobileMain> {
 
 /// Mobile-specific 404 Page
 class MobileNotFoundPage extends StatelessWidget {
-  const MobileNotFoundPage({super.key});
+  const MobileNotFoundPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

@@ -1,3 +1,4 @@
+import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/data/models/feedback_and_report_model.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
@@ -110,6 +111,8 @@ Future<void> addReply(String documentId, String reply) async {
 
         // 2. If both pinned or both not pinned, sort by date
         if (a.submittedAt == null && b.submittedAt == null) return 0;
+        if (a.submittedAt == null) return 1;
+        if (b.submittedAt == null) return -1;
 
         return b.submittedAt.compareTo(a.submittedAt);
       });

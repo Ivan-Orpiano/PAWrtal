@@ -382,4 +382,8 @@ void _registerControllers() {
   void debugPrintState() {
   }
 
+  @override
+  void onClose() {
+    super.onClose();
+  }
 }

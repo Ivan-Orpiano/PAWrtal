@@ -1,4 +1,5 @@
 import 'package:appwrite/appwrite.dart';
+import 'package:appwrite/models.dart' hide User;
 import 'package:capstone_app/data/models/feedback_and_report_model.dart';
 import 'package:capstone_app/data/models/staff_model.dart';
 import 'package:capstone_app/data/models/user_model.dart';
@@ -16,6 +17,7 @@ import 'package:capstone_app/web/pages/web_admin_home/web_admin_home_controller.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:capstone_app/utils/logout_helper.dart';
 
@@ -1814,7 +1816,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                     const SizedBox(height: 16),
                     DropdownButtonFormField<FeedbackCategory>(
                       dropdownColor: Colors.white,
-                      initialValue: feedbackController.selectedCategory.value,
+                      value: feedbackController.selectedCategory.value,
                       decoration: InputDecoration(
                         hintText: 'Select a category',
                         prefixIcon: const Icon(Icons.category),
@@ -2424,7 +2426,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                   value: value,
                   onChanged: (v) => _showSnackbar(
                       'Settings', 'Setting updated', Colors.green),
-                  activeThumbColor: iconColor,
+                  activeColor: iconColor,
                 )
               else
                 Icon(Icons.arrow_forward_ios,
