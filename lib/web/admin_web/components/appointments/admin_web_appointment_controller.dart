@@ -200,7 +200,6 @@ class WebAppointmentController extends GetxController {
       // Setup fallback polling - but mark as connected immediately
       isRealTimeConnected.value = true; // Set BEFORE setup
       _setupFallbackPolling();
-
     } catch (e) {
       isRealTimeConnected.value = false;
       _setupFallbackPolling(interval: 15);
@@ -245,7 +244,6 @@ class WebAppointmentController extends GetxController {
           _setupFallbackPolling(interval: 10);
         },
       );
-
     } catch (e) {
       rethrow;
     }
@@ -282,9 +280,7 @@ class WebAppointmentController extends GetxController {
       if (response.events.any((event) => event.contains('.create'))) {
         _showNewAppointmentNotification(appointment);
       }
-
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   void _handleNewAppointment(Appointment appointment) {
@@ -339,8 +335,7 @@ class WebAppointmentController extends GetxController {
       // Don't refetch if we're already connected
       if (!isRealTimeConnected.value) {
         fetchClinicAppointments();
-      } else {
-      }
+      } else {}
     });
   }
 
@@ -350,7 +345,6 @@ class WebAppointmentController extends GetxController {
     }
 
     try {
-
       // CRITICAL: Don't clear caches if we're just refreshing
       // Only clear on initial load or forced refresh
       final isInitialLoad = appointments.isEmpty;
@@ -362,13 +356,11 @@ class WebAppointmentController extends GetxController {
         ownersCache.clear();
         petProfilePictures.clear();
         petImagesCache.clear();
-      } else {
-      }
+      } else {}
 
       // Fetch fresh appointments
       final result = await authRepository
           .getClinicAppointments(clinicData.value!.documentId!);
-
 
       // Log status breakdown
       final statusCounts = <String, int>{};
@@ -383,7 +375,6 @@ class WebAppointmentController extends GetxController {
 
       // Update filtered view
       updateFilteredAppointments();
-
     } catch (e) {
       if (Get.context != null) {
         SnackbarHelper.showError(
@@ -395,8 +386,7 @@ class WebAppointmentController extends GetxController {
     }
   }
 
-  void debugRefetchTriggers() {
-  }
+  void debugRefetchTriggers() {}
 
   Future<void> _fetchOwnerData(String userId) async {
     if (!ownersCache.containsKey(userId)) {
@@ -516,40 +506,42 @@ class WebAppointmentController extends GetxController {
     final now = DateTime.now();
     final todayDate = DateTime(now.year, now.month, now.day);
 
+    List<Appointment> filtered;
 
-    // Start with base filtered appointments (respects calendar date or view mode)
-    List<Appointment> filtered = _getBaseFilteredAppointments();
+    // ✅ CRITICAL FIX: Pending tab shows ALL pending appointments regardless of date
+    if (selectedTab.value == 'pending') {
+      // For pending tab, start with ALL appointments (no date filtering)
+      filtered = appointments.where((a) => a.status == 'pending').toList();
+    } else {
+      // For all other tabs, apply date filtering first
+      filtered = _getBaseFilteredAppointments();
 
-    // Apply status filtering based on selected tab
-    switch (selectedTab.value) {
-      case 'pending':
-        filtered = filtered.where((a) => a.status == 'pending').toList();
-        break;
+      // Then apply status filtering
+      switch (selectedTab.value) {
+        case 'scheduled':
+          filtered = filtered.where((a) => a.status == 'accepted').toList();
+          break;
 
-      case 'scheduled':
-        filtered = filtered.where((a) => a.status == 'accepted').toList();
-        break;
+        case 'in_progress':
+          filtered = filtered.where((a) => a.status == 'in_progress').toList();
+          break;
 
-      case 'in_progress':
-        filtered = filtered.where((a) => a.status == 'in_progress').toList();
-        break;
+        case 'completed':
+          filtered = filtered.where((a) => a.status == 'completed').toList();
+          break;
 
-      case 'completed':
-        filtered = filtered.where((a) => a.status == 'completed').toList();
-        break;
+        case 'cancelled':
+          filtered = filtered.where((a) => a.status == 'cancelled').toList();
+          break;
 
-      case 'cancelled':
-        filtered = filtered.where((a) => a.status == 'cancelled').toList();
-        break;
-
-      case 'declined':
-        filtered = filtered.where((a) => a.status == 'declined').toList();
-        break;
+        case 'declined':
+          filtered = filtered.where((a) => a.status == 'declined').toList();
+          break;
+      }
     }
 
-    // Search filtering
+    // Apply search filtering (common to all tabs)
     if (searchQuery.value.isNotEmpty) {
-      final beforeSearch = filtered.length;
       filtered = filtered.where((appointment) {
         final petName = getPetName(appointment.petId).toLowerCase();
         final ownerName = getOwnerName(appointment.userId).toLowerCase();
@@ -575,9 +567,6 @@ class WebAppointmentController extends GetxController {
     });
 
     filteredAppointments.assignAll(filtered);
-
-    if (filtered.isNotEmpty) {
-    }
   }
 
   String getOwnerName(String userId) {
@@ -674,12 +663,13 @@ class WebAppointmentController extends GetxController {
       return appointmentDate.isAtSameMomentAs(todayDate);
     }).toList();
 
-
     return todayAppts;
   }
 
-  List<Appointment> get pending =>
-      appointments.where((a) => a.status == 'pending').toList();
+  List<Appointment> get pending {
+    // ✅ Return ALL pending appointments regardless of date
+    return appointments.where((a) => a.status == 'pending').toList();
+  }
 
   List<Appointment> get scheduled {
     // Show ALL accepted appointments (including today)
@@ -699,7 +689,6 @@ class WebAppointmentController extends GetxController {
     final filtered = _getFilteredAppointmentsForStats();
     final declinedList = filtered.where((a) => a.status == 'declined').toList();
 
-
     return declinedList;
   }
 
@@ -711,7 +700,6 @@ class WebAppointmentController extends GetxController {
   List<Appointment> _getFilteredAppointmentsForStats() {
     final now = DateTime.now();
     final todayDate = DateTime(now.year, now.month, now.day);
-
 
     List<Appointment> timeFilteredAppointments;
 
@@ -727,7 +715,6 @@ class WebAppointmentController extends GetxController {
 
           return appointmentDate.isAtSameMomentAs(todayDate);
         }).toList();
-
 
         final statusBreakdown = <String, int>{};
         for (var apt in timeFilteredAppointments) {
@@ -775,7 +762,6 @@ class WebAppointmentController extends GetxController {
   }
 
   Future<void> debugDeclinedCounts() async {
-
     final now = _nowInPhilippineTime;
 
     // Count declined for each view mode
@@ -816,14 +802,12 @@ class WebAppointmentController extends GetxController {
     // All Time
     final allTimeDeclined =
         appointments.where((a) => a.status == 'declined').length;
-
   }
 
   void setViewMode(AppointmentViewMode mode) {
     viewMode.value = mode;
     selectedCalendarDate.value =
         null; // Clear calendar date when changing view mode
-
 
     // Refresh filtered appointments and stats
     updateFilteredAppointments();
@@ -837,8 +821,7 @@ class WebAppointmentController extends GetxController {
     if (date != null) {
       // When calendar date is selected, keep current view mode
       // Don't force to 'today' view mode
-    } else {
-    }
+    } else {}
 
     // Refresh filtered appointments and stats
     updateFilteredAppointments();
@@ -941,7 +924,6 @@ class WebAppointmentController extends GetxController {
 
       await updateFullAppointment(updatedAppointment);
 
-
       // STEP 2: Create in-app notification (non-critical - wrapped in try-catch)
       try {
         final notification = AppNotification.appointmentDeclined(
@@ -989,9 +971,7 @@ class WebAppointmentController extends GetxController {
               "Appointment declined successfully. Patient will be notified.",
         );
       }
-
     } catch (e, stackTrace) {
-
       // Show error snackbar only if requested
       if (showSnackbar && Get.context != null) {
         SnackbarHelper.showError(
@@ -2714,7 +2694,6 @@ For more details, please check your appointments.
 
     // Reset connection status
     isRealTimeConnected.value = false;
-
   }
 
   void _startAutoDeclineTimer() {
@@ -2738,13 +2717,11 @@ For more details, please check your appointments.
           _checkAndDeclineOverlookedAppointments();
         }
       });
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   Future<void> _checkAndDeclineOverlookedAppointments() async {
     try {
-
       final now = DateTime.now();
 
       if (clinicData.value?.documentId == null) {
@@ -2758,7 +2735,6 @@ For more details, please check your appointments.
       if (pendingAppointments.isEmpty) {
         return;
       }
-
 
       int declinedCount = 0;
       int errorCount = 0;
@@ -2803,12 +2779,10 @@ For more details, please check your appointments.
         }
       }
 
-
       // CRITICAL FIX: Don't call fetchClinicAppointments() here!
       // The realtime subscription will handle updating the UI automatically
       // Only log the results
       if (declinedCount > 0) {
-
         // Optional: Manually update the local state without refetching
         for (var appointmentId in declinedIds) {
           final index =
@@ -2826,7 +2800,6 @@ For more details, please check your appointments.
         // Refresh the filtered view
         appointments.refresh();
         updateFilteredAppointments();
-
       }
     } catch (e, stackTrace) {
       // Silent fail - don't crash the app
@@ -2838,7 +2811,6 @@ For more details, please check your appointments.
     DateTime actualLocalTime,
   ) async {
     try {
-
       // Create a detailed auto-decline reason
       final formattedTime =
           DateFormat('MMM dd, yyyy • hh:mm a').format(actualLocalTime);
@@ -2853,7 +2825,6 @@ For more details, please check your appointments.
         autoDeclineReason,
         showSnackbar: false, // Don't show snackbars for auto-decline
       );
-
     } catch (e, stackTrace) {
       // Don't rethrow - we want to continue processing other appointments
     }
@@ -2861,7 +2832,6 @@ For more details, please check your appointments.
 
   Future<bool> verifyAppointmentDeclined(String appointmentId) async {
     try {
-
       // Check local state first (much faster)
       final localAppointment = appointments.firstWhereOrNull(
         (a) => a.documentId == appointmentId,
@@ -2967,12 +2937,10 @@ For more details, please check your appointments.
     }
 
     try {
-
       // Use local time to define "today" (same as dashboard)
       final today = DateTime.now();
       final startOfDay = DateTime(today.year, today.month, today.day, 0, 0, 0);
       final endOfDay = DateTime(today.year, today.month, today.day, 23, 59, 59);
-
 
       // Fetch ALL today's appointments (same query as dashboard)
       final result =
@@ -2987,15 +2955,13 @@ For more details, please check your appointments.
         ],
       );
 
-
       // Parse appointments
       final List<Appointment> todayAppts = [];
       for (var doc in result.documents) {
         try {
           final appointment = Appointment.fromMap(doc.data);
           todayAppts.add(appointment);
-        } catch (e) {
-        }
+        } catch (e) {}
       }
 
       // Log status breakdown
@@ -3023,9 +2989,7 @@ For more details, please check your appointments.
 
       // Update filtered view
       updateFilteredAppointments();
-
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   /// Get current time in Philippine timezone (UTC+8)
@@ -3035,7 +2999,6 @@ For more details, please check your appointments.
   }
 
   void resetToPendingTab() {
-
     // Reset tab selection to "pending"
     selectedTab.value = 'pending';
 
@@ -3050,12 +3013,10 @@ For more details, please check your appointments.
 
     // Trigger filter update to show pending appointments
     updateFilteredAppointments();
-
   }
 
   void syncTabControllerWithState(
       TabController desktopController, TabController mobileController) {
-
     // Define tab values list (WITHOUT 'today')
     final tabValues = [
       'pending',
@@ -3073,13 +3034,11 @@ For more details, please check your appointments.
       // Set both controllers to the saved tab
       desktopController.index = currentTabIndex;
       mobileController.index = currentTabIndex;
-
     } else {
       // Fallback to pending if something went wrong
       // BUT DON'T change selectedTab.value - keep the controller state
       desktopController.index = 0;
       mobileController.index = 0;
-
     }
 
     // Ensure filtered appointments match the selected tab
@@ -3087,7 +3046,6 @@ For more details, please check your appointments.
   }
 
   void initializeWithPendingTab() {
-
     // Set to pending tab
     selectedTab.value = 'pending';
 
@@ -3099,17 +3057,20 @@ For more details, please check your appointments.
 
     // Trigger filter update
     updateFilteredAppointments();
-
   }
 
   Map<String, int> get filteredAppointmentStats {
-    // Get the base filtered list based on calendar date or view mode
+    // For stat cards, always show correct counts based on date filters
     List<Appointment> baseFiltered = _getBaseFilteredAppointments();
+
+    // ✅ EXCEPTION: Pending count should ALWAYS show ALL pending (no date filter)
+    final allPendingCount =
+        appointments.where((a) => a.status == 'pending').length;
 
     final stats = {
       'total': baseFiltered.length,
-      'today': todayAppointments.length, // Always shows today count in header
-      'pending': baseFiltered.where((a) => a.status == 'pending').length,
+      'today': todayAppointments.length,
+      'pending': allPendingCount, // ✅ Show ALL pending appointments
       'scheduled': baseFiltered.where((a) => a.status == 'accepted').length,
       'in_progress':
           baseFiltered.where((a) => a.status == 'in_progress').length,
@@ -3117,7 +3078,6 @@ For more details, please check your appointments.
       'cancelled': baseFiltered.where((a) => a.status == 'cancelled').length,
       'declined': baseFiltered.where((a) => a.status == 'declined').length,
     };
-
 
     return stats;
   }
