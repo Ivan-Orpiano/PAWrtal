@@ -78,7 +78,7 @@ class _PetMedicalHistoryState extends State<PetMedicalHistory>
         _controller.fetchPetVaccinationHistory(widget.pet.petId),
       ]);
 
-    } catch (e) {
+    } catch (e, stackTrace) {
 
       setState(() {
         _controllerInitialized = false;
@@ -113,8 +113,8 @@ class _PetMedicalHistoryState extends State<PetMedicalHistory>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const CircularProgressIndicator(
-                color: Color(0xFF667eea),
+              CircularProgressIndicator(
+                color: const Color(0xFF667eea),
               ),
               const SizedBox(height: 24),
               Text(

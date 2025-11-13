@@ -397,7 +397,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
     return Obx(() {
       return DropdownButtonFormField<String>(
         dropdownColor: const Color.fromRGBO(248, 253, 255, 1),
-        initialValue: _controller.selectedStatus.value,
+        value: _controller.selectedStatus.value,
         decoration: InputDecoration(
           labelText: 'Status',
           labelStyle: TextStyle(
@@ -444,7 +444,7 @@ class _VeterinaryReportState extends State<VeterinaryReport> {
 
       return DropdownButtonFormField<String>(
         dropdownColor: const Color.fromRGBO(248, 253, 255, 1),
-        initialValue: _controller.selectedReason.value,
+        value: _controller.selectedReason.value,
         decoration: InputDecoration(
           labelText: 'Reason',
           labelStyle: TextStyle(

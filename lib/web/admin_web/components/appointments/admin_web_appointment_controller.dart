@@ -987,7 +987,7 @@ class WebAppointmentController extends GetxController {
         );
       }
 
-    } catch (e) {
+    } catch (e, stackTrace) {
 
       // Show error snackbar only if requested
       if (showSnackbar && Get.context != null) {
@@ -1695,7 +1695,7 @@ class WebAppointmentController extends GetxController {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    getPetName(appointment.petId),
+                    '${getPetName(appointment.petId)}',
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
@@ -2825,7 +2825,7 @@ For more details, please check your appointments.
         updateFilteredAppointments();
 
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       // Silent fail - don't crash the app
     }
   }
@@ -2842,7 +2842,7 @@ For more details, please check your appointments.
       final minutesOverdue =
           DateTime.now().difference(actualLocalTime).inMinutes;
 
-      const autoDeclineReason = 'Appointment was overlooked.';
+      final autoDeclineReason = 'Appointment was overlooked.';
 
       // ✅ CRITICAL: Call declineAppointment WITHOUT snackbars (background operation)
       await declineAppointment(
@@ -2851,7 +2851,7 @@ For more details, please check your appointments.
         showSnackbar: false, // Don't show snackbars for auto-decline
       );
 
-    } catch (e) {
+    } catch (e, stackTrace) {
       // Don't rethrow - we want to continue processing other appointments
     }
   }

@@ -1855,7 +1855,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                     const SizedBox(height: 16),
                     DropdownButtonFormField<FeedbackCategory>(
                       dropdownColor: Colors.white,
-                      initialValue: feedbackController.selectedCategory.value,
+                      value: feedbackController.selectedCategory.value,
                       decoration: InputDecoration(
                         hintText: 'Select a category',
                         prefixIcon: const Icon(Icons.category),
@@ -2463,7 +2463,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                   value: value,
                   onChanged: (v) => _showSnackbar(
                       'Settings', 'Setting updated', Colors.green),
-                  activeThumbColor: iconColor,
+                  activeColor: iconColor,
                 )
               else
                 Icon(Icons.arrow_forward_ios,

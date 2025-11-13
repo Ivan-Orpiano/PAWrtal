@@ -824,7 +824,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
                       isOpen = value;
                     });
                   },
-                  activeThumbColor: const Color.fromRGBO(81, 115, 153, 1),
+                  activeColor: const Color.fromRGBO(81, 115, 153, 1),
                 ),
                 const Divider(height: 24),
                 ...operatingHours.entries.map((entry) {
@@ -862,7 +862,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
                                   operatingHours[day]!['isOpen'] = value;
                                 });
                               },
-                              activeThumbColor:
+                              activeColor:
                                   const Color.fromRGBO(81, 115, 153, 1),
                             ),
                           ],
@@ -1030,7 +1030,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
                           ),
                           const SizedBox(height: 8),
                           DropdownButtonFormField<int>(
-                            initialValue: appointmentDuration,
+                            value: appointmentDuration,
                             decoration: const InputDecoration(
                               border: OutlineInputBorder(),
                               suffixText: "minutes",
@@ -1063,7 +1063,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
                           ),
                           const SizedBox(height: 8),
                           DropdownButtonFormField<int>(
-                            initialValue: maxAdvanceBooking,
+                            value: maxAdvanceBooking,
                             decoration: const InputDecoration(
                               border: OutlineInputBorder(),
                               suffixText: "days",
@@ -1118,11 +1118,11 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color.fromRGBO(81, 115, 153, 0.1),
+            color: const Color.fromRGBO(81, 115, 153, 0.1),
             blurRadius: 10,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -1705,7 +1705,7 @@ class _SuperAdminEditClinicPageState extends State<SuperAdminEditClinicPage>
       if (mounted) {
         Navigator.pop(context, true);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       _showErrorSnackbar('Error saving changes: ${e.toString()}');
     } finally {
       if (mounted) {

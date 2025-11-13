@@ -174,7 +174,7 @@ void _showSortMenu() {
     backgroundColor: Colors.transparent,
     builder: (context) => Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [Colors.white, backgroundColor],
@@ -1081,11 +1081,11 @@ class UserListView extends StatelessWidget {
   final Function(User) onUserTap;
 
   const UserListView({
-    super.key,
+    Key? key,
     required this.users,
     required this.isVerified,
     required this.onUserTap,
-  });
+  }) : super(key: key);
 
   static const Color backgroundColor = Color.fromRGBO(248, 253, 255, 1);
   static const Color primaryBlue = Color.fromRGBO(81, 115, 153, 1);
@@ -1170,10 +1170,10 @@ class UserCard extends StatefulWidget {
   final VoidCallback onTap;
 
   const UserCard({
-    super.key,
+    Key? key,
     required this.user,
     required this.onTap,
-  });
+  }) : super(key: key);
 
   @override
   State<UserCard> createState() => _UserCardState();
@@ -1374,12 +1374,12 @@ class _UserCardState extends State<UserCard>
                           // Email
                           Row(
                             children: [
-                              const Icon(Icons.email, size: 14, color: mediumGray),
+                              Icon(Icons.email, size: 14, color: mediumGray),
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
                                   widget.user.email,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 13,
                                     color: mediumGray,
                                   ),
@@ -1396,11 +1396,11 @@ class _UserCardState extends State<UserCard>
                               widget.user.phone!.isNotEmpty)
                             Row(
                               children: [
-                                const Icon(Icons.phone, size: 14, color: mediumGray),
+                                Icon(Icons.phone, size: 14, color: mediumGray),
                                 const SizedBox(width: 4),
                                 Text(
                                   widget.user.phone!,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 13,
                                     color: mediumGray,
                                   ),
@@ -1476,11 +1476,11 @@ class UserDetailsDialog extends StatefulWidget {
   final VoidCallback onUserUpdated;
 
   const UserDetailsDialog({
-    super.key,
+    Key? key,
     required this.user,
     required this.authRepository,
     required this.onUserUpdated,
-  });
+  }) : super(key: key);
 
   @override
   State<UserDetailsDialog> createState() => _UserDetailsDialogState();
@@ -1572,7 +1572,7 @@ Future<void> _loadVerificationDetails() async {
           _isLoadingVerificationDetails = false;
         });
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
           // Error fetching verification details
       setState(() {
         _isLoadingVerificationDetails = false;
@@ -1995,7 +1995,7 @@ Future<void> _loadVerificationDetails() async {
                       widget.user.idVerified
                           ? 'User identity has been verified'
                           : 'User identity verification pending',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         color: mediumGray,
                       ),
@@ -2012,7 +2012,7 @@ Future<void> _loadVerificationDetails() async {
             
             // Show loading indicator while fetching verification details
             if (_isLoadingVerificationDetails)
-              const Row(
+              Row(
                 children: [
                   SizedBox(
                     width: 16,
@@ -2022,7 +2022,7 @@ Future<void> _loadVerificationDetails() async {
                       color: mediumGray,
                     ),
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   Text(
                     'Loading verification details...',
                     style: TextStyle(
@@ -2067,7 +2067,7 @@ Future<void> _loadVerificationDetails() async {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Verified by:',
                               style: TextStyle(
                                 fontSize: 12,
@@ -2078,7 +2078,7 @@ Future<void> _loadVerificationDetails() async {
                             const SizedBox(height: 4),
                             Text(
                               _verifyByClinicName!,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 15,
                                 color: accentTeal,
                                 fontWeight: FontWeight.bold,
@@ -2087,7 +2087,7 @@ Future<void> _loadVerificationDetails() async {
                           ],
                         ),
                       ),
-                      const Icon(
+                      Icon(
                         Icons.verified,
                         color: vetGreen,
                         size: 20,
@@ -2102,12 +2102,12 @@ Future<void> _loadVerificationDetails() async {
               if (!_isLoadingVerificationDetails && widget.user.idVerifiedAt != null)
                 Row(
                   children: [
-                    const Icon(Icons.calendar_today, size: 16, color: mediumGray),
+                    Icon(Icons.calendar_today, size: 16, color: mediumGray),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Verified on: ${_formatDate(widget.user.idVerifiedAt)}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           color: mediumGray,
                           fontWeight: FontWeight.w500,
@@ -2216,7 +2216,7 @@ Future<void> _loadVerificationDetails() async {
             children: [
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   color: mediumGray,
                   fontWeight: FontWeight.w600,

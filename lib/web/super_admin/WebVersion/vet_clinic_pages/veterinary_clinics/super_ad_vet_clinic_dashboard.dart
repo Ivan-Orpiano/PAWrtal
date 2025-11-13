@@ -606,8 +606,8 @@ class _SuperAdminVetClinicDashboardState
         children: [
           Container(
             padding: EdgeInsets.all(_responsive.scale(24)),
-            decoration: const BoxDecoration(
-              color: Color.fromRGBO(81, 115, 153, 0.1),
+            decoration: BoxDecoration(
+              color: const Color.fromRGBO(81, 115, 153, 0.1),
               shape: BoxShape.circle,
             ),
             child: CircularProgressIndicator(
@@ -648,12 +648,12 @@ class _SuperAdminVetClinicDashboardState
               ),
               padding: EdgeInsets.all(_responsive.headerPadding),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
                     Colors.white,
-                    Color.fromRGBO(81, 115, 153, 0.03),
+                    const Color.fromRGBO(81, 115, 153, 0.03),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(_responsive.headerRadius),
@@ -960,17 +960,17 @@ class _SuperAdminVetClinicDashboardState
                     children: [
                       Container(
                         padding: EdgeInsets.all(_responsive.scale(26)),
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              Color.fromRGBO(81, 115, 153, 0.15),
-                              Color.fromRGBO(81, 115, 153, 0.05),
+                              const Color.fromRGBO(81, 115, 153, 0.15),
+                              const Color.fromRGBO(81, 115, 153, 0.05),
                             ],
                           ),
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Color.fromRGBO(81, 115, 153, 0.2),
+                              color: const Color.fromRGBO(81, 115, 153, 0.2),
                               blurRadius: 20,
                               spreadRadius: 5,
                             ),

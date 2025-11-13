@@ -101,11 +101,11 @@ class SuperAdminMobileHomePage extends GetView<WebSuperAdminHomeController> {
             ],
           ),
           borderRadius: BorderRadius.circular(14),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
-              color: Color.fromRGBO(81, 115, 153, 0.3),
+              color: const Color.fromRGBO(81, 115, 153, 0.3),
               blurRadius: 10,
-              offset: Offset(0, 4),
+              offset: const Offset(0, 4),
             ),
           ],
         ),

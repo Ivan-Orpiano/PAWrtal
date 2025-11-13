@@ -560,7 +560,7 @@ class _StaffFormDialogState extends State<_StaffFormDialog> {
                     _checkForChanges();
                   });
                 },
-                activeThumbColor: Colors.red,
+                activeColor: Colors.red,
                 activeTrackColor: Colors.red.withOpacity(0.3),
               ),
             ],

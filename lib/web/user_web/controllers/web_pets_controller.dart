@@ -218,7 +218,7 @@ class WebPetsController extends GetxController {
         for (var record in records) {
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       SnackbarHelper.showError(
         title: "Error",
         message: "Failed to fetch medical records: $e",
@@ -343,7 +343,7 @@ class WebPetsController extends GetxController {
 
       final userName = userDoc.data['name'] ?? 'Unknown';
       return userName;
-    } catch (e) {
+    } catch (e, stackTrace) {
       return 'Unknown';
     }
   }

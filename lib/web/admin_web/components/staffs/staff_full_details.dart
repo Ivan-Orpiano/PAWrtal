@@ -1480,7 +1480,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
       ),
       value: value,
       onChanged: (b) => onChanged(b),
-      activeThumbColor: colors.first,
+      activeColor: colors.first,
       activeTrackColor: colors.first.withOpacity(0.3),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     );
@@ -1625,7 +1625,7 @@ class _StaffFullDetailsState extends State<StaffFullDetails> {
                     _checkForChanges();
                   });
                 },
-                activeThumbColor: Colors.red,
+                activeColor: Colors.red,
                 activeTrackColor: Colors.red.withOpacity(0.3),
               ),
             ],

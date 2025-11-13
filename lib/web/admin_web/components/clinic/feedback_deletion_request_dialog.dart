@@ -14,7 +14,7 @@ class FeedbackDeletionRequestDialog extends StatefulWidget {
   final Function(String)? onError;
 
   const FeedbackDeletionRequestDialog({
-    super.key,
+    Key? key,
     required this.reviewId,
     required this.clinicId,
     required this.userId,
@@ -22,7 +22,7 @@ class FeedbackDeletionRequestDialog extends StatefulWidget {
     required this.requestedBy,
     required this.onSuccess,
     this.onError,
-  });
+  }) : super(key: key);
 
   @override
   State<FeedbackDeletionRequestDialog> createState() =>
@@ -35,7 +35,7 @@ class _FeedbackDeletionRequestDialogState
   final _additionalDetailsController = TextEditingController();
 
   String? _selectedReason;
-  final List<PlatformFile> _selectedFiles = [];
+  List<PlatformFile> _selectedFiles = [];
   bool _isSubmitting = false;
   String? _errorMessage;
 

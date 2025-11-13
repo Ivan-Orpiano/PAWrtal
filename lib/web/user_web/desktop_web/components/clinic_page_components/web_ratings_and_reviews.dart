@@ -3,6 +3,7 @@ import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/web/dimensions.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
 Widget buildStarRating(double rating, {double size = 30}) {
   return Row(

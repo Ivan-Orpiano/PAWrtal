@@ -84,7 +84,7 @@ class _AdminMobileHomePageState extends State<AdminMobileHomePage> {
         ),
         actions: [
           // Notification Icon with AdminWebNotif
-          const AdminWebNotif(
+          AdminWebNotif(
             right: 0,
             top: 70,
             width: 400,
@@ -148,7 +148,7 @@ class _AdminMobileHomePageState extends State<AdminMobileHomePage> {
 
   Widget _buildProfileButton(WebAdminHomeController controller) {
     return Builder(
-      builder: (context) => const AdminWebProfile(
+      builder: (context) => AdminWebProfile(
         right: 0,
         top: 70,
         width: 250,

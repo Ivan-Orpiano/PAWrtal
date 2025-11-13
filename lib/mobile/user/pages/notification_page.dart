@@ -3,6 +3,7 @@ import 'package:capstone_app/notification/services/in_app_notification_service.d
 import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
