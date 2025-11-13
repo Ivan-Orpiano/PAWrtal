@@ -20,7 +20,7 @@ class FAQItem {
   FAQItem({
     required this.question,
     required this.answer,
-    this.isExpanded = false,
+    this.isExpanded = false,  
   });
 }
 
@@ -1078,193 +1078,193 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Daily Report Tracker
-          Obx(() {
-            final tracker = feedbackController.dailyTracker.value;
+        //  Obx(() {
+          //   final tracker = feedbackController.dailyTracker.value;
 
-            if (tracker == null || feedbackController.isCheckingLimit.value) {
-              return Container(
-                padding: const EdgeInsets.all(16),
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[300]!),
-                ),
-                child: const Row(
-                  children: [
-                    SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                    SizedBox(width: 12),
-                    Text(
-                      'Loading daily limit...',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                  ],
-                ),
-              );
-            }
+          //   if (tracker == null || feedbackController.isCheckingLimit.value) {
+          //     return Container(
+          //       padding: const EdgeInsets.all(16),
+          //       margin: const EdgeInsets.only(bottom: 16),
+          //       decoration: BoxDecoration(
+          //         color: Colors.grey[100],
+          //         borderRadius: BorderRadius.circular(12),
+          //         border: Border.all(color: Colors.grey[300]!),
+          //       ),
+          //       child: const Row(
+          //         children: [
+          //           SizedBox(
+          //             width: 16,
+          //             height: 16,
+          //             child: CircularProgressIndicator(strokeWidth: 2),
+          //           ),
+          //           SizedBox(width: 12),
+          //           Text(
+          //             'Loading daily limit...',
+          //             style: TextStyle(fontSize: 12, color: Colors.grey),
+          //           ),
+          //         ],
+          //       ),
+          //     );
+          //   }
 
-            final reportCount = tracker.reportCount;
-            final remaining = tracker.remainingReports;
-            final isLimitReached = tracker.hasExceededLimit;
-            final timeUntilReset = feedbackController.getTimeUntilReset();
+          //   final reportCount = tracker.reportCount;
+          //   final remaining = tracker.remainingReports;
+          //   final isLimitReached = tracker.hasExceededLimit;
+          //   final timeUntilReset = feedbackController.getTimeUntilReset();
 
-            // Calculate progress
-            final progress = (reportCount / 3).clamp(0.0, 1.0);
+          //   // Calculate progress
+          //   final progress = (reportCount / 3).clamp(0.0, 1.0);
 
-            // Determine color based on remaining reports
-            Color progressColor;
-            Color bgColor;
-            IconData icon;
+          //   // Determine color based on remaining reports
+          //   Color progressColor;
+          //   Color bgColor;
+          //   IconData icon;
 
-            if (isLimitReached) {
-              progressColor = Colors.red[600]!;
-              bgColor = Colors.red[50]!;
-              icon = Icons.block;
-            } else if (remaining == 1) {
-              progressColor = Colors.orange[600]!;
-              bgColor = Colors.orange[50]!;
-              icon = Icons.warning_amber;
-            } else {
-              progressColor = Colors.blue[600]!;
-              bgColor = Colors.blue[50]!;
-              icon = Icons.info_outline;
-            }
+          //   if (isLimitReached) {
+          //     progressColor = Colors.red[600]!;
+          //     bgColor = Colors.red[50]!;
+          //     icon = Icons.block;
+          //   } else if (remaining == 1) {
+          //     progressColor = Colors.orange[600]!;
+          //     bgColor = Colors.orange[50]!;
+          //     icon = Icons.warning_amber;
+          //   } else {
+          //     progressColor = Colors.blue[600]!;
+          //     bgColor = Colors.blue[50]!;
+          //     icon = Icons.info_outline;
+          //   }
 
-            return Container(
-              padding: const EdgeInsets.all(16),
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: bgColor,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: progressColor.withOpacity(0.3), width: 1.5),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: progressColor.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(icon, color: progressColor, size: 20),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              isLimitReached
-                                  ? 'Daily Limit Reached'
-                                  : 'Daily Report Limit',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: progressColor,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '$reportCount/3 reports used today',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey[700],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: progressColor.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          '$remaining left',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: progressColor,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
+          //   return Container(
+          //     padding: const EdgeInsets.all(16),
+          //     margin: const EdgeInsets.only(bottom: 16),
+          //     decoration: BoxDecoration(
+          //       color: bgColor,
+          //       borderRadius: BorderRadius.circular(12),
+          //       border: Border.all(
+          //           color: progressColor.withOpacity(0.3), width: 1.5),
+          //     ),
+          //     child: Column(
+          //       crossAxisAlignment: CrossAxisAlignment.start,
+          //       children: [
+          //         Row(
+          //           children: [
+          //             Container(
+          //               padding: const EdgeInsets.all(8),
+          //               decoration: BoxDecoration(
+          //                 color: progressColor.withOpacity(0.15),
+          //                 borderRadius: BorderRadius.circular(8),
+          //               ),
+          //               child: Icon(icon, color: progressColor, size: 20),
+          //             ),
+          //             const SizedBox(width: 12),
+          //             Expanded(
+          //               child: Column(
+          //                 crossAxisAlignment: CrossAxisAlignment.start,
+          //                 children: [
+          //                   Text(
+          //                     isLimitReached
+          //                         ? 'Daily Limit Reached'
+          //                         : 'Daily Report Limit',
+          //                     style: TextStyle(
+          //                       fontSize: 14,
+          //                       fontWeight: FontWeight.w700,
+          //                       color: progressColor,
+          //                     ),
+          //                   ),
+          //                   const SizedBox(height: 2),
+          //                   Text(
+          //                     '$reportCount/3 reports used today',
+          //                     style: TextStyle(
+          //                       fontSize: 11,
+          //                       color: Colors.grey[700],
+          //                     ),
+          //                   ),
+          //                 ],
+          //               ),
+          //             ),
+          //             Container(
+          //               padding: const EdgeInsets.symmetric(
+          //                   horizontal: 10, vertical: 6),
+          //               decoration: BoxDecoration(
+          //                 color: progressColor.withOpacity(0.15),
+          //                 borderRadius: BorderRadius.circular(20),
+          //               ),
+          //               child: Text(
+          //                 '$remaining left',
+          //                 style: TextStyle(
+          //                   fontSize: 11,
+          //                   fontWeight: FontWeight.w700,
+          //                   color: progressColor,
+          //                 ),
+          //               ),
+          //             ),
+          //           ],
+          //         ),
+          //         const SizedBox(height: 12),
 
-                  // Progress Bar
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      backgroundColor: Colors.white.withOpacity(0.5),
-                      valueColor: AlwaysStoppedAnimation<Color>(progressColor),
-                      minHeight: 8,
-                    ),
-                  ),
+          //         // Progress Bar
+          //         ClipRRect(
+          //           borderRadius: BorderRadius.circular(8),
+          //           child: LinearProgressIndicator(
+          //             value: progress,
+          //             backgroundColor: Colors.white.withOpacity(0.5),
+          //             valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+          //             minHeight: 8,
+          //           ),
+          //         ),
 
-                  const SizedBox(height: 10),
+          //         const SizedBox(height: 10),
 
-                  // Reset Time Info
-                  Row(
-                    children: [
-                      Icon(Icons.access_time,
-                          size: 12, color: Colors.grey[600]),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Resets in: $timeUntilReset',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey[700],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
+          //         // Reset Time Info
+          //         Row(
+          //           children: [
+          //             Icon(Icons.access_time,
+          //                 size: 12, color: Colors.grey[600]),
+          //             const SizedBox(width: 4),
+          //             Text(
+          //               'Resets in: $timeUntilReset',
+          //               style: TextStyle(
+          //                 fontSize: 11,
+          //                 color: Colors.grey[700],
+          //                 fontWeight: FontWeight.w500,
+          //               ),
+          //             ),
+          //           ],
+          //         ),
 
-                  // Limit Reached Warning
-                  if (isLimitReached) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red[200]!),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.info_outline,
-                              size: 14, color: Colors.red[700]),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'You\'ve reached the daily limit. Please try again after reset.',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.red[700],
-                                height: 1.4,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            );
-          }),
+          //         // Limit Reached Warning
+          //         if (isLimitReached) ...[
+          //           const SizedBox(height: 12),
+          //           Container(
+          //             padding: const EdgeInsets.all(10),
+          //             decoration: BoxDecoration(
+          //               color: Colors.white,
+          //               borderRadius: BorderRadius.circular(8),
+          //               border: Border.all(color: Colors.red[200]!),
+          //             ),
+          //             child: Row(
+          //               children: [
+          //                 Icon(Icons.info_outline,
+          //                     size: 14, color: Colors.red[700]),
+          //                 const SizedBox(width: 8),
+          //                 Expanded(
+          //                   child: Text(
+          //                     'You\'ve reached the daily limit. Please try again after reset.',
+          //                     style: TextStyle(
+          //                       fontSize: 11,
+          //                       color: Colors.red[700],
+          //                       height: 1.4,
+          //                     ),
+          //                   ),
+          //                 ),
+          //               ],
+          //             ),
+          //           ),
+          //         ],
+          //       ],
+          //     ),
+          //   );
+          // }),
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
