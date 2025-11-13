@@ -76,10 +76,13 @@ class WebAppointmentController extends GetxController {
     ever(searchQuery, (_) => updateFilteredAppointments());
     ever(selectedDateFilter, (_) => updateFilteredAppointments());
 
-    // NEW: Start auto-decline timer AFTER a small delay to ensure initialization
+    // Start auto-decline timer AFTER a small delay to ensure initialization
     Future.delayed(const Duration(seconds: 2), () {
       _startAutoDeclineTimer();
     });
+
+    // Set default tab to pending
+    selectedTab.value = 'pending';
   }
 
   @override
@@ -553,71 +556,18 @@ class WebAppointmentController extends GetxController {
     print('>>> Current Local Time: ${now.toString()}');
     print('>>> Today Date: ${todayDate.toString()}');
 
-    List<Appointment> filtered = appointments.toList();
+    // Start with base filtered appointments (respects calendar date or view mode)
+    List<Appointment> filtered = _getBaseFilteredAppointments();
 
-    // Calendar date selection
-    if (selectedCalendarDate.value != null) {
-      final selectedDate = selectedCalendarDate.value!;
-
-      filtered = filtered.where((appointment) {
-        final appointmentDate = DateTime(
-          appointment.dateTime.year,
-          appointment.dateTime.month,
-          appointment.dateTime.day,
-        );
-
-        return appointmentDate.year == selectedDate.year &&
-            appointmentDate.month == selectedDate.month &&
-            appointmentDate.day == selectedDate.day;
-      }).toList();
-
-      print('>>> 📅 Calendar date filter:');
-      print(
-          '    Selected Date: ${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}');
-      print('    Filtered appointments: ${filtered.length}');
-    } else {
-      // Apply view mode filtering
-      if (selectedTab.value != 'pending' &&
-          selectedTab.value != 'scheduled' &&
-          selectedTab.value != 'declined' &&
-          selectedTab.value != 'cancelled') {
-        filtered = _getFilteredAppointmentsForStats();
-      }
-    }
-
-    // Status filtering
+    // Apply status filtering based on selected tab
     switch (selectedTab.value) {
-      case 'today':
-        // Stored dateTime is already local, just compare dates
-        filtered = filtered.where((appointment) {
-          final appointmentDate = DateTime(
-            appointment.dateTime.year,
-            appointment.dateTime.month,
-            appointment.dateTime.day,
-          );
-
-          return appointmentDate.isAtSameMomentAs(todayDate);
-        }).toList();
-        print('>>> 📅 Tab filter: today (${filtered.length} appointments)');
-        break;
-
       case 'pending':
         filtered = filtered.where((a) => a.status == 'pending').toList();
         print('>>> 📅 Tab filter: pending (${filtered.length} appointments)');
         break;
 
       case 'scheduled':
-        filtered = filtered.where((a) {
-          // Check if NOT today
-          final appointmentDate = DateTime(
-            a.dateTime.year,
-            a.dateTime.month,
-            a.dateTime.day,
-          );
-
-          final isToday = appointmentDate.isAtSameMomentAs(todayDate);
-          return a.status == 'accepted' && !isToday;
-        }).toList();
+        filtered = filtered.where((a) => a.status == 'accepted').toList();
         print('>>> 📅 Tab filter: scheduled (${filtered.length} appointments)');
         break;
 
@@ -633,17 +583,11 @@ class WebAppointmentController extends GetxController {
         break;
 
       case 'cancelled':
-        if (selectedCalendarDate.value == null) {
-          filtered = _getFilteredAppointmentsForStats();
-        }
         filtered = filtered.where((a) => a.status == 'cancelled').toList();
         print('>>> 📅 Tab filter: cancelled (${filtered.length} appointments)');
         break;
 
       case 'declined':
-        if (selectedCalendarDate.value == null) {
-          filtered = _getFilteredAppointmentsForStats();
-        }
         filtered = filtered.where((a) => a.status == 'declined').toList();
         print('>>> 📅 Tab filter: declined (${filtered.length} appointments)');
         break;
@@ -666,11 +610,25 @@ class WebAppointmentController extends GetxController {
           '>>> 🔍 Search filter: "${searchQuery.value}" ($beforeSearch -> ${filtered.length})');
     }
 
-    // Sort by date (newest first)
-    filtered.sort((a, b) => b.dateTime.compareTo(a.dateTime));
+    // Sort by nearest date/time from current moment
+    filtered.sort((a, b) {
+      final nowMoment = DateTime.now();
+      final aDiff = a.dateTime.difference(nowMoment).abs();
+      final bDiff = b.dateTime.difference(nowMoment).abs();
+      final comparison = aDiff.compareTo(bDiff);
+      if (comparison == 0) {
+        return a.dateTime.compareTo(b.dateTime);
+      }
+      return comparison;
+    });
+
     filteredAppointments.assignAll(filtered);
 
     print('>>> 📋 Final filtered appointments: ${filteredAppointments.length}');
+    if (filtered.isNotEmpty) {
+      print('>>> 🕐 First appointment: ${filtered.first.dateTime}');
+      print('>>> 🕐 Last appointment: ${filtered.last.dateTime}');
+    }
   }
 
   String getOwnerName(String userId) {
@@ -756,8 +714,8 @@ class WebAppointmentController extends GetxController {
     final todayDate = DateTime(now.year, now.month, now.day);
 
     final todayAppts = appointments.where((appointment) {
-      // CRITICAL: The stored dateTime is ALREADY in local time (not UTC)
-      // Just compare the DATE part, same as dashboard
+      // The stored dateTime is ALREADY in local time (not UTC)
+      // Just compare the DATE part
       final appointmentDate = DateTime(
         appointment.dateTime.year,
         appointment.dateTime.month,
@@ -778,21 +736,8 @@ class WebAppointmentController extends GetxController {
       appointments.where((a) => a.status == 'pending').toList();
 
   List<Appointment> get scheduled {
-    final now = DateTime.now();
-    final todayDate = DateTime(now.year, now.month, now.day);
-
-    return appointments.where((a) {
-      if (a.status != 'accepted') return false;
-
-      // Check if NOT today - stored time is already local
-      final appointmentDate = DateTime(
-        a.dateTime.year,
-        a.dateTime.month,
-        a.dateTime.day,
-      );
-
-      return !appointmentDate.isAtSameMomentAs(todayDate);
-    }).toList();
+    // Show ALL accepted appointments (including today)
+    return appointments.where((a) => a.status == 'accepted').toList();
   }
 
   List<Appointment> get inProgress =>
@@ -815,45 +760,8 @@ class WebAppointmentController extends GetxController {
   }
 
   Map<String, int> get appointmentStats {
-    List<Appointment> filteredForStats = _getFilteredAppointmentsForStats();
-    final now = DateTime.now();
-    final todayDate = DateTime(now.year, now.month, now.day);
-
-    final stats = {
-      'total': filteredForStats.length,
-      'today': todayAppointments.length,
-      'pending': appointments.where((a) => a.status == 'pending').length,
-      'scheduled': filteredForStats.where((a) {
-        // Check if NOT today - stored time is already local
-        final appointmentDate = DateTime(
-          a.dateTime.year,
-          a.dateTime.month,
-          a.dateTime.day,
-        );
-
-        final isToday = appointmentDate.isAtSameMomentAs(todayDate);
-        return a.status == 'accepted' && !isToday;
-      }).length,
-      'in_progress':
-          filteredForStats.where((a) => a.status == 'in_progress').length,
-      'completed':
-          filteredForStats.where((a) => a.status == 'completed').length,
-      'cancelled':
-          filteredForStats.where((a) => a.status == 'cancelled').length,
-      'declined': filteredForStats.where((a) => a.status == 'declined').length,
-    };
-
-    print('>>> 📊 Appointment Stats (${viewMode.value.label}) - LOCAL Time:');
-    print('    Total: ${stats['total']}');
-    print('    Today: ${stats['today']}');
-    print('    Pending: ${stats['pending']}');
-    print('    Scheduled: ${stats['scheduled']}');
-    print('    In Progress: ${stats['in_progress']}');
-    print('    Completed: ${stats['completed']}');
-    print('    Cancelled: ${stats['cancelled']}');
-    print('    Declined: ${stats['declined']}');
-
-    return stats;
+    // Use the new filteredAppointmentStats which respects calendar date and view mode
+    return filteredAppointmentStats;
   }
 
   List<Appointment> _getFilteredAppointmentsForStats() {
@@ -999,16 +907,34 @@ class WebAppointmentController extends GetxController {
 
   void setViewMode(AppointmentViewMode mode) {
     viewMode.value = mode;
-    selectedCalendarDate.value = null;
+    selectedCalendarDate.value =
+        null; // Clear calendar date when changing view mode
+
+    print('>>> 🔄 View mode changed to: ${mode.label}');
+
+    // Refresh filtered appointments and stats
     updateFilteredAppointments();
+
+    // Force refresh of stats
+    appointmentStats; // Trigger the getter
   }
 
   void setCalendarDate(DateTime? date) {
     selectedCalendarDate.value = date;
     if (date != null) {
-      viewMode.value = AppointmentViewMode.today;
+      // When calendar date is selected, keep current view mode
+      // Don't force to 'today' view mode
+      print(
+          '>>> 📅 Calendar date selected: ${DateFormat('MMM dd, yyyy').format(date)}');
+    } else {
+      print('>>> 📅 Calendar date filter cleared');
     }
+
+    // Refresh filtered appointments and stats
     updateFilteredAppointments();
+
+    // Force refresh of stats (this will update stat cards and tab counts)
+    appointmentStats; // Trigger the getter
   }
 
   Future<void> acceptAppointment(Appointment appointment) async {
@@ -1621,7 +1547,23 @@ class WebAppointmentController extends GetxController {
   }
 
   void setSelectedTab(String tab) {
-    selectedTab.value = tab;
+    // Validate tab value (no 'today' allowed)
+    final validTabs = [
+      'pending',
+      'scheduled',
+      'in_progress',
+      'completed',
+      'cancelled',
+      'declined'
+    ];
+
+    if (validTabs.contains(tab)) {
+      selectedTab.value = tab;
+    } else {
+      // Default to pending if invalid tab
+      print('>>> ⚠️ Invalid tab value: $tab, defaulting to pending');
+      selectedTab.value = 'pending';
+    }
   }
 
   void setDateFilter(DateTime date) {
@@ -2847,7 +2789,6 @@ For more details, please check your appointments.
     _fallbackTimer?.cancel();
     _fallbackTimer = null;
 
-    // NEW: Cancel auto-decline timer
     _autoDeclineTimer?.cancel();
     _autoDeclineTimer = null;
 
@@ -2865,13 +2806,19 @@ For more details, please check your appointments.
 
     // Reset filters
     searchQuery.value = '';
-    selectedTab.value = 'today';
+
+    // ✅ IMPORTANT: Reset to pending on logout ONLY
+    selectedTab.value = 'pending';
+
     selectedDateFilter.value = DateTime.now();
     selectedCalendarDate.value = null;
     viewMode.value = AppointmentViewMode.today;
 
     // Reset connection status
     isRealTimeConnected.value = false;
+
+    print(
+        '>>> 🧹 Controller cleanup complete (tab reset to pending for fresh login)');
   }
 
   void _startAutoDeclineTimer() {
@@ -3243,34 +3190,33 @@ For more details, please check your appointments.
     return utcNow.add(const Duration(hours: 8));
   }
 
-  void resetToTodayTab() {
-    print('>>> 🔄 Resetting to Today tab');
+  void resetToPendingTab() {
+    print('>>> 🔄 Resetting to Pending tab');
 
-    // Reset tab selection to "today"
-    selectedTab.value = 'today';
+    // Reset tab selection to "pending"
+    selectedTab.value = 'pending';
 
     // Clear calendar date filter
     selectedCalendarDate.value = null;
 
-    // Ensure view mode is set to today
-    viewMode.value = AppointmentViewMode.today;
+    // Keep the current view mode (don't force to 'today')
+    // Users can still use the view mode filter
 
     // Clear search query
     searchQuery.value = '';
 
-    // Trigger filter update to show today's appointments
+    // Trigger filter update to show pending appointments
     updateFilteredAppointments();
 
-    print('>>> ✅ Reset complete - showing today\'s appointments');
+    print('>>> ✅ Reset complete - showing pending appointments');
   }
 
   void syncTabControllerWithState(
       TabController desktopController, TabController mobileController) {
     print('>>> 🔄 Syncing tab controllers with saved state');
 
-    // Define tab values list (same as in the widget)
+    // Define tab values list (WITHOUT 'today')
     final tabValues = [
-      'today',
       'pending',
       'scheduled',
       'in_progress',
@@ -3279,7 +3225,7 @@ For more details, please check your appointments.
       'declined',
     ];
 
-    // Find the index of the currently selected tab
+    // Find the index of the currently selected tab (from the persistent state)
     final currentTabIndex = tabValues.indexOf(selectedTab.value);
 
     if (currentTabIndex != -1) {
@@ -3290,15 +3236,142 @@ For more details, please check your appointments.
       print(
           '>>> ✅ Tab controllers synced to: ${selectedTab.value} (index: $currentTabIndex)');
     } else {
-      // Fallback to today if something went wrong
-      selectedTab.value = 'today';
+      // Fallback to pending if something went wrong
+      // BUT DON'T change selectedTab.value - keep the controller state
       desktopController.index = 0;
       mobileController.index = 0;
 
-      print('>>> ⚠️ Invalid tab state, reset to today');
+      print(
+          '>>> ⚠️ Invalid tab state detected, UI defaulting to pending (but controller state preserved)');
     }
 
     // Ensure filtered appointments match the selected tab
     updateFilteredAppointments();
+  }
+
+  void initializeWithPendingTab() {
+    print('>>> 🔄 Initializing with Pending tab as default');
+
+    // Set to pending tab
+    selectedTab.value = 'pending';
+
+    // Clear any calendar date filter
+    selectedCalendarDate.value = null;
+
+    // Clear search
+    searchQuery.value = '';
+
+    // Trigger filter update
+    updateFilteredAppointments();
+
+    print('>>> ✅ Initialized with pending tab');
+  }
+
+  Map<String, int> get filteredAppointmentStats {
+    // Get the base filtered list based on calendar date or view mode
+    List<Appointment> baseFiltered = _getBaseFilteredAppointments();
+
+    final stats = {
+      'total': baseFiltered.length,
+      'today': todayAppointments.length, // Always shows today count in header
+      'pending': baseFiltered.where((a) => a.status == 'pending').length,
+      'scheduled': baseFiltered.where((a) => a.status == 'accepted').length,
+      'in_progress':
+          baseFiltered.where((a) => a.status == 'in_progress').length,
+      'completed': baseFiltered.where((a) => a.status == 'completed').length,
+      'cancelled': baseFiltered.where((a) => a.status == 'cancelled').length,
+      'declined': baseFiltered.where((a) => a.status == 'declined').length,
+    };
+
+    print('>>> 📊 Filtered Appointment Stats:');
+    print('    Calendar Date: ${selectedCalendarDate.value}');
+    print('    View Mode: ${viewMode.value.label}');
+    print('    Total: ${stats['total']}');
+    print('    Pending: ${stats['pending']}');
+    print('    Scheduled: ${stats['scheduled']}');
+    print('    In Progress: ${stats['in_progress']}');
+    print('    Completed: ${stats['completed']}');
+    print('    Cancelled: ${stats['cancelled']}');
+    print('    Declined: ${stats['declined']}');
+
+    return stats;
+  }
+
+  List<Appointment> _getBaseFilteredAppointments() {
+    final now = DateTime.now();
+    final todayDate = DateTime(now.year, now.month, now.day);
+
+    List<Appointment> filtered;
+
+    // Priority 1: Calendar date selection (if set)
+    if (selectedCalendarDate.value != null) {
+      final selectedDate = selectedCalendarDate.value!;
+
+      filtered = appointments.where((appointment) {
+        final appointmentDate = DateTime(
+          appointment.dateTime.year,
+          appointment.dateTime.month,
+          appointment.dateTime.day,
+        );
+
+        return appointmentDate.year == selectedDate.year &&
+            appointmentDate.month == selectedDate.month &&
+            appointmentDate.day == selectedDate.day;
+      }).toList();
+
+      print(
+          '>>> 📅 Base filter: Calendar date (${filtered.length} appointments)');
+      return filtered;
+    }
+
+    // Priority 2: View mode filtering
+    switch (viewMode.value) {
+      case AppointmentViewMode.today:
+        filtered = appointments.where((appointment) {
+          final appointmentDate = DateTime(
+            appointment.dateTime.year,
+            appointment.dateTime.month,
+            appointment.dateTime.day,
+          );
+          return appointmentDate.isAtSameMomentAs(todayDate);
+        }).toList();
+        print(
+            '>>> 📅 Base filter: Today view (${filtered.length} appointments)');
+        break;
+
+      case AppointmentViewMode.thisWeek:
+        final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+        final weekStartDate =
+            DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+        final weekEndDate = weekStartDate.add(const Duration(days: 6));
+
+        filtered = appointments.where((a) {
+          final appointmentDate = DateTime(
+            a.dateTime.year,
+            a.dateTime.month,
+            a.dateTime.day,
+          );
+          return !appointmentDate.isBefore(weekStartDate) &&
+              !appointmentDate.isAfter(weekEndDate);
+        }).toList();
+        print(
+            '>>> 📅 Base filter: This Week (${filtered.length} appointments)');
+        break;
+
+      case AppointmentViewMode.thisMonth:
+        filtered = appointments.where((a) {
+          return a.dateTime.year == now.year && a.dateTime.month == now.month;
+        }).toList();
+        print(
+            '>>> 📅 Base filter: This Month (${filtered.length} appointments)');
+        break;
+
+      case AppointmentViewMode.allTime:
+        filtered = appointments.toList();
+        print('>>> 📅 Base filter: All Time (${filtered.length} appointments)');
+        break;
+    }
+
+    return filtered;
   }
 }
