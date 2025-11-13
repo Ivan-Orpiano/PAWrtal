@@ -51,7 +51,8 @@ class MyPetTile extends StatelessWidget {
                     topRight: Radius.circular(20),
                   ),
                   child: Image.network(
-                    pet.image ?? 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=300&h=300&fit=crop',
+                    pet.image ??
+                        'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=300&h=300&fit=crop',
                     height: 130,
                     width: double.infinity,
                     fit: BoxFit.cover,
@@ -71,7 +72,8 @@ class MyPetTile extends StatelessWidget {
                   top: 8,
                   right: 8,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: const Color(0xFF3498DB),
                       borderRadius: BorderRadius.circular(12),
@@ -93,9 +95,42 @@ class MyPetTile extends StatelessWidget {
                     ),
                   ),
                 ),
+                // NEW: Age Badge (bottom left)
+                if (pet.hasBirthdate)
+                  Positioned(
+                    bottom: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.6),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // const Icon(
+                          //   Icons.cake,
+                          //   color: Colors.white,
+                          //   size: 12,
+                          // ),
+                          // const SizedBox(width: 4),
+                          Text(
+                            _getShortAge(pet),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
               ],
             ),
-            
+
             // Info Section
             Expanded(
               child: Padding(
@@ -129,11 +164,12 @@ class MyPetTile extends StatelessWidget {
                         ),
                       ],
                     ),
-                    
+
                     // Weight info if available
                     if (pet.weight != null)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.grey[100],
                           borderRadius: BorderRadius.circular(8),
@@ -166,5 +202,28 @@ class MyPetTile extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // NEW: Helper method to get short age format for badge
+  String _getShortAge(Pet pet) {
+    if (pet.birthdate == null) return '';
+
+    final now = DateTime.now();
+    final age = now.difference(pet.birthdate!);
+
+    final years = age.inDays ~/ 365;
+    final months = (age.inDays % 365) ~/ 30;
+
+    if (years > 0) {
+      return '${years}y';
+    } else if (months > 0) {
+      return '${months}mo';
+    } else {
+      final days = age.inDays;
+      if (days >= 7) {
+        return '${days ~/ 7}w';
+      }
+      return '${days}d';
+    }
   }
 }

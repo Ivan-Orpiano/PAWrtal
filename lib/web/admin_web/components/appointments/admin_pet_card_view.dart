@@ -54,7 +54,6 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
 
   /// NEW: Initialize controller synchronously in initState
   void _initializeController() {
-
     // Register controller with unique tag
     final adminController = Get.put(
       AdminPetCardViewController(
@@ -62,7 +61,6 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
       ),
       tag: widget.pet.petId,
     );
-
 
     // Fetch data AFTER first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -73,18 +71,14 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
   /// NEW: Load pet data after controller is initialized
   Future<void> _loadPetData(AdminPetCardViewController controller) async {
     try {
-
       // Load all data
       await controller.loadPetData(widget.pet, widget.clinicId);
-
-    } catch (e, stackTrace) {
-    }
+    } catch (e, stackTrace) {}
   }
 
   /// NEW: Initialize controller and fetch all data immediately
   Future<void> _initializeAndLoadData() async {
     try {
-
       final adminController = Get.put(
         AdminPetCardViewController(
           authRepository: Get.find(),
@@ -92,12 +86,9 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
         tag: widget.pet.petId,
       );
 
-
       // âœ… CRITICAL: Pass clinic ID and fetch data immediately
       await adminController.loadPetData(widget.pet, widget.clinicId);
-
-    } catch (e, stackTrace) {
-    }
+    } catch (e, stackTrace) {}
   }
 
   @override
@@ -406,6 +397,16 @@ class _AdminPetCardViewState extends State<AdminPetCardView>
                           : 'Not specified'),
                   const Divider(height: 24),
                   _buildIDRow('Gender', widget.pet.gender ?? 'Not specified'),
+                  // NEW: Add birthdate and age
+                  if (widget.pet.hasBirthdate) ...[
+                    const Divider(height: 24),
+                    _buildIDRow(
+                      'Birthdate',
+                      DateFormat('MMMM dd, yyyy').format(widget.pet.birthdate!),
+                    ),
+                    const Divider(height: 24),
+                    _buildIDRow('Age', widget.pet.ageString),
+                  ],
                 ],
               ),
             ),

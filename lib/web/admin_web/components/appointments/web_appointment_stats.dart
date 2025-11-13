@@ -32,7 +32,7 @@ class WebAppointmentStats extends StatelessWidget {
   Widget _buildHeader(WebAppointmentController controller) {
     return Obx(() => Container(
           padding:
-              const EdgeInsets.only(left: 24, right: 24, top: 10, bottom: 10),
+              const EdgeInsets.only(left: 24, right: 24, top: 16, bottom: 16),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
@@ -78,79 +78,134 @@ class WebAppointmentStats extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          controller.selectedCalendarDate.value != null
-                              ? "Showing: ${DateFormat('MMM dd, yyyy').format(controller.selectedCalendarDate.value!)}"
-                              : "${controller.appointmentStats['today']} today",
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 16,
+                        const SizedBox(height: 6),
+                        // Improved today count display
+                        if (controller.selectedCalendarDate.value != null)
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.filter_alt,
+                                size: 16,
+                                color: Colors.white.withOpacity(0.9),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                "Filtered: ${DateFormat('MMM dd, yyyy').format(controller.selectedCalendarDate.value!)}",
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.9),
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          )
+                        else
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.calendar_today,
+                                  size: 14,
+                                  color: Colors.white.withOpacity(0.95),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Total Appointments: ',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                Text(
+                                  '${controller.appointmentStats['today']}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),
+                  // Improved total display
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1.5,
+                      ),
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
-                          Icons.calendar_today,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                        const SizedBox(height: 4),
                         Text(
                           '${controller.appointmentStats['total']}',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 18,
+                            fontSize: 32,
                             fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          controller.viewMode.value.label,
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
-                            fontSize: 10,
+                            height: 1,
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: controller.isRealTimeConnected.value
-                                    ? Colors.green
-                                    : Colors.orange,
-                                shape: BoxShape.circle,
-                              ),
+                        Text(
+                          'Appointments',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            controller.selectedCalendarDate.value != null
+                                ? 'Selected Date'
+                                : controller.viewMode.value.label,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.95),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              controller.connectionStatus,
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.9),
-                                fontSize: 9,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 14),
               Container(
                 padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
@@ -168,7 +223,9 @@ class WebAppointmentStats extends StatelessWidget {
                         borderRadius: BorderRadius.circular(4),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color:
                                 isSelected ? Colors.white : Colors.transparent,
@@ -193,7 +250,7 @@ class WebAppointmentStats extends StatelessWidget {
                 ),
               ),
               if (controller.selectedCalendarDate.value != null) ...[
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 TextButton.icon(
                   onPressed: () => controller.setCalendarDate(null),
                   icon: const Icon(Icons.clear, color: Colors.white, size: 14),
@@ -216,25 +273,21 @@ class WebAppointmentStats extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                  child: _buildStatCard('Total', stats['total']!,
-                      Icons.calendar_today, Colors.blue)),
-              const SizedBox(width: 16),
-              Expanded(
                   child: _buildStatCard('Pending', stats['pending']!,
                       Icons.pending, Colors.orange)),
               const SizedBox(width: 16),
               Expanded(
                   child: _buildStatCard('Scheduled', stats['scheduled']!,
                       Icons.schedule, Colors.green)),
+              const SizedBox(width: 16),
+              Expanded(
+                  child: _buildStatCard('In Progress', stats['in_progress']!,
+                      Icons.medical_services, Colors.purple)),
             ],
           ),
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(
-                  child: _buildStatCard('In Progress', stats['in_progress']!,
-                      Icons.medical_services, Colors.purple)),
-              const SizedBox(width: 16),
               Expanded(
                   child: _buildStatCard('Completed', stats['completed']!,
                       Icons.check_circle, Colors.teal)),
@@ -242,6 +295,10 @@ class WebAppointmentStats extends StatelessWidget {
               Expanded(
                   child: _buildStatCard('Cancelled', stats['cancelled']!,
                       Icons.cancel, Colors.grey)),
+              const SizedBox(width: 16),
+              Expanded(
+                  child: _buildStatCard('Declined', stats['declined']!,
+                      Icons.cancel_outlined, Colors.red)),
             ],
           ),
         ],
@@ -261,13 +318,6 @@ class WebAppointmentStats extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  SizedBox(
-                    width: 190,
-                    child: _buildStatCard('Total', stats['total']!,
-                        Icons.calendar_today, Colors.blue,
-                        isDesktop: true),
-                  ),
-                  const SizedBox(width: 12),
                   SizedBox(
                     width: 190,
                     child: _buildStatCard('Pending', stats['pending']!,
@@ -302,6 +352,13 @@ class WebAppointmentStats extends StatelessWidget {
                         Icons.cancel, Colors.grey,
                         isDesktop: true),
                   ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 190,
+                    child: _buildStatCard('Declined', stats['declined']!,
+                        Icons.cancel_outlined, Colors.red,
+                        isDesktop: true),
+                  ),
                 ],
               ),
             );
@@ -311,14 +368,8 @@ class WebAppointmentStats extends StatelessWidget {
           return Row(
             children: [
               Expanded(
-                child: _buildStatCard('Total Appointments', stats['total']!,
-                    Icons.calendar_today, Colors.blue,
-                    isDesktop: true),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildStatCard('Pending Review', stats['pending']!,
-                    Icons.pending, Colors.orange,
+                child: _buildStatCard(
+                    'Pending ', stats['pending']!, Icons.pending, Colors.orange,
                     isDesktop: true),
               ),
               const SizedBox(width: 16),
@@ -343,6 +394,12 @@ class WebAppointmentStats extends StatelessWidget {
               Expanded(
                 child: _buildStatCard(
                     'Cancelled', stats['cancelled']!, Icons.cancel, Colors.grey,
+                    isDesktop: true),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildStatCard('Declined', stats['declined']!,
+                    Icons.cancel_outlined, Colors.red,
                     isDesktop: true),
               ),
             ],
@@ -370,87 +427,55 @@ class WebAppointmentStats extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Flexible(
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Icon(
-                        icon,
-                        color: color,
-                        size: isDesktop ? 18 : 16,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Flexible(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            value.toString(),
-                            style: TextStyle(
-                              fontSize: isDesktop ? 24 : 20,
-                              fontWeight: FontWeight.bold,
-                              color: color,
-                            ),
-                          ),
-                          Text(
-                            title,
-                            style: TextStyle(
-                              fontSize: isDesktop ? 12 : 11,
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.w500,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 2,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (value > 0)
+          Flexible(
+            child: Row(
+              children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(6),
                   ),
-                  child: Text(
-                    'Active',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: color,
-                    ),
+                  child: Icon(
+                    icon,
+                    color: color,
+                    size: isDesktop ? 18 : 16,
                   ),
                 ),
-            ],
-          ),
-          if (isDesktop && value > 0) ...[
-            const SizedBox(height: 6),
-            LinearProgressIndicator(
-              value: value /
-                  (controller.appointmentStats['total']! > 0
-                      ? controller.appointmentStats['total']!
-                      : 1),
-              backgroundColor: color.withOpacity(0.2),
-              color: color,
-              minHeight: 2,
+                const SizedBox(width: 12),
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        value.toString(),
+                        style: TextStyle(
+                          fontSize: isDesktop ? 24 : 20,
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
+                      ),
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: isDesktop ? 12 : 11,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 2,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ],
       ),
     );

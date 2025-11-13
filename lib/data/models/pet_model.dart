@@ -11,6 +11,7 @@ class Pet {
   String? createdAt;
   String? documentId;
   String? gender;
+  DateTime? birthdate; // NEW: Birthdate field
 
   Pet({
     required this.petId,
@@ -25,6 +26,7 @@ class Pet {
     this.createdAt,
     this.documentId,
     this.gender,
+    this.birthdate, // NEW
   });
 
   Pet.fromMap(Map<String, dynamic> map) {
@@ -40,6 +42,15 @@ class Pet {
     createdAt = map['\$createdAt'] ?? '';
     documentId = map['\$id'] ?? '';
     gender = map['gender'] ?? '';
+
+    // NEW: Parse birthdate
+    if (map['birthdate'] != null && map['birthdate'].toString().isNotEmpty) {
+      try {
+        birthdate = DateTime.parse(map['birthdate']);
+      } catch (e) {
+        birthdate = null;
+      }
+    }
   }
 
   Map<String, dynamic> toMap() {
@@ -54,6 +65,7 @@ class Pet {
       'notes': notes,
       'weight': weight,
       'gender': gender,
+      'birthdate': birthdate?.toIso8601String(), // NEW: Include birthdate
     };
   }
 
@@ -70,6 +82,7 @@ class Pet {
     String? createdAt,
     String? documentId,
     String? gender,
+    DateTime? birthdate, // NEW
   }) {
     return Pet(
       petId: petId ?? this.petId,
@@ -84,6 +97,47 @@ class Pet {
       createdAt: createdAt ?? this.createdAt,
       documentId: documentId ?? this.documentId,
       gender: gender ?? this.gender,
+      birthdate: birthdate ?? this.birthdate, // NEW
     );
   }
+
+  // NEW: Calculate age from birthdate
+  String get ageString {
+    if (birthdate == null) return 'Age unknown';
+
+    final now = DateTime.now();
+    final age = now.difference(birthdate!);
+
+    final years = age.inDays ~/ 365;
+    final months = (age.inDays % 365) ~/ 30;
+    final days = (age.inDays % 365) % 30;
+
+    if (years > 0) {
+      if (months > 0) {
+        return '$years ${years == 1 ? 'year' : 'years'}, $months ${months == 1 ? 'month' : 'months'}';
+      }
+      return '$years ${years == 1 ? 'year' : 'years'}';
+    } else if (months > 0) {
+      if (days > 7) {
+        return '$months ${months == 1 ? 'month' : 'months'}, ${days ~/ 7} ${days ~/ 7 == 1 ? 'week' : 'weeks'}';
+      }
+      return '$months ${months == 1 ? 'month' : 'months'}';
+    } else if (days >= 7) {
+      final weeks = days ~/ 7;
+      return '$weeks ${weeks == 1 ? 'week' : 'weeks'}';
+    } else {
+      return '$days ${days == 1 ? 'day' : 'days'}';
+    }
+  }
+
+  // NEW: Get age in years (for sorting or comparisons)
+  double get ageInYears {
+    if (birthdate == null) return 0;
+    final now = DateTime.now();
+    final age = now.difference(birthdate!);
+    return age.inDays / 365.25;
+  }
+
+  // NEW: Helper to check if birthdate is set
+  bool get hasBirthdate => birthdate != null;
 }

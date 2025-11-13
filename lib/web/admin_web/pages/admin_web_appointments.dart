@@ -33,7 +33,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
   bool _isLoggingOut = false;
 
   final List<Tab> _tabs = const [
-    Tab(text: 'Today'),
     Tab(text: 'Pending'),
     Tab(text: 'Scheduled'),
     Tab(text: 'In Progress'),
@@ -43,7 +42,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
   ];
 
   final List<String> _tabValues = [
-    'today',
     'pending',
     'scheduled',
     'in_progress',
@@ -56,7 +54,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
   void initState() {
     super.initState();
 
-    // Initialize UI controllers
+    // Initialize UI controllers (6 tabs: pending, scheduled, in_progress, completed, cancelled, declined)
     _tabController = TabController(length: _tabs.length, vsync: this);
     _mobileTabController = TabController(length: _tabs.length, vsync: this);
     _searchController = TextEditingController();
@@ -69,22 +67,19 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
     // Initialize controller
     _initializeControllerSync();
 
-    // ✅ NEW: Reset to today tab when page loads
+    // ✅ SYNC TAB CONTROLLERS WITH SAVED STATE (after frame)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_controller != null && Get.isRegistered<WebAppointmentController>()) {
-        // OPTION 1: Always reset to today (recommended)
-        // _controller!.resetToTodayTab();
-        // _tabController.index = 0;
-        // _mobileTabController.index = 0;
-
-        // OPTION 2: Keep last selected tab (if you prefer)
+        // Use the existing syncTabControllerWithState method
         _controller!
             .syncTabControllerWithState(_tabController, _mobileTabController);
+
+        // Refresh the filtered appointments to match current tab
+        _controller!.updateFilteredAppointments();
       }
     });
   }
 
-// NEW METHOD: Synchronous initialization
   void _initializeControllerSync() {
     if (_isDisposed) return;
 
@@ -181,8 +176,25 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
     }
 
     try {
-      _controller!.setSelectedTab(_tabValues[_tabController.index]);
-    } catch (e) {}
+      // Tab values WITHOUT 'today'
+      final tabValues = [
+        'pending',
+        'scheduled',
+        'in_progress',
+        'completed',
+        'cancelled',
+        'declined',
+      ];
+
+      final currentIndex = _tabController.index;
+      if (currentIndex >= 0 && currentIndex < tabValues.length) {
+        _controller!.setSelectedTab(tabValues[currentIndex]);
+        print(
+            '>>> 📑 Desktop tab changed to: ${tabValues[currentIndex]} (index: $currentIndex)');
+      }
+    } catch (e) {
+      print('>>> ❌ Error in tab controller change: $e');
+    }
   }
 
   void _onMobileTabControllerChanged() {
@@ -198,8 +210,25 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
     }
 
     try {
-      _controller!.setSelectedTab(_tabValues[_mobileTabController.index]);
-    } catch (e) {}
+      // Tab values WITHOUT 'today'
+      final tabValues = [
+        'pending',
+        'scheduled',
+        'in_progress',
+        'completed',
+        'cancelled',
+        'declined',
+      ];
+
+      final currentIndex = _mobileTabController.index;
+      if (currentIndex >= 0 && currentIndex < tabValues.length) {
+        _controller!.setSelectedTab(tabValues[currentIndex]);
+        print(
+            '>>> 📱 Mobile tab changed to: ${tabValues[currentIndex]} (index: $currentIndex)');
+      }
+    } catch (e) {
+      print('>>> ❌ Error in mobile tab controller change: $e');
+    }
   }
 
   @override
@@ -655,9 +684,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
                   controller: _statsScrollController,
                   scrollDirection: Axis.horizontal,
                   children: [
-                    _buildMobileStatCard('Total', stats['total'] ?? 0,
-                        Icons.calendar_today, Colors.blue),
-                    const SizedBox(width: 12),
                     _buildMobileStatCard('Pending', stats['pending'] ?? 0,
                         Icons.pending, Colors.orange),
                     const SizedBox(width: 12),
@@ -675,6 +701,9 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
                     const SizedBox(width: 12),
                     _buildMobileStatCard('Cancelled', stats['cancelled'] ?? 0,
                         Icons.cancel, Colors.grey),
+                    const SizedBox(width: 12),
+                    _buildMobileStatCard('Declined', stats['declined'] ?? 0,
+                        Icons.cancel_outlined, Colors.red),
                   ],
                 ),
               );
@@ -947,7 +976,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
                 borderRadius: BorderRadius.circular(8),
               ),
               tabs: [
-                _buildMobileTab('Today', stats['today'] ?? 0, Icons.today),
                 _buildMobileTab(
                     'Pending', stats['pending'] ?? 0, Icons.pending),
                 _buildMobileTab(
@@ -985,7 +1013,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
         final stats = _controller!.appointmentStats;
         return LayoutBuilder(
           builder: (context, constraints) {
-            final needsScroll = constraints.maxWidth < 1100;
+            final needsScroll = constraints.maxWidth < 1000;
 
             return ScrollConfiguration(
               behavior: ScrollConfiguration.of(context).copyWith(
@@ -1009,7 +1037,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
                   borderRadius: BorderRadius.circular(8),
                 ),
                 tabs: [
-                  _buildTab('Today', stats['today'] ?? 0, Icons.today),
                   _buildTab('Pending', stats['pending'] ?? 0, Icons.pending),
                   _buildTab(
                       'Scheduled', stats['scheduled'] ?? 0, Icons.schedule),
@@ -1145,11 +1172,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
     String subtitle;
 
     switch (tabValue) {
-      case 'today':
-        icon = Icons.event_available;
-        title = 'No Appointments Today';
-        subtitle = 'Your schedule is clear for today!';
-        break;
       case 'pending':
         icon = Icons.pending_actions;
         title = 'No Pending Appointments';
@@ -1158,7 +1180,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
       case 'scheduled':
         icon = Icons.schedule;
         title = 'No Scheduled Appointments';
-        subtitle = 'Accepted appointments for future dates will appear here.';
+        subtitle = 'Accepted appointments will appear here.';
         break;
       case 'in_progress':
         icon = Icons.medical_services_outlined;
@@ -1226,24 +1248,28 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
 
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _controller!.selectedDateFilter.value,
+      initialDate: _controller!.selectedCalendarDate.value ?? DateTime.now(),
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
 
     if (picked != null) {
-      _controller!.setDateFilter(picked);
+      _controller!.setCalendarDate(picked);
+
+      // Show feedback to user
+      if (mounted && Get.context != null) {
+        SnackbarHelper.showSuccess(
+          context: Get.context!,
+          title: "Date Filter Applied",
+          message:
+              "Showing appointments for ${DateFormat('MMM dd, yyyy').format(picked)}",
+        );
+      }
     }
   }
 
   void _showCalendarPicker() async {
     if (_controller == null) return;
-
-    SnackbarHelper.showSuccess(
-      context: Get.context!,
-      title: "Success",
-      message: "Appointment accepted!",
-    );
 
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -1254,13 +1280,21 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
 
     if (picked != null) {
       _controller!.setCalendarDate(picked);
+
+      // Show feedback to user
+      if (mounted && Get.context != null) {
+        SnackbarHelper.showSuccess(
+          context: Get.context!,
+          title: "Date Filter Applied",
+          message:
+              "Showing appointments for ${DateFormat('MMM dd, yyyy').format(picked)}",
+        );
+      }
     }
   }
 
   Color _getTabCountColor(String tabName) {
     switch (tabName) {
-      case 'Today':
-        return Colors.blue;
       case 'Pending':
         return Colors.orange;
       case 'Scheduled':

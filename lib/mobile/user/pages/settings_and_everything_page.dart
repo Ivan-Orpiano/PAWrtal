@@ -233,8 +233,9 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
     final userEmail = storage.read("email") ?? "user@example.com";
     final userName = storage.read("userName") ?? "User";
     final userRole = storage.read("role") ?? "user";
-    final userPhone = storage.read("phone") ?? "09XXX XXX XXXX";
+    final userPhone = storage.read("phone") ?? "09XX XXX XXXX";
     final userId = storage.read("userId") ?? "";
+    final profilePictureId = storage.read("userProfilePictureId") as String?;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -388,11 +389,68 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                     userName,
                     style: const TextStyle(
                       color: Colors.black87,
-                      fontSize: 20,
+                      fontSize: 24,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
                     ),
-                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 6),
+// Add verification badge for name
+                  FutureBuilder<Map<String, dynamic>>(
+                    future: Get.find<AuthRepository>()
+                        .getUserVerificationStatus(userId),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData) {
+                        final isVerified =
+                            snapshot.data?['user']?['idVerified'] == true;
+                        final verifyByClinic = snapshot.data?['verificationDoc']
+                            ?['verifyByClinic'] as String?;
+                        final isPAWrtalVerified = isVerified &&
+                            (verifyByClinic == null || verifyByClinic.isEmpty);
+
+                        if (isVerified) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            margin: const EdgeInsets.only(bottom: 6),
+                            decoration: BoxDecoration(
+                              color: isPAWrtalVerified
+                                  ? Colors.green.withOpacity(0.1)
+                                  : Colors.blue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isPAWrtalVerified
+                                      ? Icons.verified_user
+                                      : Icons.local_hospital,
+                                  size: 12,
+                                  color: isPAWrtalVerified
+                                      ? Colors.green[700]
+                                      : Colors.blue[700],
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  isPAWrtalVerified
+                                      ? 'ID Verified'
+                                      : 'Clinic Verified',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: isPAWrtalVerified
+                                        ? Colors.green[700]
+                                        : Colors.blue[700],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                      }
+                      return const SizedBox.shrink();
+                    },
                   ),
                   const SizedBox(height: 4),
                   Row(
@@ -527,10 +585,35 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
             email: userEmail,
             userRole: userRole,
             showButton: true,
-            onVerificationComplete: () {
-              // This callback is triggered when verification is completed
-              // You can refresh the page or show a success message
-              _showSuccess('Verification completed successfully!');
+            onVerificationComplete: () async {
+              // Sync name from verified ID
+              final userDocId = storage.read("userDocumentId") as String?;
+              if (userDocId != null) {
+                final authRepository = Get.find<AuthRepository>();
+                final synced = await authRepository
+                    .syncVerifiedNameToUserProfile(userId, userDocId);
+
+                if (synced) {
+                  final verifiedName = await authRepository
+                      .getVerifiedNameFromIdVerification(userId);
+                  if (verifiedName != null && verifiedName.isNotEmpty) {
+                    await storage.write("userName", verifiedName);
+
+                    // ✅ Also update idVerified flag in GetStorage
+                    await storage.write("idVerified", true);
+
+                    setState(() {});
+                    _showSuccess('Profile updated with verified name');
+                  }
+                }
+              }
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Verification submitted successfully!'),
+                  backgroundColor: Color(0xFF4CAF50),
+                ),
+              );
             },
           ),
           const SizedBox(height: 16),
@@ -563,7 +646,7 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
               onPressed: _showEditProfileDialog,
               icon:
                   Icon(Icons.edit_outlined, size: 14, color: Colors.blue[700]),
-              label: Text('Edit',
+              label: Text('Edit Profile',
                   style: TextStyle(
                       color: Colors.blue[700],
                       fontWeight: FontWeight.w600,
@@ -1581,10 +1664,10 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                         style: TextStyle(color: Colors.grey[600], fontSize: 11),
                       ),
                       const SizedBox(height: 4),
-                     Text(
-                    '🖼️ Images Only: Max 5MB per file (JPG, PNG, GIF, WEBP, BMP)',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 11),
-                  ),
+                      Text(
+                        '🖼️ Images Only: Max 5MB per file (JPG, PNG, GIF, WEBP, BMP)',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 11),
+                      ),
                       const SizedBox(height: 12),
 
                       // Upload Button
@@ -2073,11 +2156,38 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
   }
 
   // Dialog methods
-  void _showEditProfileDialog() {
+  void _showEditProfileDialog() async {
+    final userId = storage.read("userId") ?? "";
+    final userDocId = storage.read("userDocumentId") as String?;
+    final currentName = storage.read("userName") ?? "";
+
+    // Check verification status
+    final authRepository = Get.find<AuthRepository>();
+    final verificationStatus =
+        await authRepository.getUserVerificationStatus(userId);
+
+    final isVerified = verificationStatus['isVerified'] == true;
+    final isPAWrtalVerified = verificationStatus['isPAWrtalVerified'] == true;
+    final isClinicVerified = verificationStatus['isClinicVerified'] == true;
+
+    // If PAWrtal verified, sync name first
+    if (isPAWrtalVerified && userDocId != null) {
+      final synced =
+          await authRepository.syncVerifiedNameToUserProfile(userId, userDocId);
+      if (synced) {
+        final verifiedName =
+            await authRepository.getVerifiedNameFromIdVerification(userId);
+        if (verifiedName != null && verifiedName.isNotEmpty) {
+          await storage.write("userName", verifiedName);
+          setState(() {}); // Refresh UI
+          _showSuccess('Name updated from verified ID');
+        }
+      }
+    }
+
     final nameController =
         TextEditingController(text: storage.read("userName") ?? "");
 
-    // Set default to 09 if phone is empty or null
     String currentPhone = storage.read("phone") ?? "09";
     if (currentPhone.isEmpty || currentPhone.trim().isEmpty) {
       currentPhone = "09";
@@ -2088,21 +2198,18 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
     final phoneError = Rx<String?>(null);
     final isLoading = false.obs;
 
-    // Phone validation function with Philippines format
+    // Phone validation
     String? validatePhone(String phone) {
       if (phone.isEmpty) {
         return 'Phone number is required';
       }
 
-      // Remove spaces for validation
       final cleanPhone = phone.replaceAll(' ', '');
 
-      // Check if it starts with 09 (Philippines mobile format)
       if (!cleanPhone.startsWith('09')) {
         return 'Please use Philippines format: 09XX XXX XXXX';
       }
 
-      // Check if it's a valid Philippine mobile format (09 followed by 9 digits = 11 total)
       if (!RegExp(r'^09\d{9}$').hasMatch(cleanPhone)) {
         return 'Invalid Philippine phone number format';
       }
@@ -2110,27 +2217,22 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
       return null;
     }
 
-    // Format phone number with spaces for display
+    // Format phone number
     String formatPhoneNumber(String phone) {
-      // Remove all spaces first
       String cleaned = phone.replaceAll(' ', '');
 
-      // If empty or just "0", return "09"
       if (cleaned.isEmpty || cleaned == '0') {
         return '09';
       }
 
-      // If starts with 0 but not 09, force 09
       if (cleaned.startsWith('0') && !cleaned.startsWith('09')) {
         cleaned = '09${cleaned.substring(1)}';
       }
 
-      // If doesn't start with 0, prepend 09
       if (!cleaned.startsWith('0')) {
         cleaned = '09$cleaned';
       }
 
-      // Apply formatting: 0XXX XXX XXXX
       if (cleaned.length <= 4) {
         return cleaned;
       } else if (cleaned.length <= 7) {
@@ -2138,12 +2240,11 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
       } else if (cleaned.length <= 11) {
         return '${cleaned.substring(0, 4)} ${cleaned.substring(4, 7)} ${cleaned.substring(7)}';
       } else {
-        // Limit to 11 digits
         return '${cleaned.substring(0, 4)} ${cleaned.substring(4, 7)} ${cleaned.substring(7, 11)}';
       }
     }
 
-    // Name validation function
+    // Name validation
     String? validateName(String name) {
       if (name.isEmpty) {
         return 'Name is required';
@@ -2160,9 +2261,8 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
       return null;
     }
 
-    // Update profile function
+    // Update profile
     Future<void> updateProfile() async {
-      // Clear previous errors
       nameError.value = null;
       phoneError.value = null;
 
@@ -2171,14 +2271,15 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
 
       bool hasError = false;
 
-      // Validate name
-      final nameValidation = validateName(name);
-      if (nameValidation != null) {
-        nameError.value = nameValidation;
-        hasError = true;
+      // Only validate name if user can edit it
+      if (!isVerified) {
+        final nameValidation = validateName(name);
+        if (nameValidation != null) {
+          nameError.value = nameValidation;
+          hasError = true;
+        }
       }
 
-      // Validate phone
       final phoneValidation = validatePhone(phone);
       if (phoneValidation != null) {
         phoneError.value = phoneValidation;
@@ -2190,41 +2291,42 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
       try {
         isLoading.value = true;
 
-        final userDocId = storage.read("userDocumentId") as String?;
-
         if (userDocId == null || userDocId.isEmpty) {
           throw Exception('User document ID not found. Please log in again.');
         }
 
+        // Prepare update data
+        final updateData = <String, dynamic>{
+          'phone': phone,
+        };
 
-        // Update in Appwrite
-        final authRepository = Get.find<AuthRepository>();
+        // Only update name if user is not verified
+        if (!isVerified) {
+          updateData['name'] = name;
+        }
+
         await authRepository.updateUserProfile(
           documentId: userDocId,
-          fields: {
-            'name': name,
-            'phone': phone,
-          },
+          fields: updateData,
         );
 
+        if (!isVerified && updateData.containsKey('name')) {
+          await authRepository.updateAuthAccountName(updateData['name']);
+        }
 
-        // Update GetStorage
-        await storage.write("userName", name);
+        // Update GetStorage (name only if not verified)
+        if (!isVerified) {
+          await storage.write("userName", name);
+        }
         await storage.write("phone", phone);
-
 
         isLoading.value = false;
 
-        // Close dialog
         Navigator.of(context).pop();
-
-        // Refresh UI
         setState(() {});
 
-        // Show success message
         _showSuccess('Profile updated successfully');
 
-        // Dispose controllers
         nameController.dispose();
         phoneController.dispose();
       } catch (e) {
@@ -2243,340 +2345,288 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
       }
     }
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.7,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
-          child: Column(
+          title: Row(
             children: [
-              // Header
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 5,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Column(
-                  children: [
-                    // Drag handle
-                    Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [Colors.blue[400]!, Colors.blue[600]!],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(
-                            Icons.edit_outlined,
-                            color: Colors.white,
-                            size: 22,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Edit Profile',
-                                style: TextStyle(
-                                  color: Colors.black87,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              SizedBox(height: 2),
-                              Text(
-                                'Update your profile information',
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close, size: 22),
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                            nameController.dispose();
-                            phoneController.dispose();
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
+                child: Icon(
+                  Icons.edit_outlined,
+                  color: Colors.blue[700],
+                  size: 24,
                 ),
               ),
-
-              // Content
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Name Field
-                      Text(
-                        'Full Name',
-                        style: TextStyle(
-                          color: Colors.grey[800],
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Obx(() => TextField(
-                            controller: nameController,
-                            maxLength: 100,
-                            style: const TextStyle(
-                                color: Colors.black87, fontSize: 14),
-                            decoration: InputDecoration(
-                              hintText: 'Enter your full name',
-                              hintStyle: TextStyle(
-                                  color: Colors.grey[400], fontSize: 13),
-                              errorText: nameError.value,
-                              errorMaxLines: 2,
-                              errorStyle: const TextStyle(fontSize: 11),
-                              counterText: '',
-                              filled: true,
-                              fillColor: Colors.grey[50],
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide:
-                                    BorderSide(color: Colors.grey[300]!),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide:
-                                    BorderSide(color: Colors.grey[300]!),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                    color: Colors.blue, width: 2),
-                              ),
-                              errorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                    color: Colors.red, width: 1.5),
-                              ),
-                              prefixIcon: Icon(Icons.person_outline,
-                                  size: 20, color: Colors.grey[600]),
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 14),
-                            ),
-                            onChanged: (value) {
-                              if (nameError.value != null) {
-                                nameError.value = null;
-                              }
-                            },
-                          )),
-                      const SizedBox(height: 16),
-
-                      // Phone Field with PH format
-                      Text(
-                        'Phone Number (Philippines)',
-                        style: TextStyle(
-                          color: Colors.grey[800],
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Obx(() => TextField(
-                            controller: phoneController,
-                            maxLength:
-                                13, // "0XXX XXX XXXX" = 13 characters with spaces
-                            style: const TextStyle(
-                                color: Colors.black87, fontSize: 14),
-                            keyboardType: TextInputType.phone,
-                            decoration: InputDecoration(
-                              hintText: '0XXX XXX XXXX',
-                              hintStyle: TextStyle(
-                                  color: Colors.grey[400], fontSize: 13),
-                              helperText: 'Format: 09 followed by 9 digits',
-                              helperStyle: TextStyle(
-                                  color: Colors.grey[500], fontSize: 10),
-                              errorText: phoneError.value,
-                              errorMaxLines: 2,
-                              errorStyle: const TextStyle(fontSize: 11),
-                              counterText: '',
-                              filled: true,
-                              fillColor: Colors.grey[50],
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide:
-                                    BorderSide(color: Colors.grey[300]!),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide:
-                                    BorderSide(color: Colors.grey[300]!),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                    color: Colors.blue, width: 2),
-                              ),
-                              errorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                    color: Colors.red, width: 1.5),
-                              ),
-                              prefixIcon: Icon(Icons.phone_outlined,
-                                  size: 20, color: Colors.grey[600]),
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 14),
-                            ),
-                            onChanged: (value) {
-                              // Format the phone number as user types
-                              final formatted = formatPhoneNumber(value);
-                              if (formatted != value) {
-                                phoneController.value = TextEditingValue(
-                                  text: formatted,
-                                  selection: TextSelection.collapsed(
-                                      offset: formatted.length),
-                                );
-                              }
-                              if (phoneError.value != null) {
-                                phoneError.value = null;
-                              }
-                            },
-                          )),
-                      const SizedBox(height: 16),
-
-                      // Info box
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Colors.blue[50]!, Colors.cyan[50]!],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: Colors.blue.withOpacity(0.2),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.info_outline,
-                              size: 16,
-                              color: Colors.blue[700],
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Changes will be saved to your account',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.blue[700],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 80), // Space for bottom button
-                    ],
-                  ),
-                ),
-              ),
-
-              // Bottom Action Button
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, -2),
-                    ),
-                  ],
-                ),
-                child: SafeArea(
-                  child: Obx(() => ElevatedButton(
-                        onPressed: isLoading.value ? null : updateProfile,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue[600],
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor: Colors.grey[400],
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: isLoading.value
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white),
-                                ),
-                              )
-                            : const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.check_circle_outline, size: 20),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Save Changes',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                      )),
+              const SizedBox(width: 12),
+              const Text(
+                'Edit Profile',
+                style: TextStyle(
+                  color: Colors.black87,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
           ),
+          content: SingleChildScrollView(
+            child: SizedBox(
+              width: 400,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Verification status banner
+                  if (isVerified) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: isPAWrtalVerified
+                              ? [Colors.green[50]!, Colors.green[100]!]
+                              : [Colors.blue[50]!, Colors.blue[100]!],
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isPAWrtalVerified
+                              ? Colors.green[300]!
+                              : Colors.blue[300]!,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            isPAWrtalVerified
+                                ? Icons.verified_user
+                                : Icons.local_hospital,
+                            color: isPAWrtalVerified
+                                ? Colors.green[700]
+                                : Colors.blue[700],
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  isPAWrtalVerified
+                                      ? 'PAWrtal Verified Account'
+                                      : 'Clinic Verified Account',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: isPAWrtalVerified
+                                        ? Colors.green[800]
+                                        : Colors.blue[800],
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  isPAWrtalVerified
+                                      ? 'Your name is locked and matches your verified ID'
+                                      : 'Your name is locked as verified by clinic staff',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isPAWrtalVerified
+                                        ? Colors.green[700]
+                                        : Colors.blue[700],
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+
+                  // Name Field
+                  Obx(() => TextField(
+                        controller: nameController,
+                        enabled: !isVerified, // Disable if verified
+                        maxLength: 100,
+                        style: TextStyle(
+                          color: isVerified ? Colors.grey[600] : Colors.black87,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: 'Full Name',
+                          labelStyle: TextStyle(color: Colors.grey[600]),
+                          errorText: nameError.value,
+                          errorMaxLines: 2,
+                          counterText: '',
+                          filled: isVerified,
+                          fillColor: isVerified ? Colors.grey[100] : null,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color:
+                                  isVerified ? Colors.grey[300]! : Colors.blue,
+                              width: 2,
+                            ),
+                          ),
+                          disabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          prefixIcon: Icon(
+                            isVerified ? Icons.lock : Icons.person_outline,
+                            color: isVerified ? Colors.grey[500] : null,
+                          ),
+                          suffixIcon: isVerified
+                              ? Tooltip(
+                                  message: isPAWrtalVerified
+                                      ? 'Name verified by PAWrtal ID verification'
+                                      : 'Name verified by clinic staff',
+                                  child: Icon(
+                                    isPAWrtalVerified
+                                        ? Icons.verified_user
+                                        : Icons.local_hospital,
+                                    color: isPAWrtalVerified
+                                        ? Colors.green[600]
+                                        : Colors.blue[600],
+                                    size: 20,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        onChanged: (value) {
+                          if (nameError.value != null) {
+                            nameError.value = null;
+                          }
+                        },
+                      )),
+                  const SizedBox(height: 20),
+
+                  // Phone Field
+                  Obx(() => TextField(
+                        controller: phoneController,
+                        maxLength: 13,
+                        style: const TextStyle(color: Colors.black87),
+                        keyboardType: TextInputType.phone,
+                        decoration: InputDecoration(
+                          labelText: 'Phone Number (Philippines)',
+                          labelStyle: TextStyle(color: Colors.grey[600]),
+                          hintText: '0XXX XXX XXXX',
+                          hintStyle: TextStyle(color: Colors.grey[400]),
+                          helperText: 'Format: 09 followed by 9 digits',
+                          helperStyle:
+                              TextStyle(color: Colors.grey[500], fontSize: 11),
+                          errorText: phoneError.value,
+                          errorMaxLines: 2,
+                          counterText: '',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                const BorderSide(color: Colors.blue, width: 2),
+                          ),
+                          prefixIcon: const Icon(Icons.phone_outlined),
+                        ),
+                        onChanged: (value) {
+                          final formatted = formatPhoneNumber(value);
+                          if (formatted != value) {
+                            phoneController.value = TextEditingValue(
+                              text: formatted,
+                              selection: TextSelection.collapsed(
+                                  offset: formatted.length),
+                            );
+                          }
+                          if (phoneError.value != null) {
+                            phoneError.value = null;
+                          }
+                        },
+                      )),
+                  const SizedBox(height: 16),
+
+                  // Info box
+                  if (!isVerified)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Colors.blue.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 16,
+                            color: Colors.blue[700],
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Your name can be changed until you verify your account',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.blue[700],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                nameController.dispose();
+                phoneController.dispose();
+              },
+              child: const Text('Cancel'),
+            ),
+            Obx(() => ElevatedButton(
+                  onPressed: isLoading.value ? null : updateProfile,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.grey,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                  ),
+                  child: isLoading.value
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Text('Save Changes'),
+                )),
+          ],
         );
       },
     );
@@ -2673,14 +2723,12 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
       try {
         isLoading.value = true;
 
-
         // Appwrite's updatePassword automatically verifies old password
         final authRepository = Get.find<AuthRepository>();
         await authRepository.appWriteProvider.account!.updatePassword(
           password: newPassword,
           oldPassword: currentPassword,
         );
-
 
         isLoading.value = false;
 
@@ -3265,106 +3313,107 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
     );
   }
 
-        Widget _buildFileItemWithPreview(PlatformFile file) {
-          final extension = file.extension?.toLowerCase() ?? '';
-          
-          return Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(10),
+  Widget _buildFileItemWithPreview(PlatformFile file) {
+    final extension = file.extension?.toLowerCase() ?? '';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Row(
+        children: [
+          // Image preview thumbnail
+          Container(
+            width: 50,
+            height: 50,
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey[300]!),
+              color: Colors.blue.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(6),
             ),
-            child: Row(
+            child: Center(
+              child: Icon(
+                Icons.image,
+                color: Colors.blue,
+                size: 24,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Image preview thumbnail
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(6),
+                Text(
+                  file.name,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
                   ),
-                  child: Center(
-                    child: Icon(
-                      Icons.image,
-                      color: Colors.blue,
-                      size: 24,
-                    ),
-                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        file.name,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black87,
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '🖼️ Image',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.blue[700],
+                          fontWeight: FontWeight.w600,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              '🖼️ Image',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.blue[700],
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            feedbackController.getFileSize(file.size),
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      feedbackController.removeFile(file);
-                      feedbackController.selectedFiles.refresh();
-                    },
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      child: Icon(
-                        Icons.close,
-                        size: 18,
-                        color: Colors.red[400],
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 6),
+                    Text(
+                      feedbackController.getFileSize(file.size),
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          );
-        }
+          ),
+          const SizedBox(width: 8),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                feedbackController.removeFile(file);
+                feedbackController.selectedFiles.refresh();
+              },
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                child: Icon(
+                  Icons.close,
+                  size: 18,
+                  color: Colors.red[400],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showCompactNotification(String message,
       {required Color bgColor,
       required IconData icon,

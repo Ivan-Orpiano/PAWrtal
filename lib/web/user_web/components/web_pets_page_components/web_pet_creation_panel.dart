@@ -4,7 +4,9 @@ import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:capstone_app/web/user_web/services/web_image_picker_service.dart';
 import 'package:capstone_app/web/user_web/services/web_snack_bar_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // NEW: For input formatters
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
 class WebPetCreationPanel extends StatefulWidget {
   final Pet? existingPet;
@@ -23,50 +25,6 @@ class WebPetCreationPanel extends StatefulWidget {
 class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
   late final PetCreationController controller;
   ImagePickerResult? _selectedImage;
-
-  // Pet type options - easily expandable
-  final List<String> petTypes = [
-    'Dog',
-    'Cat',
-  ];
-
-  // Breed options by pet type - easily expandable
-  final Map<String, List<String>> breedsByType = {
-    'Dog': [
-      'Labrador Retriever',
-      'German Shepherd',
-      'Golden Retriever',
-      'Bulldog',
-      'Beagle',
-      'Poodle',
-      'Rottweiler',
-      'Yorkshire Terrier',
-      'Boxer',
-      'Dachshund',
-      'Siberian Husky',
-      'Chihuahua',
-      'Shih Tzu',
-      'Pug',
-      'Mixed Breed',
-    ],
-    'Cat': [
-      'Persian',
-      'Maine Coon',
-      'Siamese',
-      'Ragdoll',
-      'British Shorthair',
-      'Abyssinian',
-      'Birman',
-      'Oriental Shorthair',
-      'Sphynx',
-      'Devon Rex',
-      'American Shorthair',
-      'Scottish Fold',
-      'Domestic Shorthair',
-      'Domestic Longhair',
-      'Mixed Breed',
-    ],
-  };
 
   @override
   void initState() {
@@ -99,9 +57,33 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
     }
   }
 
-  List<String> _getAvailableBreeds() {
-    final selectedType = controller.typeController.text;
-    return breedsByType[selectedType] ?? ['Mixed Breed', 'Unknown'];
+  Future<void> _pickBirthdate() async {
+    final initialDate = controller.selectedBirthdate.value ?? DateTime.now();
+    final firstDate = DateTime(1990);
+    final lastDate = DateTime.now();
+
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: initialDate.isAfter(lastDate) ? lastDate : initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF3498DB),
+              onPrimary: Colors.white,
+              onSurface: Color(0xFF2C3E50),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (pickedDate != null) {
+      controller.selectedBirthdate.value = pickedDate;
+    }
   }
 
   @override
@@ -235,21 +217,11 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: _buildSearchableDropdown(
-                            controller: controller.typeController,
-                            label: "Type (e.g. Dog, Cat) *",
-                            icon: Icons.category,
-                            options: petTypes,
-                            onChanged: (value) {
-                              setState(() {
-                                controller.typeController.text = value;
-                                // Reset breed when type changes
-                                if (!_getAvailableBreeds()
-                                    .contains(controller.breedController.text)) {
-                                  controller.breedController.clear();
-                                }
-                              });
-                            },
+                          child: _buildTextField(
+                            controller.typeController,
+                            "Type (e.g. Dog, Cat) *",
+                            Icons.category,
+                            hint: "Dog, Cat, etc.",
                           ),
                         ),
                       ],
@@ -258,14 +230,11 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
                     Row(
                       children: [
                         Expanded(
-                          child: _buildSearchableDropdown(
-                            controller: controller.breedController,
-                            label: "Breed *",
-                            icon: Icons.pets_outlined,
-                            options: _getAvailableBreeds(),
-                            onChanged: (value) {
-                              controller.breedController.text = value;
-                            },
+                          child: _buildTextField(
+                            controller.breedController,
+                            "Breed *",
+                            Icons.pets_outlined,
+                            hint: "Enter breed",
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -279,6 +248,9 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
                       ],
                     ),
 
+                    // Birthdate Picker
+                    _buildBirthdatePicker(),
+
                     Row(
                       children: [
                         Expanded(
@@ -287,6 +259,7 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
                             "Weight (kg)",
                             Icons.monitor_weight,
                             isNumber: true,
+                            hint: "e.g. 15.5",
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -404,124 +377,98 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
     );
   }
 
-  Widget _buildSearchableDropdown({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required List<String> options,
-    required Function(String) onChanged,
-  }) {
+  Widget _buildBirthdatePicker() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
+          const Text(
+            "Birthdate",
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: Color(0xFF2C3E50),
             ),
           ),
           const SizedBox(height: 8),
-          Autocomplete<String>(
-            initialValue: TextEditingValue(text: controller.text),
-            optionsBuilder: (TextEditingValue textEditingValue) {
-              if (textEditingValue.text.isEmpty) {
-                return options;
-              }
-              return options.where((String option) {
-                return option
-                    .toLowerCase()
-                    .contains(textEditingValue.text.toLowerCase());
-              });
-            },
-            onSelected: (String selection) {
-              onChanged(selection);
-            },
-            fieldViewBuilder: (BuildContext context,
-                TextEditingController fieldController,
-                FocusNode fieldFocusNode,
-                VoidCallback onFieldSubmitted) {
-              // Sync with main controller
-              if (controller.text.isNotEmpty &&
-                  fieldController.text != controller.text) {
-                fieldController.text = controller.text;
-              }
+          Obx(() {
+            final birthdate = controller.selectedBirthdate.value;
+            final displayText = birthdate != null
+                ? DateFormat('MMMM dd, yyyy').format(birthdate)
+                : 'Select birthdate';
 
-              return TextFormField(
-                controller: fieldController,
-                focusNode: fieldFocusNode,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide:
-                        const BorderSide(color: Color(0xFF3498DB), width: 2),
-                  ),
-                  fillColor: Colors.grey[50],
-                  filled: true,
-                  contentPadding: const EdgeInsets.all(16),
-                  prefixIcon: Icon(icon, color: Colors.grey[500]),
-                  suffixIcon:
-                      Icon(Icons.arrow_drop_down, color: Colors.grey[500]),
-                ),
-                onChanged: (value) {
-                  controller.text = value;
-                },
-                validator: (value) {
-                  if (label.contains('*') && (value == null || value.isEmpty)) {
-                    return "Please enter ${label.replaceAll(' *', '')}";
-                  }
-                  return null;
-                },
-              );
-            },
-            optionsViewBuilder: (BuildContext context,
-                AutocompleteOnSelected<String> onSelected,
-                Iterable<String> options) {
-              return Align(
-                alignment: Alignment.topLeft,
-                child: Material(
-                  elevation: 4,
+            return InkWell(
+              onTap: _pickBirthdate,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
                   borderRadius: BorderRadius.circular(12),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      maxHeight: 200,
-                      maxWidth: 300,
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.cake, color: Colors.grey[500], size: 22),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        displayText,
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: birthdate != null
+                              ? const Color(0xFF2C3E50)
+                              : Colors.grey[400],
+                        ),
+                      ),
                     ),
-                    child: ListView.builder(
-                      padding: const EdgeInsets.all(8),
-                      shrinkWrap: true,
-                      itemCount: options.length,
-                      itemBuilder: (BuildContext context, int index) {
-                        final String option = options.elementAt(index);
-                        return InkWell(
-                          onTap: () {
-                            onSelected(option);
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            child: Text(
-                              option,
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                          ),
-                        );
-                      },
+                    if (birthdate != null)
+                      IconButton(
+                        icon: Icon(Icons.clear, color: Colors.grey[400], size: 20),
+                        onPressed: () {
+                          controller.selectedBirthdate.value = null;
+                        },
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      )
+                    else
+                      Icon(Icons.calendar_today, color: Colors.grey[400], size: 18),
+                  ],
+                ),
+              ),
+            );
+          }),
+          Obx(() {
+            final birthdate = controller.selectedBirthdate.value;
+            if (birthdate == null) return const SizedBox.shrink();
+
+            final pet = Pet(
+              petId: '',
+              userId: '',
+              name: '',
+              type: '',
+              breed: '',
+              birthdate: birthdate,
+            );
+
+            return Padding(
+              padding: const EdgeInsets.only(top: 8, left: 12),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: Colors.blue[700]),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Age: ${pet.ageString}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.blue[700],
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                ),
-              );
-            },
-          ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -533,6 +480,7 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
     IconData icon, {
     bool isNumber = false,
     int maxLines = 1,
+    String? hint,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -551,8 +499,17 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
           TextFormField(
             controller: controller,
             maxLines: maxLines,
-            keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+            keyboardType: isNumber 
+                ? const TextInputType.numberWithOptions(decimal: true) 
+                : TextInputType.text,
+            inputFormatters: isNumber
+                ? [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                  ]
+                : null,
             decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: Colors.grey[300]!),

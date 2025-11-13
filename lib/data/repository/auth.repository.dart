@@ -16,6 +16,7 @@ import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterin
 import 'package:file_picker/file_picker.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
+import 'package:get_storage/get_storage.dart';
 import '../models/appointment_model.dart';
 import 'package:capstone_app/data/models/conversation_model.dart';
 import 'package:capstone_app/data/models/message_model.dart';
@@ -41,7 +42,6 @@ class AuthRepository {
     try {
       final email = map["email"];
       final password = map["password"];
-
 
       // First check if this is a staff account BY CHECKING DATABASE
       final staffCheck = await appWriteProvider.checkIfStaffAccount(email);
@@ -128,7 +128,6 @@ class AuthRepository {
 
   Future<void> updateFullAppointment(
       String documentId, Map<String, dynamic> data) {
-
     // CRITICAL: Validate that no medical data is being sent
     final medicalFields = [
       'diagnosis',
@@ -141,13 +140,11 @@ class AuthRepository {
         data.keys.where((key) => medicalFields.contains(key)).toList();
 
     if (foundMedicalFields.isNotEmpty) {
-
       // Remove medical fields
       for (var field in foundMedicalFields) {
         data.remove(field);
       }
     }
-
 
     // Call the provider method which will clean data again (defense in depth)
     return appWriteProvider.updateFullAppointment(documentId, data);
@@ -163,7 +160,6 @@ class AuthRepository {
 
   Future<models.Document?> getPetById(String petId) async {
     try {
-
       // STRATEGY 1: Try as document ID first
       try {
         final result = await appWriteProvider.databases!.getDocument(
@@ -173,8 +169,7 @@ class AuthRepository {
         );
 
         return result;
-      } catch (e) {
-      }
+      } catch (e) {}
 
       // STRATEGY 2: Try as petId field (for backward compatibility)
       final result = await appWriteProvider.databases!.listDocuments(
@@ -207,7 +202,6 @@ class AuthRepository {
 
   Future<void> createAppointment(Appointment appointment) async {
     try {
-
       // CRITICAL: Check if service is medical from clinic settings
       final clinicSettings =
           await getClinicSettingsByClinicId(appointment.clinicId);
@@ -215,14 +209,12 @@ class AuthRepository {
       bool isMedicalService = false;
       if (clinicSettings != null) {
         isMedicalService = clinicSettings.isServiceMedical(appointment.service);
-      } else {
-      }
+      } else {}
 
       // Create appointment with correct medical status
       final appointmentWithMedicalStatus = appointment.copyWith(
         isMedicalService: isMedicalService,
       );
-
 
       return appWriteProvider
           .createAppointment(appointmentWithMedicalStatus.toMap());
@@ -248,9 +240,7 @@ class AuthRepository {
   }
 
   Future<models.Document> createMedicalRecord(MedicalRecord medicalRecord) {
-
     final recordMap = medicalRecord.toMap();
-
 
     // CRITICAL: Validate that vitals column is null
     if (recordMap['vitals'] != null) {
@@ -272,16 +262,13 @@ class AuthRepository {
 
   Future<List<MedicalRecord>> getPetMedicalRecords(String petId) async {
     try {
-
       final rawRecords = await appWriteProvider.getPetMedicalRecords(petId);
-
 
       final records = rawRecords.map((data) {
         // Log each record's data
 
         return MedicalRecord.fromMap(data);
       }).toList();
-
 
       return records;
     } catch (e, stackTrace) {
@@ -291,7 +278,6 @@ class AuthRepository {
 
   Future<List<Appointment>> getPetMedicalAppointments(String petId) async {
     try {
-
       final rawAppointments = await appWriteProvider.getUserAppointments(petId);
 
       final appointments = rawAppointments.map((data) {
@@ -304,7 +290,6 @@ class AuthRepository {
             (appointment.isCompleted || appointment.hasServiceCompleted);
       }).toList();
 
-
       return medicalAppointments;
     } catch (e) {
       return [];
@@ -313,17 +298,14 @@ class AuthRepository {
 
   Future<List<MedicalRecord>> getClinicMedicalRecords(String clinicId) async {
     try {
-
       final rawRecords =
           await appWriteProvider.getClinicMedicalRecords(clinicId);
-
 
       final records = rawRecords.map((data) {
         // Log vitals data for debugging
 
         return MedicalRecord.fromMap(data);
       }).toList();
-
 
       return records;
     } catch (e) {
@@ -447,7 +429,6 @@ class AuthRepository {
 
   Future<models.Document> updateMedicalRecord(
       String documentId, Map<String, dynamic> data) async {
-
     // Ensure vitals column is null
     if (data.containsKey('vitals') && data['vitals'] != null) {
       data['vitals'] = null;
@@ -460,10 +441,8 @@ class AuthRepository {
 
   Future<void> migrateMedicalRecordsVitals(String clinicId) async {
     try {
-
       final rawRecords =
           await appWriteProvider.getClinicMedicalRecords(clinicId);
-
 
       int migratedCount = 0;
       int alreadyMigratedCount = 0;
@@ -490,7 +469,6 @@ class AuthRepository {
             alreadyMigratedCount++;
             continue;
           }
-
 
           // Parse old vitals JSON
           Map<String, dynamic> vitals;
@@ -524,7 +502,6 @@ class AuthRepository {
           errorCount++;
         }
       }
-
     } catch (e) {
       rethrow;
     }
@@ -543,7 +520,6 @@ class AuthRepository {
     String? attachment,
   }) async {
     try {
-
       // Prepare message data with all required fields (WITHOUT isStarterMessage)
       final messageMap = {
         'conversationId': conversationId,
@@ -559,10 +535,8 @@ class AuthRepository {
         'sentAt': DateTime.now().toIso8601String(),
       };
 
-
       // The createMessage method will add senderType and receiverId automatically
       final messageDoc = await appWriteProvider.createMessage(messageMap);
-
 
       // Create Message object for return
       final createdMessage = Message(
@@ -593,7 +567,6 @@ class AuthRepository {
     bool updateUnreadCount = true,
   }) async {
     try {
-
       final message = Message(
         conversationId: conversationId,
         senderId: senderId,
@@ -626,12 +599,10 @@ class AuthRepository {
   /// Mark a single message as read
   Future<void> markMessageAsRead(String messageId) async {
     try {
-
       await appWriteProvider.updateMessage(messageId, {
         'isRead': true,
         'updatedAt': DateTime.now().toIso8601String(),
       });
-
     } catch (e) {
       rethrow;
     }
@@ -752,27 +723,23 @@ class AuthRepository {
 
   Future<List<Map<String, dynamic>>> getClinicsWithSettings() async {
     try {
-
       final clinics = await getAllClinics();
       final List<Map<String, dynamic>> clinicsWithSettings = [];
 
       for (final clinic in clinics) {
-
         final settings =
             await getClinicSettingsByClinicId(clinic.documentId ?? '');
 
         // CRITICAL: Pass dashboard picture from settings to clinic
         if (settings != null && settings.dashboardPic.isNotEmpty) {
           clinic.dashboardPic = settings.dashboardPic;
-        } else {
-        }
+        } else {}
 
         clinicsWithSettings.add({
           'clinic': clinic,
           'settings': settings,
         });
       }
-
 
       return clinicsWithSettings;
     } catch (e) {
@@ -1207,14 +1174,11 @@ class AuthRepository {
 
   Future<List<Vaccination>> getPetVaccinations(String petId) async {
     try {
-
       final rawVaccinations = await appWriteProvider.getPetVaccinations(petId);
-
 
       final vaccinations = rawVaccinations.map((data) {
         return Vaccination.fromMap(data);
       }).toList();
-
 
       return vaccinations;
     } catch (e) {
@@ -1446,9 +1410,7 @@ class AuthRepository {
 
   Future<void> archiveFeedback(String documentId, String archivedBy) async {
     try {
-
       await appWriteProvider.archiveFeedback(documentId, archivedBy);
-
     } catch (e) {
       rethrow;
     }
@@ -1754,7 +1716,6 @@ class AuthRepository {
     List<String>? attachmentIds,
   }) async {
     try {
-
       final data = {
         'reviewId': reviewId,
         'clinicId': clinicId,
@@ -1799,18 +1760,15 @@ class AuthRepository {
     String? status,
   }) async {
     try {
-
       final docs = await appWriteProvider.getClinicDeletionRequests(
         clinicId,
         status: status,
       );
 
-
       final requests = docs.map((doc) {
         final request = FeedbackDeletionRequest.fromMap(doc.data);
         return request.copyWith(documentId: doc.$id);
       }).toList();
-
 
       return requests;
     } catch (e, stackTrace) {
@@ -1978,14 +1936,12 @@ class AuthRepository {
   ) async {
     // ... keep existing implementation unchanged ...
     try {
-
       final petDoc = await getPetById(petId);
       String? petName;
 
       if (petDoc != null) {
         petName = petDoc.data['name'] as String?;
-      } else {
-      }
+      } else {}
 
       final rawAppointments =
           await appWriteProvider.getPetMedicalAppointmentsAllClinics(petId);
@@ -2019,7 +1975,6 @@ class AuthRepository {
         }
       }
 
-
       return enrichedAppointments;
     } catch (e) {
       return [];
@@ -2028,7 +1983,6 @@ class AuthRepository {
 
   Future<models.Document?> getPetByPetId(String petId) async {
     try {
-
       final result = await appWriteProvider.databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.petsCollectionID,
@@ -2052,25 +2006,20 @@ class AuthRepository {
   /// Debug method to check medical records and appointments relationship
   Future<void> debugMedicalRecordsForPet(String petId) async {
     try {
-
       // Get medical records
       final records = await getPetMedicalRecords(petId);
 
-      for (var record in records) {
-      }
+      for (var record in records) {}
 
       // Get medical appointments
       final appointments = await getPetMedicalAppointmentsAllClinics(petId);
 
       for (var appointment in appointments) {
-
         // Check if has matching medical record
         final hasRecord =
             records.any((r) => r.appointmentId == appointment['\$id']);
       }
-
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   Future<bool> sendAutomatedAppointmentMessage({
@@ -2079,14 +2028,12 @@ class AuthRepository {
     required String messageText,
   }) async {
     try {
-
       // Step 1: Get or create conversation
       final conversation = await getOrCreateConversation(userId, clinicId);
 
       if (conversation == null) {
         return false;
       }
-
 
       // Step 2: Send the message
       final messageData = {
@@ -2103,7 +2050,6 @@ class AuthRepository {
       };
 
       await appWriteProvider.createMessage(messageData);
-
 
       return true;
     } catch (e) {
@@ -2124,7 +2070,6 @@ class AuthRepository {
       );
 
       final isVerified = verificationDoc.documents.isNotEmpty;
-
 
       return isVerified;
     } catch (e) {
@@ -2151,7 +2096,6 @@ class AuthRepository {
           verifiedIds.add(userId);
         }
       }
-
 
       return verifiedIds;
     } catch (e) {
@@ -2205,11 +2149,9 @@ class AuthRepository {
 
   Future<void> debugStaffProfilePicture(String staffDocumentId) async {
     try {
-
       final staff = await getStaffByDocumentId(staffDocumentId);
 
       if (staff != null) {
-
         if (staff.image.isNotEmpty) {
           final imageUrl = getStaffProfilePictureUrl(staff.image);
 
@@ -2219,15 +2161,10 @@ class AuthRepository {
               bucketId: AppwriteConstants.imageBucketID,
               fileId: staff.image,
             );
-          } catch (e) {
-          }
-        } else {
-        }
-      } else {
-      }
-
-    } catch (e) {
-    }
+          } catch (e) {}
+        } else {}
+      } else {}
+    } catch (e) {}
   }
 
   Future<void> fixStaffImageUrls() {
@@ -2408,7 +2345,6 @@ class AuthRepository {
     String clinicId,
   ) async {
     try {
-
       final rawAppointments = await appWriteProvider
           .getPetMedicalAppointmentsByClinic(petId, clinicId);
 
@@ -2443,7 +2379,6 @@ class AuthRepository {
           enrichedAppointments.add(appointmentData);
         }
       }
-
 
       return enrichedAppointments;
     } catch (e) {
@@ -2503,9 +2438,198 @@ class AuthRepository {
 
         // Delete the controller instance
         Get.delete<WebAppointmentController>(force: true);
+      }
+    } catch (e) {}
+  }
 
+  String _formatNameToProperCase(String name) {
+    if (name.isEmpty) return name;
+
+    // Remove extra spaces and trim
+    name = name.trim().replaceAll(RegExp(r'\s+'), ' ');
+
+    // Split by spaces
+    final words = name.toLowerCase().split(' ');
+
+    // Capitalize first letter of each word
+    final properCaseWords = words.map((word) {
+      if (word.isEmpty) return word;
+
+      // Handle special prefixes (e.g., "Mc", "Mac", "De", "Van")
+      if (word.length >= 2) {
+        // Handle "Mc" prefix (e.g., "McDonald" becomes "McDonald")
+        if (word.startsWith('mc') && word.length > 2) {
+          return 'Mc${word[2].toUpperCase()}${word.substring(3)}';
+        }
+
+        // Handle "Mac" prefix (e.g., "Macdonald" becomes "MacDonald")
+        if (word.startsWith('mac') && word.length > 3) {
+          return 'Mac${word[3].toUpperCase()}${word.substring(4)}';
+        }
+      }
+
+      // Handle hyphenated names (e.g., "Jean-Paul")
+      if (word.contains('-')) {
+        return word.split('-').map((part) {
+          if (part.isEmpty) return part;
+          return part[0].toUpperCase() + part.substring(1);
+        }).join('-');
+      }
+
+      // Handle apostrophes (e.g., "O'Brien")
+      if (word.contains("'")) {
+        return word.split("'").map((part) {
+          if (part.isEmpty) return part;
+          return part[0].toUpperCase() + part.substring(1);
+        }).join("'");
+      }
+
+      // Standard capitalization
+      return word[0].toUpperCase() + word.substring(1);
+    });
+
+    return properCaseWords.join(' ');
+  }
+
+  Future<bool> updateAuthAccountName(String newName) async {
+    try {
+      // 🆕 Ensure proper capitalization
+      final formattedName = _formatNameToProperCase(newName);
+
+      await appWriteProvider.account!.updateName(name: formattedName);
+      print('✅ Updated Appwrite Auth account name: $formattedName');
+      return true;
+    } catch (e) {
+      print('❌ Error updating Auth account name: $e');
+      return false;
+    }
+  }
+
+  /// Fetch verified name from ID Verification document
+  Future<String?> getVerifiedNameFromIdVerification(String userId) async {
+    try {
+      final documents = await appWriteProvider.databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.idVerificationCollectionID,
+        queries: [
+          Query.equal('userId', userId),
+          Query.equal('status', 'approved'),
+          Query.orderDesc('\$createdAt'),
+          Query.limit(1),
+        ],
+      );
+
+      if (documents.documents.isNotEmpty) {
+        final verificationDoc = documents.documents.first.data;
+        final rawName = verificationDoc['fullName'] as String?;
+
+        if (rawName != null && rawName.isNotEmpty) {
+          // 🆕 Convert to proper case
+          final properName = _formatNameToProperCase(rawName);
+          print('📝 Formatted name: "$rawName" → "$properName"');
+          return properName;
+        }
+      }
+
+      return null;
+    } catch (e) {
+      print('Error fetching verified name: $e');
+      return null;
+    }
+  }
+
+  /// Update user's name from verified ID (PAWrtal verification only)
+  Future<bool> syncVerifiedNameToUserProfile(
+      String userId, String userDocumentId) async {
+    try {
+      // Get verified name from ID verification (already formatted to proper case)
+      final verifiedName = await getVerifiedNameFromIdVerification(userId);
+
+      if (verifiedName == null || verifiedName.isEmpty) {
+        print('No verified name found in ID verification');
+        return false;
+      }
+
+      print('🔄 Syncing verified name: "$verifiedName"');
+
+      // 1. Update user document (database collection)
+      await appWriteProvider.databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.usersCollectionID,
+        documentId: userDocumentId,
+        data: {'name': verifiedName},
+      );
+      print('  ✅ Database updated');
+
+      // 2. Update Appwrite Auth account name
+      await appWriteProvider.account!.updateName(name: verifiedName);
+      print('  ✅ Auth updated');
+
+      // 3. Update GetStorage
+      await GetStorage().write('userName', verifiedName);
+      print('  ✅ GetStorage updated');
+
+      print('✅ User name synced everywhere: $verifiedName');
+      return true;
+    } catch (e) {
+      print('Error syncing verified name: $e');
+      return false;
+    }
+  }
+
+  Future<void> syncAuthNameOnLogin(String userId) async {
+    try {
+      print('🔄 Syncing auth name with database...');
+
+      final userDoc = await appWriteProvider.databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.usersCollectionID,
+        queries: [
+          Query.equal('userId', userId),
+          Query.limit(1),
+        ],
+      );
+
+      if (userDoc.documents.isEmpty) {
+        print('⚠️  User document not found');
+        return;
+      }
+
+      final databaseName = userDoc.documents.first.data['name'] as String?;
+
+      if (databaseName == null || databaseName.isEmpty) {
+        print('⚠️  No name found in database');
+        return;
+      }
+
+      // 🆕 Ensure proper capitalization
+      final formattedName = _formatNameToProperCase(databaseName);
+
+      final currentUser = await appWriteProvider.account!.get();
+      final authName = currentUser.name;
+
+      if (authName != formattedName) {
+        await appWriteProvider.account!.updateName(name: formattedName);
+        print('✅ Auth name synced: "$authName" → "$formattedName"');
+
+        // Also update database if it wasn't properly formatted
+        if (databaseName != formattedName) {
+          await appWriteProvider.databases!.updateDocument(
+            databaseId: AppwriteConstants.dbID,
+            collectionId: AppwriteConstants.usersCollectionID,
+            documentId: userDoc.documents.first.$id,
+            data: {'name': formattedName},
+          );
+          print('  ✅ Database also updated to proper case');
+        }
+
+        await GetStorage().write('userName', formattedName);
+        print('  ✅ GetStorage userName updated: "$formattedName"');
+      } else {
+        print('✓ Auth name already matches database: "$formattedName"');
       }
     } catch (e) {
+      print('⚠️  Error syncing auth name: $e');
     }
   }
 }
