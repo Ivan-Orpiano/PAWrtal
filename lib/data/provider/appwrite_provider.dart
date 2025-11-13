@@ -12,12 +12,9 @@ import 'package:capstone_app/notification/services/notification_service.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:capstone_app/utils/platform_html_helper.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
-import 'package:appwrite/enums.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:capstone_app/data/id_verification/utils/name_validator.dart';
 
 enum AuthStatus {
   uninitialized,
