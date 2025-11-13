@@ -4,9 +4,7 @@ import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_com
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_clinic_description.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_clinic_location.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_clinic_services.dart';
-import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_like.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_picture_gallery.dart';
-import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_share_button.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_hover_underline_text.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/clinic_page_components/web_ratings_and_reviews.dart';
 import 'package:capstone_app/web/user_web/desktop_web/components/dashboard_components/web_search_bar.dart';

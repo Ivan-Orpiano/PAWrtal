@@ -3,15 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:get_storage/get_storage.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:webview_flutter_android/webview_flutter_android.dart';
-import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/data/id_verification/services/argos_service.dart';
 import 'package:capstone_app/data/models/id_verification_model.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'dart:io' show Platform;
 
 class IdVerificationScreen extends StatefulWidget {
   final String userId;

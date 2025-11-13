@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:get_storage/get_storage.dart';

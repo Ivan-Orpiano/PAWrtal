@@ -2,7 +2,6 @@ import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
-import 'package:capstone_app/utils/image_helper.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterinary_clinics/super_ad_staff_management_page.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterinary_clinics/super_ad_edit_clinic_page.dart';
 import 'package:flutter/material.dart';
