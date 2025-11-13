@@ -2715,7 +2715,7 @@ class _PinnedFeedbackPageState extends State<PinnedFeedbackPage> {
   
 
 void _markAsCompleted(FeedbackAndReport feedback) {
-  final TextEditingController resolutionController = TextEditingController();
+  // final TextEditingController resolutionController = TextEditingController();
 
   showDialog(
     context: context,
@@ -2792,22 +2792,6 @@ void _markAsCompleted(FeedbackAndReport feedback) {
             ),
           ),
           const SizedBox(height: 16),
-          TextField(
-            controller: resolutionController,
-            decoration: InputDecoration(
-              labelText: 'Resolution Notes (Optional)',
-              hintText: 'Describe how the issue was fixed...',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF517399), width: 2),
-              ),
-            ),
-            maxLines: 3,
-          ),
-          const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -2836,7 +2820,6 @@ void _markAsCompleted(FeedbackAndReport feedback) {
       actions: [
         TextButton(
           onPressed: () {
-            resolutionController.dispose();
             Navigator.pop(context);
           },
           child: Text(
@@ -2854,14 +2837,7 @@ void _markAsCompleted(FeedbackAndReport feedback) {
               FeedbackStatus.completed,
             );
 
-            if (resolutionController.text.trim().isNotEmpty) {
-              await controller.addReply(
-                feedback.documentId!,
-                'Resolution: ${resolutionController.text.trim()}',
-              );
-            }
-
-            resolutionController.dispose();
+      
             Navigator.pop(context);
 
             ScaffoldMessenger.of(context).showSnackBar(

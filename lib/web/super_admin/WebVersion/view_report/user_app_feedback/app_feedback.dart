@@ -29,6 +29,9 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
   bool _isLoggingOut = false;
   Timer? _timeUpdateTimer;
 
+  final Set<String> _selectedFeedbackIds = <String>{};
+  bool _isSelectionMode = false;
+
   @override
   void initState() {
     super.initState();
@@ -1358,6 +1361,7 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
 
   // ==================== DESKTOP FEEDBACK CARD ====================
   Widget _buildFeedbackCard(FeedbackAndReport feedback) {
+    final isSelected = _selectedFeedbackIds.contains(feedback.documentId);
     return Obx(() {
       final feedbackItem = controller.allFeedback.firstWhere(
         (f) => f.documentId == feedback.documentId,
@@ -1387,6 +1391,14 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
               children: [
                 Row(
                   children: [
+                    Checkbox(
+                      value: isSelected,
+                      onChanged: (bool? value) {
+                        _toggleSelection(feedback.documentId!);
+                      },
+                      activeColor: const Color(0xFF517399),
+                    ),
+                    const SizedBox(width: 8),
                     InkWell(
                       onTap: () => controller.togglePin(feedback.documentId!),
                       borderRadius: BorderRadius.circular(20),
@@ -1935,6 +1947,109 @@ class _AdminFeedbackManagementState extends State<AdminFeedbackManagement> {
           : '${difference.inMinutes} minutes ago';
     } else {
       return 'Just now';
+    }
+  }
+
+   void _toggleSelection(String feedbackId) {
+    setState(() {
+      if (_selectedFeedbackIds.contains(feedbackId)) {
+        _selectedFeedbackIds.remove(feedbackId);
+        if (_selectedFeedbackIds.isEmpty) {
+          _isSelectionMode = false;
+        }
+      } else {
+        _selectedFeedbackIds.add(feedbackId);
+        _isSelectionMode = true;
+      }
+    });
+  }
+
+  void _selectAll(List<FeedbackAndReport> feedbackList) {
+    setState(() {
+      if (_selectedFeedbackIds.length == feedbackList.length) {
+        _selectedFeedbackIds.clear();
+        _isSelectionMode = false;
+      } else {
+        _selectedFeedbackIds.clear();
+        _selectedFeedbackIds.addAll(
+          feedbackList.map((f) => f.documentId!).where((id) => id.isNotEmpty)
+        );
+        _isSelectionMode = true;
+      }
+    });
+  }
+
+  void _cancelSelection() {
+    setState(() {
+      _selectedFeedbackIds.clear();
+      _isSelectionMode = false;
+    });
+  }
+
+  Future<void> _archiveSelectedFeedback() async {
+    if (_selectedFeedbackIds.isEmpty) return;
+
+    final count = _selectedFeedbackIds.length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color.fromRGBO(248, 253, 255, 1),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.archive, color: Colors.orange[700], size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Text('Archive Selected'),
+          ],
+        ),
+        content: Text(
+          'Archive $count selected feedback item${count > 1 ? 's' : ''}?',
+          style: TextStyle(fontSize: 15, color: Colors.grey[700]),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.archive, size: 18),
+            label: const Text('Archive'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange[600],
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      final ids = List<String>.from(_selectedFeedbackIds);
+      for (final id in ids) {
+        await controller.archiveFeedback(id);
+      }
+      setState(() {
+        _selectedFeedbackIds.clear();
+        _isSelectionMode = false;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Archived $count feedback item${count > 1 ? 's' : ''}'),
+            backgroundColor: Colors.green[600],
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -2706,7 +2821,21 @@ Widget _buildMiniTypeBadge(FeedbackType type) {
   Widget _buildPinnedFAB() {
     return Obx(() {
       final pinnedCount = controller.pinnedFeedbackIds.length;
-
+        if (_isSelectionMode && _selectedFeedbackIds.isNotEmpty) {
+        return FloatingActionButton.extended(
+          onPressed: _archiveSelectedFeedback,
+          backgroundColor: Colors.orange[700],
+          icon: const Icon(Icons.archive, color: Colors.white),
+          label: Text(
+            'Archive (${_selectedFeedbackIds.length})',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          elevation: 6,
+        );
+      }
       return pinnedCount > 0
           ? Stack(
               alignment: Alignment.center,
