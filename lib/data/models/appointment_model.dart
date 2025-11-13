@@ -214,7 +214,7 @@ class Appointment {
 
   bool get isToday {
     final now = DateTime.now();
-    final localDate = dateTime.toLocal();
+    final localDate = dateTime;
     return localDate.year == now.year &&
         localDate.month == now.month &&
         localDate.day == now.day;
@@ -222,7 +222,7 @@ class Appointment {
 
   bool get isPast {
     final now = DateTime.now();
-    final localDate = dateTime.toLocal();
+    final localDate = dateTime;
     final appointmentDate =
         DateTime(localDate.year, localDate.month, localDate.day);
     final today = DateTime(now.year, now.month, now.day);
