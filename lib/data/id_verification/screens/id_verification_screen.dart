@@ -1,5 +1,7 @@
+import 'package:capstone_app/pages/routes/app_pages.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:get_storage/get_storage.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
@@ -47,7 +49,6 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
 
   Future<void> _requestCameraPermission() async {
     try {
-
       final status = await Permission.camera.request();
 
       if (status.isGranted) {
@@ -120,7 +121,6 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
 
   Future<void> _handleWebPlatform() async {
     try {
-
       // Check for existing verification
       final existingVerification =
           await widget.authRepository.getIdVerificationByUserId(widget.userId);
@@ -160,7 +160,6 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
           await widget.authRepository.createIdVerification(newVerification);
       newVerification.documentId = doc.$id;
 
-
       setState(() {
         _currentVerification = newVerification;
         _isLoading = false;
@@ -178,7 +177,6 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showBrowserOpenedScreen();
       });
-
     } catch (e) {
       _showErrorScreen(e.toString());
     }
@@ -193,7 +191,6 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
 
   Future<void> _initializeVerification() async {
     try {
-
       await widget.authRepository.cleanupStuckVerifications(widget.userId);
 
       final existingVerification =
@@ -244,7 +241,6 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
       );
 
       if (launched) {
-
         setState(() {
           _currentVerification = newVerification;
           _isLoading = false;
@@ -265,7 +261,8 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
       MaterialPageRoute(
         builder: (context) => _ResponsiveVerificationScreen(
           child: _BrowserOpenedContent(
-            onBackToHome: () => Navigator.of(context).pop(false),
+            onBackToHome: () => Get.offAllNamed(Routes.userHome),
+            onRefreshVerification: _refreshVerificationStatus, // ✅ ADD THIS
           ),
         ),
       ),
@@ -358,8 +355,7 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
       // Run again after a delay to ensure it takes effect
       await Future.delayed(const Duration(milliseconds: 2000));
       await _webViewController.runJavaScript(script);
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   void _handleVerificationComplete() {
@@ -379,7 +375,8 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
           child: _VerificationResultContent(
             success: true,
             message: 'Your ID has been successfully verified!',
-            onComplete: () => Navigator.of(context).pop(true),
+            onComplete: () => Get.offAllNamed(Routes.userHome),
+            onRefreshVerification: _refreshVerificationStatus, // ✅ ADD THIS
           ),
         ),
       ),
@@ -395,7 +392,8 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
             success: null,
             message:
                 'Your ID verification is being processed. You will be notified once it\'s complete.',
-            onComplete: () => Navigator.of(context).pop(false),
+            onComplete: () => Get.offAllNamed(Routes.userHome),
+            onRefreshVerification: _refreshVerificationStatus, // ✅ ADD THIS
           ),
         ),
       ),
@@ -410,7 +408,8 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
             success: false,
             message:
                 'Your ID verification was rejected. ${_currentVerification?.rejectionReason ?? "Please try again with a valid ID."}',
-            onComplete: () => Navigator.of(context).pop(false),
+            onComplete: () => Get.offAllNamed(Routes.userHome),
+            onRefreshVerification: _refreshVerificationStatus, // ✅ ADD THIS
             onRetry: () {
               Navigator.of(context).pushReplacement(
                 MaterialPageRoute(
@@ -435,11 +434,45 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
           child: _VerificationResultContent(
             success: false,
             message: 'An error occurred: $error',
-            onComplete: () => Navigator.of(context).pop(false),
+            onComplete: () => Get.offAllNamed(Routes.userHome),
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _refreshVerificationStatus() async {
+    try {
+      print('🔄 Refreshing verification status...');
+
+      final storage = GetStorage();
+      final userDocId = storage.read("userDocumentId") as String?;
+
+      if (userDocId == null) {
+        print('⚠️ No user document ID found');
+        return;
+      }
+
+      // Check and sync verified name
+      final synced = await widget.authRepository
+          .syncVerifiedNameToUserProfile(widget.userId, userDocId);
+
+      if (synced) {
+        print('✅ Verification status refreshed and name synced');
+
+        // Update the verified name in GetStorage
+        final verifiedName = await widget.authRepository
+            .getVerifiedNameFromIdVerification(widget.userId);
+
+        if (verifiedName != null && verifiedName.isNotEmpty) {
+          await storage.write("userName", verifiedName);
+          await storage.write("idVerified", true);
+          print('✅ Name updated in storage: $verifiedName');
+        }
+      }
+    } catch (e) {
+      print('❌ Error refreshing verification status: $e');
+    }
   }
 
   @override
@@ -570,8 +603,12 @@ class _WebVerificationContent extends StatelessWidget {
 // Browser opened content
 class _BrowserOpenedContent extends StatelessWidget {
   final VoidCallback onBackToHome;
+  final VoidCallback? onRefreshVerification;
 
-  const _BrowserOpenedContent({required this.onBackToHome});
+  const _BrowserOpenedContent({
+    required this.onBackToHome,
+    this.onRefreshVerification, // ADD THIS
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -619,7 +656,10 @@ class _BrowserOpenedContent extends StatelessWidget {
         ),
         const SizedBox(height: 32),
         ElevatedButton(
-          onPressed: onBackToHome,
+          onPressed: () {
+            onRefreshVerification?.call();
+            onBackToHome();
+          },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF1976D2),
             foregroundColor: Colors.white,
@@ -641,12 +681,14 @@ class _VerificationResultContent extends StatelessWidget {
   final String message;
   final VoidCallback onComplete;
   final VoidCallback? onRetry;
+  final VoidCallback? onRefreshVerification;
 
   const _VerificationResultContent({
     required this.success,
     required this.message,
     required this.onComplete,
     this.onRetry,
+    this.onRefreshVerification,
   });
 
   @override
@@ -712,7 +754,10 @@ class _VerificationResultContent extends StatelessWidget {
           ),
         const SizedBox(height: 16),
         TextButton(
-          onPressed: onComplete,
+          onPressed: () {
+            onRefreshVerification?.call();
+            onComplete();
+          },
           child: const Text(
             'Back to Home',
             style: TextStyle(fontSize: 16),

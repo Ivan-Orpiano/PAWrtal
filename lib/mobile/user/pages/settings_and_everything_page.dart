@@ -89,6 +89,14 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
   final TextEditingController descriptionController = TextEditingController();
   late MobileUserPfpController profilePictureController;
 
+  Key _verificationWidgetKey = UniqueKey();
+
+  void _refreshVerificationWidget() {
+    setState(() {
+      _verificationWidgetKey = UniqueKey();
+    });
+  }
+
   static const List<String> menuItems = [
     'Profile',
     'Settings',
@@ -581,6 +589,7 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
 
           const SizedBox(height: 16),
           VerificationStatusWidget(
+            key: _verificationWidgetKey,
             userId: userId,
             email: userEmail,
             userRole: userRole,
@@ -598,11 +607,10 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
                       .getVerifiedNameFromIdVerification(userId);
                   if (verifiedName != null && verifiedName.isNotEmpty) {
                     await storage.write("userName", verifiedName);
-
-                    // ✅ Also update idVerified flag in GetStorage
                     await storage.write("idVerified", true);
 
-                    setState(() {});
+                    _refreshVerificationWidget();
+
                     _showSuccess('Profile updated with verified name');
                   }
                 }
@@ -2171,19 +2179,19 @@ class _SettingsAndEverythingPageState extends State<SettingsAndEverythingPage> {
     final isClinicVerified = verificationStatus['isClinicVerified'] == true;
 
     // If PAWrtal verified, sync name first
-    if (isPAWrtalVerified && userDocId != null) {
-      final synced =
-          await authRepository.syncVerifiedNameToUserProfile(userId, userDocId);
-      if (synced) {
-        final verifiedName =
-            await authRepository.getVerifiedNameFromIdVerification(userId);
-        if (verifiedName != null && verifiedName.isNotEmpty) {
-          await storage.write("userName", verifiedName);
-          setState(() {}); // Refresh UI
-          _showSuccess('Name updated from verified ID');
-        }
-      }
-    }
+    // if (isPAWrtalVerified && userDocId != null) {
+    //   final synced =
+    //       await authRepository.syncVerifiedNameToUserProfile(userId, userDocId);
+    //   if (synced) {
+    //     final verifiedName =
+    //         await authRepository.getVerifiedNameFromIdVerification(userId);
+    //     if (verifiedName != null && verifiedName.isNotEmpty) {
+    //       await storage.write("userName", verifiedName);
+    //       // setState(() {}); // Refresh UI
+    //       // _showSuccess('Name updated from verified ID');
+    //     }
+    //   }
+    // }
 
     final nameController =
         TextEditingController(text: storage.read("userName") ?? "");

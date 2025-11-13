@@ -38,6 +38,10 @@ class _VerificationStatusWidgetState extends State<VerificationStatusWidget> {
     _authRepository.cleanupStuckVerifications(widget.userId);
   }
 
+  void refresh() {
+    _loadVerificationStatus();
+  }
+
   Future<void> _loadVerificationStatus() async {
     setState(() => _isLoading = true);
 
