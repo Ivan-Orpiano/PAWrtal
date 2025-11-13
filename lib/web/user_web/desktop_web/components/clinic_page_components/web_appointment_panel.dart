@@ -646,19 +646,30 @@ class _EnhancedWebAppointmentPanelState
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
+        // Get screen dimensions
+        final screenWidth = MediaQuery.of(context).size.width;
+        final screenHeight = MediaQuery.of(context).size.height;
+
+        // Calculate responsive dimensions
+        final dialogWidth = screenWidth > 500 ? 480.0 : screenWidth * 0.9;
+        final isCompact = screenHeight < 700 || screenWidth < 400;
+
         return Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
           child: Container(
-            width: 480,
-            constraints: const BoxConstraints(maxWidth: 500),
+            width: dialogWidth,
+            constraints: BoxConstraints(
+              maxWidth: 500,
+              maxHeight: screenHeight * 0.85, // Limit to 85% of screen height
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Header with gradient background
                 Container(
-                  padding: const EdgeInsets.all(24),
+                  padding: EdgeInsets.all(isCompact ? 16 : 24),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
@@ -676,15 +687,15 @@ class _EnhancedWebAppointmentPanelState
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: EdgeInsets.all(isCompact ? 8 : 12),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.calendar_month,
                           color: Colors.white,
-                          size: 28,
+                          size: isCompact ? 22 : 28,
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -695,16 +706,16 @@ class _EnhancedWebAppointmentPanelState
                             Text(
                               'Confirm Appointment',
                               style: GoogleFonts.inter(
-                                fontSize: 22,
+                                fontSize: isCompact ? 18 : 22,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            SizedBox(height: isCompact ? 2 : 4),
                             Text(
                               'Review your booking details',
                               style: GoogleFonts.inter(
-                                fontSize: 14,
+                                fontSize: isCompact ? 12 : 14,
                                 color: Colors.white.withOpacity(0.9),
                               ),
                             ),
@@ -715,70 +726,66 @@ class _EnhancedWebAppointmentPanelState
                   ),
                 ),
 
-                // Content
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    children: [
-                      // Clinic Section with Image
-                      _buildClinicSection(),
+                // Content - Make scrollable
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(isCompact ? 16 : 24),
+                    child: Column(
+                      children: [
+                        // Clinic Section with Image
+                        _buildClinicSection(),
 
-                      const SizedBox(height: 20),
+                        SizedBox(height: isCompact ? 12 : 20),
 
-                      // Divider
-                      Divider(color: Colors.grey[300], height: 1),
+                        // Divider
+                        Divider(color: Colors.grey[300], height: 1),
 
-                      const SizedBox(height: 20),
+                        SizedBox(height: isCompact ? 12 : 20),
 
-                      // Pet Section with Image
-                      _buildDisplayPetSection(selectedPet),
+                        // Pet Section with Image
+                        _buildDisplayPetSection(selectedPet),
 
-                      const SizedBox(height: 20),
+                        SizedBox(height: isCompact ? 12 : 20),
 
-                      // Service, Date, and Time in Cards
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildInfoCard(
-                              icon: Icons.medical_services,
-                              iconColor: const Color(0xFF5173B8),
-                              label: 'Service',
-                              value: selectedService,
+                        // Service, Date, and Time in Cards
+                        _buildInfoCard(
+                          icon: Icons.medical_services,
+                          iconColor: const Color(0xFF5173B8),
+                          label: 'Service',
+                          value: selectedService,
+                        ),
+
+                        SizedBox(height: isCompact ? 8 : 12),
+
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildInfoCard(
+                                icon: Icons.calendar_today,
+                                iconColor: Colors.orange,
+                                label: 'Date',
+                                value: formattedDate,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildInfoCard(
-                              icon: Icons.calendar_today,
-                              iconColor: Colors.orange,
-                              label: 'Date',
-                              value: formattedDate,
+                            SizedBox(width: isCompact ? 8 : 12),
+                            Expanded(
+                              child: _buildInfoCard(
+                                icon: Icons.access_time,
+                                iconColor: Colors.green,
+                                label: 'Time',
+                                value: selectedTime,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildInfoCard(
-                              icon: Icons.access_time,
-                              iconColor: Colors.green,
-                              label: 'Time',
-                              value: selectedTime,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
 
                 // Action Buttons
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.all(isCompact ? 12 : 20),
                   decoration: BoxDecoration(
                     color: Colors.grey[50],
                     borderRadius: const BorderRadius.only(
@@ -793,7 +800,8 @@ class _EnhancedWebAppointmentPanelState
                           onPressed: () => _showCancelConfirmation(context),
                           style: TextButton.styleFrom(
                             foregroundColor: Colors.grey[700],
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            padding: EdgeInsets.symmetric(
+                                vertical: isCompact ? 12 : 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                               side: BorderSide(color: Colors.grey[300]!),
@@ -802,25 +810,25 @@ class _EnhancedWebAppointmentPanelState
                           child: Text(
                             'Cancel',
                             style: GoogleFonts.inter(
-                              fontSize: 16,
+                              fontSize: isCompact ? 14 : 16,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: isCompact ? 8 : 12),
                       Expanded(
                         flex: 2,
                         child: ElevatedButton(
                           onPressed: () async {
                             Navigator.of(context).pop();
                             await controller.bookAppointment();
-                            // ADDED: Reset form after successful booking
                             _resetFormAfterBooking();
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF5173B8),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            padding: EdgeInsets.symmetric(
+                                vertical: isCompact ? 12 : 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -829,13 +837,14 @@ class _EnhancedWebAppointmentPanelState
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.check_circle, size: 20),
-                              const SizedBox(width: 8),
+                              Icon(Icons.check_circle,
+                                  size: isCompact ? 16 : 20),
+                              SizedBox(width: isCompact ? 6 : 8),
                               Text(
                                 'Confirm Booking',
                                 style: GoogleFonts.inter(
                                   color: Colors.white,
-                                  fontSize: 16,
+                                  fontSize: isCompact ? 14 : 16,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),

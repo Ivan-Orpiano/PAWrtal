@@ -91,8 +91,8 @@ class WebAppointmentController extends GetxController {
     _autoDeclineTimer = null;
     isAutoDeclineActive.value = false;
 
-    cleanupOnLogout();
     super.onClose();
+    cleanupOnLogout();
   }
 
   Future<void> fetchClinicData() async {

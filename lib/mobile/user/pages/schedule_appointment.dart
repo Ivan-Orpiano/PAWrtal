@@ -352,18 +352,29 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
+        // Get screen dimensions
+        final screenWidth = MediaQuery.of(context).size.width;
+        final screenHeight = MediaQuery.of(context).size.height;
+
+        // Determine if we're on a small device
+        final isCompact = screenHeight < 650 || screenWidth < 360;
+        final isVerySmall = screenHeight < 600;
+
         return Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 500),
+            constraints: BoxConstraints(
+              maxWidth: 500,
+              maxHeight: screenHeight * 0.9, // Use 90% of screen height
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Header with gradient background
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.all(isCompact ? 14 : 20),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
@@ -382,18 +393,18 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(10),
+                        padding: EdgeInsets.all(isCompact ? 8 : 10),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.calendar_month,
                           color: Colors.white,
-                          size: 24,
+                          size: isCompact ? 20 : 24,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: isCompact ? 10 : 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -401,19 +412,21 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                             Text(
                               'Confirm Appointment',
                               style: GoogleFonts.inter(
-                                fontSize: 20,
+                                fontSize: isCompact ? 16 : 20,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Review your booking details',
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                color: Colors.white.withOpacity(0.9),
+                            if (!isVerySmall) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                'Review your booking details',
+                                style: GoogleFonts.inter(
+                                  fontSize: isCompact ? 11 : 13,
+                                  color: Colors.white.withOpacity(0.9),
+                                ),
                               ),
-                            ),
+                            ],
                           ],
                         ),
                       ),
@@ -421,27 +434,27 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                   ),
                 ),
 
-                // Content
-                SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
+                // Content - Made scrollable
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(isCompact ? 12 : 20),
                     child: Column(
                       children: [
-                        // Clinic Section with Image - MODIFIED
+                        // Clinic Section with Image
                         _buildMobileClinicSection(),
 
-                        const SizedBox(height: 16),
+                        SizedBox(height: isCompact ? 10 : 16),
 
                         // Divider
                         Divider(color: Colors.grey[300], height: 1),
 
-                        const SizedBox(height: 16),
+                        SizedBox(height: isCompact ? 10 : 16),
 
                         // Pet Section with Image
                         if (selectedPetObj != null)
                           _buildMobilePetSection(selectedPetObj),
 
-                        const SizedBox(height: 16),
+                        SizedBox(height: isCompact ? 10 : 16),
 
                         // Service Card
                         _buildMobileInfoCard(
@@ -451,7 +464,7 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                           value: selectedService!,
                         ),
 
-                        const SizedBox(height: 10),
+                        SizedBox(height: isCompact ? 8 : 10),
 
                         // Date and Time Cards
                         Row(
@@ -464,7 +477,7 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                                 value: formattedDate,
                               ),
                             ),
-                            const SizedBox(width: 10),
+                            SizedBox(width: isCompact ? 8 : 10),
                             Expanded(
                               child: _buildMobileInfoCard(
                                 icon: Icons.access_time,
@@ -482,7 +495,7 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
 
                 // Action Buttons
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(isCompact ? 10 : 16),
                   decoration: BoxDecoration(
                     color: Colors.grey[50],
                     borderRadius: const BorderRadius.only(
@@ -497,7 +510,8 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                           onPressed: () => _showCancelConfirmation(context),
                           style: TextButton.styleFrom(
                             foregroundColor: Colors.grey[700],
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            padding: EdgeInsets.symmetric(
+                                vertical: isCompact ? 10 : 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
                               side: BorderSide(color: Colors.grey[300]!),
@@ -506,26 +520,25 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                           child: Text(
                             'Cancel',
                             style: GoogleFonts.inter(
-                              fontSize: 15,
+                              fontSize: isCompact ? 13 : 15,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      SizedBox(width: isCompact ? 8 : 10),
                       Expanded(
                         flex: 2,
                         child: ElevatedButton(
                           onPressed: () async {
-                            Navigator.of(context)
-                                .pop(); // Close confirmation dialog
+                            Navigator.of(context).pop();
                             await _confirmBookAppointment();
-                            // Note: Reset is now handled in _showSuccessDialog
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor:
                                 const Color.fromARGB(255, 81, 115, 153),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            padding: EdgeInsets.symmetric(
+                                vertical: isCompact ? 10 : 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),
@@ -534,13 +547,14 @@ class _ScheduleAppointmentState extends State<ScheduleAppointment> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.check_circle, size: 18),
-                              const SizedBox(width: 6),
+                              Icon(Icons.check_circle,
+                                  size: isCompact ? 16 : 18),
+                              SizedBox(width: isCompact ? 4 : 6),
                               Text(
                                 'Confirm',
                                 style: GoogleFonts.inter(
                                   color: Colors.white,
-                                  fontSize: 15,
+                                  fontSize: isCompact ? 13 : 15,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),

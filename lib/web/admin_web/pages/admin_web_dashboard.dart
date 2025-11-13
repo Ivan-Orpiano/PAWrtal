@@ -1,4 +1,5 @@
 import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/utils/logout_helper.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:capstone_app/data/models/appointment_model.dart';
 import 'package:capstone_app/web/admin_web/components/appointments/admin_web_appointment_controller.dart';
@@ -35,16 +36,26 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
   late WebAdminHomeController permissionController;
   bool _isInitialized = false;
 
+  bool _isLoggingOut = false;
+
   @override
   void initState() {
     super.initState();
     _initializeController();
+
+    // ✅ NEW: Listen to global logout flag
+    ever(LogoutHelper.isLoggingOut, (isLoggingOut) {
+      if (mounted && isLoggingOut) {
+        setState(() {
+          _isLoggingOut = true;
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
     // CRITICAL: DON'T delete controller on dispose - only on logout
-    // The controller should persist for caching to work
     super.dispose();
   }
 
@@ -100,6 +111,32 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ PRIORITY 1: Show loading screen if logging out
+    if (_isLoggingOut) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                color: const Color.fromARGB(255, 81, 115, 153),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Logging out...',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // ✅ PRIORITY 2: Check if widget is disposed or not initialized
     if (!_isInitialized) {
       return const Scaffold(
         backgroundColor: Color(0xFFF8FAFC),
@@ -109,45 +146,156 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
       );
     }
 
-    // NEW: Check if staff has no permissions
+    // ✅ PRIORITY 3: Check if NO permissions
     if (_hasNoPermissions()) {
       return _buildNoPermissionsView(context);
     }
 
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth < 768;
-    final isTablet = screenWidth < 1200 && screenWidth >= 768;
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: Obx(() {
-        if (controller.isLoading.value) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        return RefreshIndicator(
-          onRefresh: () => controller.refreshDashboard(),
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(isMobile ? 16 : 24),
+    // ✅ PRIORITY 4: Wrap entire build in try-catch
+    try {
+      // Check if controller exists and is valid
+      if (!Get.isRegistered<AdminDashboardController>()) {
+        return Scaffold(
+          backgroundColor: const Color(0xFFF8FAFC),
+          body: Center(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildHeader(controller, isMobile),
+                CircularProgressIndicator(
+                  color: const Color.fromARGB(255, 81, 115, 153),
+                ),
                 const SizedBox(height: 24),
-                _buildQuickStats(controller, isMobile, isTablet),
-                const SizedBox(height: 32),
-                if (isMobile)
-                  _buildMobileLayout(controller)
-                else if (isTablet)
-                  _buildTabletLayout(controller)
-                else
-                  _buildDesktopLayout(controller),
+                Text(
+                  'Initializing dashboard...',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
+                ),
               ],
             ),
           ),
         );
-      }),
-    );
+      }
+
+      // Build normally
+      final screenWidth = MediaQuery.of(context).size.width;
+      final isMobile = screenWidth < 768;
+      final isTablet = screenWidth < 1200 && screenWidth >= 768;
+
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        body: Obx(() {
+          // ✅ Check inside Obx too
+          if (_isLoggingOut || !Get.isRegistered<AdminDashboardController>()) {
+            return const SizedBox.shrink();
+          }
+
+          if (controller.isLoading.value) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          return RefreshIndicator(
+            onRefresh: () => controller.refreshDashboard(),
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(isMobile ? 16 : 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ✅ USE ERROR-SAFE WRAPPERS
+                  _buildHeaderWithErrorHandling(controller, isMobile),
+                  const SizedBox(height: 24),
+                  _buildQuickStatsWithErrorHandling(
+                      controller, isMobile, isTablet),
+                  const SizedBox(height: 32),
+                  // ✅ USE ERROR-SAFE LAYOUT METHODS
+                  if (isMobile)
+                    _buildMobileLayoutWithErrorHandling(controller)
+                  else if (isTablet)
+                    _buildTabletLayoutWithErrorHandling(controller)
+                  else
+                    _buildDesktopLayoutWithErrorHandling(controller),
+                ],
+              ),
+            ),
+          );
+        }),
+      );
+    } catch (e) {
+      // ✅ Catch ANY error and show blank loading screen
+      print('>>> ❌ CRITICAL DASHBOARD BUILD ERROR: $e');
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        body: Container(), // Completely blank page
+      );
+    }
+  }
+
+  Widget _buildHeaderWithErrorHandling(
+      AdminDashboardController controller, bool isMobile) {
+    if (_isLoggingOut) return const SizedBox.shrink();
+    try {
+      if (!Get.isRegistered<AdminDashboardController>())
+        return const SizedBox.shrink();
+      return _buildHeader(controller, isMobile);
+    } catch (e) {
+      print('>>> Error building header: $e');
+      return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildQuickStatsWithErrorHandling(
+      AdminDashboardController controller, bool isMobile, bool isTablet) {
+    if (_isLoggingOut) return const SizedBox.shrink();
+    try {
+      if (!Get.isRegistered<AdminDashboardController>())
+        return const SizedBox.shrink();
+      if (!Get.isRegistered<WebAppointmentController>())
+        return const SizedBox.shrink();
+      return _buildQuickStats(controller, isMobile, isTablet);
+    } catch (e) {
+      print('>>> Error building quick stats: $e');
+      return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildMobileLayoutWithErrorHandling(
+      AdminDashboardController controller) {
+    if (_isLoggingOut) return const SizedBox.shrink();
+    try {
+      if (!Get.isRegistered<AdminDashboardController>())
+        return const SizedBox.shrink();
+      return _buildMobileLayout(controller);
+    } catch (e) {
+      print('>>> Error building mobile layout: $e');
+      return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildTabletLayoutWithErrorHandling(
+      AdminDashboardController controller) {
+    if (_isLoggingOut) return const SizedBox.shrink();
+    try {
+      if (!Get.isRegistered<AdminDashboardController>())
+        return const SizedBox.shrink();
+      return _buildTabletLayout(controller);
+    } catch (e) {
+      print('>>> Error building tablet layout: $e');
+      return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildDesktopLayoutWithErrorHandling(
+      AdminDashboardController controller) {
+    if (_isLoggingOut) return const SizedBox.shrink();
+    try {
+      if (!Get.isRegistered<AdminDashboardController>())
+        return const SizedBox.shrink();
+      return _buildDesktopLayout(controller);
+    } catch (e) {
+      print('>>> Error building desktop layout: $e');
+      return const SizedBox.shrink();
+    }
   }
 
   // NEW: Build no permissions view
@@ -302,236 +450,266 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
   }
 
   Widget _buildHeader(AdminDashboardController controller, bool isMobile) {
-    // Get the appointment controller
-    final appointmentController = Get.find<WebAppointmentController>();
+    try {
+      if (_isLoggingOut || !Get.isRegistered<WebAppointmentController>()) {
+        return const SizedBox.shrink();
+      }
 
-    return Obx(() {
-      // Get today's count from appointment controller stats
-      final todayCount = appointmentController.appointmentStats['today'] ?? 0;
+      // Get the appointment controller
+      final appointmentController = Get.find<WebAppointmentController>();
 
-      return Container(
-        padding: EdgeInsets.all(isMobile ? 20 : 24),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color.fromARGB(255, 81, 115, 153),
-              Colors.blue.shade400,
+      return Obx(() {
+        // ✅ Double check inside Obx
+        if (_isLoggingOut || !Get.isRegistered<WebAppointmentController>()) {
+          return const SizedBox.shrink();
+        }
+
+        // Get today's count from appointment controller stats
+        final todayCount = appointmentController.appointmentStats['today'] ?? 0;
+
+        return Container(
+          padding: EdgeInsets.all(isMobile ? 20 : 24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color.fromARGB(255, 81, 115, 153),
+                Colors.blue.shade400,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.2),
+                spreadRadius: 2,
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
             ],
           ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.2),
-              spreadRadius: 2,
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.dashboard_rounded,
-                      color: Colors.white, size: 32),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        controller.clinicData.value?.clinicName ??
-                            'Admin Dashboard',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: isMobile ? 20 : 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        DateFormat('EEEE, MMMM dd, yyyy')
-                            .format(DateTime.now()),
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
-                          fontSize: isMobile ? 14 : 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (!isMobile && _canAccessFeature('appointments')) ...[
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
+                    child: const Icon(Icons.dashboard_rounded,
+                        color: Colors.white, size: 32),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.pets, color: Colors.white, size: 24),
-                        const SizedBox(height: 8),
                         Text(
-                          '$todayCount',
-                          style: const TextStyle(
+                          controller.clinicData.value?.clinicName ??
+                              'Admin Dashboard',
+                          style: TextStyle(
                             color: Colors.white,
-                            fontSize: 20,
+                            fontSize: isMobile ? 20 : 24,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         Text(
-                          "Today's Patients",
+                          DateFormat('EEEE, MMMM dd, yyyy')
+                              .format(DateTime.now()),
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
-                            fontSize: 12,
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: isMobile ? 14 : 16,
                           ),
                         ),
                       ],
                     ),
                   ),
+                  if (!isMobile && _canAccessFeature('appointments')) ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        children: [
+                          const Icon(Icons.pets, color: Colors.white, size: 24),
+                          const SizedBox(height: 8),
+                          Text(
+                            '$todayCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            "Today's Patients",
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
-              ],
-            ),
-          ],
-        ),
-      );
-    });
+              ),
+            ],
+          ),
+        );
+      });
+    } catch (e) {
+      print('>>> Error in _buildHeader: $e');
+      return const SizedBox.shrink();
+    }
   }
 
   Widget _buildQuickStats(
       AdminDashboardController controller, bool isMobile, bool isTablet) {
-    // Get the appointment controller stats
-    final appointmentController = Get.find<WebAppointmentController>();
-
-    return Obx(() {
-      // Get stats from appointment controller (these are for TODAY view mode)
-      final stats = appointmentController.appointmentStats;
-
-      final statsList = [
-        {
-          'title': 'Today\'s Appointments',
-          'value': stats['today']?.toString() ?? '0',
-          'subtitle': 'Scheduled today',
-          'icon': Icons.event_available,
-          'color': Colors.blue,
-          'permission': 'appointments',
-          'onTap': () => _handleNavigateToAppointments('today'),
-        },
-        {
-          'title': 'Pending Appointments',
-          'value': stats['pending']?.toString() ?? '0',
-          'subtitle': 'Need approval',
-          'icon': Icons.pending_actions,
-          'color': Colors.orange,
-          'permission': 'appointments',
-          'onTap': () => _handleNavigateToAppointments('pending'),
-        },
-        {
-          'title': 'Today\'s In Progress',
-          'value': stats['in_progress']?.toString() ?? '0',
-          'subtitle': 'Currently being treated',
-          'icon': Icons.medical_services,
-          'color': Colors.purple,
-          'permission': 'appointments',
-          'onTap': () => _handleNavigateToAppointments('in_progress'),
-        },
-        {
-          'title': 'Today\'s Completed',
-          'value': stats['completed']?.toString() ?? '0',
-          'subtitle': 'Finished appointments today',
-          'icon': Icons.check_circle,
-          'color': Colors.green,
-          'permission': 'appointments',
-          'onTap': () => _handleNavigateToAppointments('completed'),
-        },
-      ];
-
-      final visibleStats = statsList
-          .where((s) => _canAccessFeature(s['permission'] as String))
-          .toList();
-
-      if (visibleStats.isEmpty) {
+    // ✅ CRITICAL: Wrap Obx in try-catch
+    try {
+      if (_isLoggingOut || !Get.isRegistered<WebAppointmentController>()) {
         return const SizedBox.shrink();
       }
 
-      if (isMobile) {
-        return Column(
-          children: [
-            Row(
-              children: [
-                if (visibleStats.isNotEmpty)
-                  Expanded(child: _buildStatCard(visibleStats[0])),
-                const SizedBox(width: 12),
-                if (visibleStats.length > 1)
-                  Expanded(child: _buildStatCard(visibleStats[1]))
-                else
-                  Expanded(child: Container()),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                if (visibleStats.length > 2)
-                  Expanded(child: _buildStatCard(visibleStats[2])),
-                const SizedBox(width: 12),
-                if (visibleStats.length > 3)
-                  Expanded(child: _buildStatCard(visibleStats[3]))
-                else
-                  Expanded(child: Container()),
-              ],
-            ),
-          ],
-        );
-      } else if (isTablet) {
-        return Column(
-          children: [
-            Row(
-              children: [
-                if (visibleStats.isNotEmpty)
-                  Expanded(child: _buildStatCard(visibleStats[0])),
-                const SizedBox(width: 16),
-                if (visibleStats.length > 1)
-                  Expanded(child: _buildStatCard(visibleStats[1]))
-                else
-                  Expanded(child: Container()),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                if (visibleStats.length > 2)
-                  Expanded(child: _buildStatCard(visibleStats[2])),
-                const SizedBox(width: 16),
-                if (visibleStats.length > 3)
-                  Expanded(child: _buildStatCard(visibleStats[3]))
-                else
-                  Expanded(child: Container()),
-              ],
-            ),
-          ],
-        );
-      } else {
-        return Row(
-          children: visibleStats.map((stat) {
-            return Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: _buildStatCard(stat),
+      // Get the appointment controller
+      final appointmentController = Get.find<WebAppointmentController>();
+
+      return Obx(() {
+        // ✅ Double check inside Obx
+        if (_isLoggingOut || !Get.isRegistered<WebAppointmentController>()) {
+          return const SizedBox.shrink();
+        }
+
+        // Get stats from appointment controller
+        final stats = appointmentController.appointmentStats;
+
+        final statsList = [
+          {
+            'title': 'Today\'s Appointments',
+            'value': stats['today']?.toString() ?? '0',
+            'subtitle': 'Scheduled today',
+            'icon': Icons.event_available,
+            'color': Colors.blue,
+            'permission': 'appointments',
+            'onTap': () => _handleNavigateToAppointments('today'),
+          },
+          {
+            'title': 'Pending Appointments',
+            'value': stats['pending']?.toString() ?? '0',
+            'subtitle': 'Need approval',
+            'icon': Icons.pending_actions,
+            'color': Colors.orange,
+            'permission': 'appointments',
+            'onTap': () => _handleNavigateToAppointments('pending'),
+          },
+          {
+            'title': 'Today\'s In Progress',
+            'value': stats['in_progress']?.toString() ?? '0',
+            'subtitle': 'Currently being treated',
+            'icon': Icons.medical_services,
+            'color': Colors.purple,
+            'permission': 'appointments',
+            'onTap': () => _handleNavigateToAppointments('in_progress'),
+          },
+          {
+            'title': 'Today\'s Completed',
+            'value': stats['completed']?.toString() ?? '0',
+            'subtitle': 'Finished appointments today',
+            'icon': Icons.check_circle,
+            'color': Colors.green,
+            'permission': 'appointments',
+            'onTap': () => _handleNavigateToAppointments('completed'),
+          },
+        ];
+
+        final visibleStats = statsList
+            .where((s) => _canAccessFeature(s['permission'] as String))
+            .toList();
+
+        if (visibleStats.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        // ... (rest of the existing layout code)
+        if (isMobile) {
+          return Column(
+            children: [
+              Row(
+                children: [
+                  if (visibleStats.isNotEmpty)
+                    Expanded(child: _buildStatCard(visibleStats[0])),
+                  const SizedBox(width: 12),
+                  if (visibleStats.length > 1)
+                    Expanded(child: _buildStatCard(visibleStats[1]))
+                  else
+                    Expanded(child: Container()),
+                ],
               ),
-            );
-          }).toList(),
-        );
-      }
-    });
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  if (visibleStats.length > 2)
+                    Expanded(child: _buildStatCard(visibleStats[2])),
+                  const SizedBox(width: 12),
+                  if (visibleStats.length > 3)
+                    Expanded(child: _buildStatCard(visibleStats[3]))
+                  else
+                    Expanded(child: Container()),
+                ],
+              ),
+            ],
+          );
+        } else if (isTablet) {
+          return Column(
+            children: [
+              Row(
+                children: [
+                  if (visibleStats.isNotEmpty)
+                    Expanded(child: _buildStatCard(visibleStats[0])),
+                  const SizedBox(width: 16),
+                  if (visibleStats.length > 1)
+                    Expanded(child: _buildStatCard(visibleStats[1]))
+                  else
+                    Expanded(child: Container()),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  if (visibleStats.length > 2)
+                    Expanded(child: _buildStatCard(visibleStats[2])),
+                  const SizedBox(width: 16),
+                  if (visibleStats.length > 3)
+                    Expanded(child: _buildStatCard(visibleStats[3]))
+                  else
+                    Expanded(child: Container()),
+                ],
+              ),
+            ],
+          );
+        } else {
+          return Row(
+            children: visibleStats.map((stat) {
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 16),
+                  child: _buildStatCard(stat),
+                ),
+              );
+            }).toList(),
+          );
+        }
+      });
+    } catch (e) {
+      print('>>> Error in _buildQuickStats: $e');
+      return const SizedBox.shrink();
+    }
   }
 
   void _handleNavigateToAppointments(String filter) {
@@ -651,319 +829,376 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
   }
 
   Widget _buildMobileLayout(AdminDashboardController controller) {
-    final children = <Widget>[];
-
-    if (_canAccessFeature('appointments')) {
-      children.add(_buildPendingAppointments(controller, true));
-      children.add(const SizedBox(height: 24));
+    if (_isLoggingOut || !Get.isRegistered<AdminDashboardController>()) {
+      return const SizedBox.shrink();
     }
 
-    if (_canAccessFeature('messages')) {
-      children.add(_buildRecentMessages(controller, true));
-      children.add(const SizedBox(height: 24));
-    }
+    try {
+      final children = <Widget>[];
 
-    if (_canAccessFeature('appointments')) {
-      children.add(_buildUpcomingAppointments(controller, true));
-    }
+      if (_canAccessFeature('appointments')) {
+        children
+            .add(_buildPendingAppointmentsWithErrorHandling(controller, true));
+        children.add(const SizedBox(height: 24));
+      }
 
-    return Column(children: children);
+      if (_canAccessFeature('messages')) {
+        children.add(_buildRecentMessagesWithErrorHandling(controller, true));
+        children.add(const SizedBox(height: 24));
+      }
+
+      if (_canAccessFeature('appointments')) {
+        children
+            .add(_buildUpcomingAppointmentsWithErrorHandling(controller, true));
+      }
+
+      return Column(children: children);
+    } catch (e) {
+      print('>>> Error in mobile layout: $e');
+      return const SizedBox.shrink();
+    }
   }
 
   Widget _buildTabletLayout(AdminDashboardController controller) {
-    final hasAppointments = _canAccessFeature('appointments');
-    final hasMessages = _canAccessFeature('messages');
-    final children = <Widget>[];
-
-    if (hasAppointments) {
-      children.add(_buildPendingAppointments(controller, false));
-      children.add(const SizedBox(height: 24));
+    if (_isLoggingOut || !Get.isRegistered<AdminDashboardController>()) {
+      return const SizedBox.shrink();
     }
 
-    final rowChildren = <Widget>[];
-    if (hasMessages) {
-      rowChildren.add(Expanded(child: _buildRecentMessages(controller, false)));
+    try {
+      final hasAppointments = _canAccessFeature('appointments');
+      final hasMessages = _canAccessFeature('messages');
+      final children = <Widget>[];
+
       if (hasAppointments) {
-        rowChildren.add(const SizedBox(width: 24));
-        rowChildren.add(
-            Expanded(child: _buildUpcomingAppointments(controller, false)));
+        children
+            .add(_buildPendingAppointmentsWithErrorHandling(controller, false));
+        children.add(const SizedBox(height: 24));
       }
-    } else if (hasAppointments) {
-      rowChildren
-          .add(Expanded(child: _buildUpcomingAppointments(controller, false)));
-    }
 
-    if (rowChildren.isNotEmpty) {
-      children.add(Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: rowChildren,
-      ));
-    }
+      final rowChildren = <Widget>[];
+      if (hasMessages) {
+        rowChildren.add(Expanded(
+            child: _buildRecentMessagesWithErrorHandling(controller, false)));
+        if (hasAppointments) {
+          rowChildren.add(const SizedBox(width: 24));
+          rowChildren.add(Expanded(
+              child: _buildUpcomingAppointmentsWithErrorHandling(
+                  controller, false)));
+        }
+      } else if (hasAppointments) {
+        rowChildren.add(Expanded(
+            child: _buildUpcomingAppointmentsWithErrorHandling(
+                controller, false)));
+      }
 
-    return Column(children: children);
+      if (rowChildren.isNotEmpty) {
+        children.add(Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: rowChildren,
+        ));
+      }
+
+      return Column(children: children);
+    } catch (e) {
+      print('>>> Error in tablet layout: $e');
+      return const SizedBox.shrink();
+    }
   }
 
   Widget _buildDesktopLayout(AdminDashboardController controller) {
-    final hasAppointments = _canAccessFeature('appointments');
-    final hasMessages = _canAccessFeature('messages');
-    final children = <Widget>[];
-
-    if (hasAppointments) {
-      children.add(Expanded(
-        flex: 2,
-        child: Column(
-          children: [
-            _buildPendingAppointments(controller, false),
-            const SizedBox(height: 24),
-            _buildUpcomingAppointments(controller, false),
-          ],
-        ),
-      ));
-      children.add(const SizedBox(width: 24));
+    if (_isLoggingOut || !Get.isRegistered<AdminDashboardController>()) {
+      return const SizedBox.shrink();
     }
 
-    if (hasAppointments || hasMessages) {
-      final rightChildren = <Widget>[];
+    try {
+      final hasAppointments = _canAccessFeature('appointments');
+      final hasMessages = _canAccessFeature('messages');
+      final children = <Widget>[];
 
       if (hasAppointments) {
-        rightChildren.add(_buildAppointmentCalendar(controller));
-        rightChildren.add(const SizedBox(height: 24));
-      }
-
-      if (hasMessages) {
-        rightChildren.add(_buildRecentMessages(controller, false));
-      }
-
-      if (rightChildren.isNotEmpty) {
         children.add(Expanded(
-          flex: 1,
-          child: Column(children: rightChildren),
+          flex: 2,
+          child: Column(
+            children: [
+              _buildPendingAppointmentsWithErrorHandling(controller, false),
+              const SizedBox(height: 24),
+              _buildUpcomingAppointmentsWithErrorHandling(controller, false),
+            ],
+          ),
         ));
+        children.add(const SizedBox(width: 24));
       }
-    }
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: children,
-    );
+      if (hasAppointments || hasMessages) {
+        final rightChildren = <Widget>[];
+
+        if (hasAppointments) {
+          rightChildren
+              .add(_buildAppointmentCalendarWithErrorHandling(controller));
+          rightChildren.add(const SizedBox(height: 24));
+        }
+
+        if (hasMessages) {
+          rightChildren
+              .add(_buildRecentMessagesWithErrorHandling(controller, false));
+        }
+
+        if (rightChildren.isNotEmpty) {
+          children.add(Expanded(
+            flex: 1,
+            child: Column(children: rightChildren),
+          ));
+        }
+      }
+
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      );
+    } catch (e) {
+      print('>>> Error in desktop layout: $e');
+      return const SizedBox.shrink();
+    }
   }
 
   Widget _buildPendingAppointments(
       AdminDashboardController controller, bool isMobile) {
-    return _buildDashboardCard(
-      title: 'Pending Appointments', // Changed from "Today's Schedule"
-      subtitle:
-          '${controller.todayAppointments.length} awaiting approval', // Changed subtitle
-      icon: Icons.pending_actions, // Changed icon
-      child: controller.todayAppointments.isEmpty
-          ? _buildEmptyState('No pending appointments', Icons.pending_actions)
-          : Column(
-              children: controller.todayAppointments.take(5).map((appointment) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child:
-                      _buildAppointmentItem(controller, appointment, isMobile),
-                );
-              }).toList(),
-            ),
-      actionLabel: 'View All',
-      onAction: () =>
-          _handleNavigateToAppointments('pending'), // Changed to pending
-    );
+    try {
+      return _buildDashboardCard(
+        title: 'Pending Appointments',
+        subtitle: '${controller.todayAppointments.length} awaiting approval',
+        icon: Icons.pending_actions,
+        child: Obx(() {
+          // ✅ Check if logging out inside Obx
+          if (_isLoggingOut || !Get.isRegistered<AdminDashboardController>()) {
+            return const SizedBox.shrink();
+          }
+
+          if (controller.todayAppointments.isEmpty) {
+            return _buildEmptyState(
+                'No pending appointments', Icons.pending_actions);
+          }
+
+          return Column(
+            children: controller.todayAppointments.take(5).map((appointment) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _buildAppointmentItem(controller, appointment, isMobile),
+              );
+            }).toList(),
+          );
+        }),
+        actionLabel: 'View All',
+        onAction: () => _handleNavigateToAppointments('pending'),
+      );
+    } catch (e) {
+      print('>>> Error in _buildPendingAppointments: $e');
+      return const SizedBox.shrink();
+    }
   }
 
   Widget _buildAppointmentItem(AdminDashboardController controller,
       Appointment appointment, bool isMobile) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: _getStatusColor(appointment.status).withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-            color: _getStatusColor(appointment.status).withOpacity(0.3)),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              // 🔧 FIXED: Use Obx to observe cached pet images (no FutureBuilder)
-              Obx(() {
-                final profilePictureUrl =
-                    controller.petProfilePictures[appointment.petId];
-                final isLoading =
-                    controller.petImageLoadingStates[appointment.petId] ??
-                        false;
+    if (_isLoggingOut || !Get.isRegistered<AdminDashboardController>()) {
+      return const SizedBox.shrink();
+    }
 
-                if (isLoading) {
-                  // Show loading indicator
-                  return Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(25),
-                      color: Colors.grey[200],
-                    ),
-                    child: Center(
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            _getStatusColor(appointment.status),
+    try {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: _getStatusColor(appointment.status).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+              color: _getStatusColor(appointment.status).withOpacity(0.3)),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                // 🔧 FIXED: Use Obx to observe cached pet images
+                Obx(() {
+                  // ✅ Check if logging out inside Obx
+                  if (_isLoggingOut ||
+                      !Get.isRegistered<AdminDashboardController>()) {
+                    return const SizedBox.shrink();
+                  }
+
+                  final profilePictureUrl =
+                      controller.petProfilePictures[appointment.petId];
+                  final isLoading =
+                      controller.petImageLoadingStates[appointment.petId] ??
+                          false;
+
+                  if (isLoading) {
+                    return Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(25),
+                        color: Colors.grey[200],
+                      ),
+                      child: Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              _getStatusColor(appointment.status),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  );
-                }
+                    );
+                  }
 
-                if (profilePictureUrl != null && profilePictureUrl.isNotEmpty) {
-                  // Show pet profile picture
-                  return Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(25),
-                      border: Border.all(
-                        color: _getStatusColor(appointment.status),
-                        width: 2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.3),
-                          spreadRadius: 1,
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
+                  if (profilePictureUrl != null &&
+                      profilePictureUrl.isNotEmpty) {
+                    return Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(25),
+                        border: Border.all(
+                          color: _getStatusColor(appointment.status),
+                          width: 2,
                         ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(25),
-                      child: Image.network(
-                        profilePictureUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          // Fallback to gradient icon if image fails
-                          return _buildPetAvatarFallback(appointment.status);
-                        },
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          // Show loading progress
-                          return Container(
-                            color: Colors.grey[200],
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                value: loadingProgress.expectedTotalBytes !=
-                                        null
-                                    ? loadingProgress.cumulativeBytesLoaded /
-                                        loadingProgress.expectedTotalBytes!
-                                    : null,
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  _getStatusColor(appointment.status),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.3),
+                            spreadRadius: 1,
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(25),
+                        child: Image.network(
+                          profilePictureUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return _buildPetAvatarFallback(appointment.status);
+                          },
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              color: Colors.grey[200],
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  value: loadingProgress.expectedTotalBytes !=
+                                          null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                      : null,
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    _getStatusColor(appointment.status),
+                                  ),
                                 ),
                               ),
-                            ),
-                          );
-                        },
+                            );
+                          },
+                        ),
                       ),
-                    ),
-                  );
-                }
+                    );
+                  }
 
-                // Fallback to gradient icon if no profile picture
-                return _buildPetAvatarFallback(appointment.status);
-              }),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  return _buildPetAvatarFallback(appointment.status);
+                }),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        controller.getPetName(appointment.petId),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Text(
+                        controller.getOwnerName(appointment.userId),
+                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                      ),
+                      Text(
+                        appointment.service,
+                        style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      controller.getPetName(appointment.petId),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                      DateFormat('hh:mm a').format(appointment.dateTime),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _getStatusColor(appointment.status),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                    ),
-                    Text(
-                      controller.getOwnerName(appointment.userId),
-                      style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                    ),
-                    Text(
-                      appointment.service,
-                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                      child: Text(
+                        _getStatusDisplayText(appointment.status),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ],
                 ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              ],
+            ),
+            if (appointment.status == 'pending') ...[
+              const SizedBox(height: 12),
+              Row(
                 children: [
-                  Text(
-                    DateFormat('hh:mm a').format(appointment.dateTime),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(appointment.status),
-                      borderRadius: BorderRadius.circular(10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => controller
+                          .confirmQuickDeclineAppointment(appointment),
+                      icon: const Icon(Icons.close, size: 16),
+                      label: const Text('Decline'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                      ),
                     ),
-                    child: Text(
-                      _getStatusDisplayText(appointment.status),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () =>
+                          controller.confirmQuickAcceptAppointment(appointment),
+                      icon: const Icon(Icons.check, size: 16),
+                      label: const Text('Accept'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
                       ),
                     ),
                   ),
                 ],
               ),
             ],
-          ),
-          // Show action buttons only for pending appointments
-          if (appointment.status == 'pending') ...[
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () =>
-                        controller.confirmQuickDeclineAppointment(appointment),
-                    icon: const Icon(Icons.close, size: 16),
-                    label: const Text('Decline'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () =>
-                        controller.confirmQuickAcceptAppointment(appointment),
-                    icon: const Icon(Icons.check, size: 16),
-                    label: const Text('Accept'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ],
-        ],
-      ),
-    );
+        ),
+      );
+    } catch (e) {
+      print('>>> Error in _buildAppointmentItem: $e');
+      return const SizedBox.shrink();
+    }
   }
 
   // 🆕 ADD THIS HELPER METHOD for fallback avatar
@@ -1005,42 +1240,52 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
 
   Widget _buildRecentMessages(
       AdminDashboardController controller, bool isMobile) {
-    return _buildDashboardCard(
-      title: 'Recent Messages',
-      subtitle:
-          '${controller.recentMessages.where((m) => m['unreadCount'] > 0).length} unread',
-      icon: Icons.message,
-      child: Obx(() {
-        if (controller.recentMessages.isEmpty) {
-          return _buildEmptyState('No recent messages', Icons.message);
-        }
+    try {
+      return _buildDashboardCard(
+        title: 'Recent Messages',
+        subtitle:
+            '${controller.recentMessages.where((m) => m['unreadCount'] > 0).length} unread',
+        icon: Icons.message,
+        child: Obx(() {
+          // ✅ Check if logging out inside Obx
+          if (_isLoggingOut || !Get.isRegistered<AdminDashboardController>()) {
+            return const SizedBox.shrink();
+          }
 
-        return Column(
-          children: controller.recentMessages.take(3).map((message) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _buildMessageItem(message, isMobile),
-            );
-          }).toList(),
-        );
-      }),
-      actionLabel: 'View All',
-      onAction: () {
-        if (!permissionController.canAccessFeature('messages')) {
-          permissionController.showPermissionDeniedDialog('Messages');
-          return;
-        }
+          if (controller.recentMessages.isEmpty) {
+            return _buildEmptyState('No recent messages', Icons.message);
+          }
 
-        final messagesIndex =
-            permissionController.navigationLabels.indexOf('Messages');
+          return Column(
+            children: controller.recentMessages.take(3).map((message) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _buildMessageItem(message, isMobile),
+              );
+            }).toList(),
+          );
+        }),
+        actionLabel: 'View All',
+        onAction: () {
+          if (!permissionController.canAccessFeature('messages')) {
+            permissionController.showPermissionDeniedDialog('Messages');
+            return;
+          }
 
-        if (messagesIndex == -1) {
-          return;
-        }
+          final messagesIndex =
+              permissionController.navigationLabels.indexOf('Messages');
 
-        permissionController.setSelectedIndex(messagesIndex);
-      },
-    );
+          if (messagesIndex == -1) {
+            return;
+          }
+
+          permissionController.setSelectedIndex(messagesIndex);
+        },
+      );
+    } catch (e) {
+      print('>>> Error in _buildRecentMessages: $e');
+      return const SizedBox.shrink();
+    }
   }
 
   Widget _buildMessageItem(Map<String, dynamic> message, bool isMobile) {
@@ -1243,256 +1488,294 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
 
   Widget _buildUpcomingAppointments(
       AdminDashboardController controller, bool isMobile) {
-    return _buildDashboardCard(
-      title: 'Upcoming Appointments',
-      subtitle: 'Next ${controller.upcomingAppointments.length} scheduled',
-      icon: Icons.schedule,
-      child: controller.upcomingAppointments.isEmpty
-          ? _buildEmptyState('No upcoming appointments', Icons.event_available)
-          : Column(
-              children: controller.upcomingAppointments.map((appointment) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildUpcomingAppointmentItem(
-                      controller, appointment, isMobile),
-                );
-              }).toList(),
-            ),
-      actionLabel: 'View All',
-      onAction: () => _handleNavigateToAppointments('all'),
-    );
+    try {
+      return _buildDashboardCard(
+        title: 'Upcoming Appointments',
+        subtitle: 'Next ${controller.upcomingAppointments.length} scheduled',
+        icon: Icons.schedule,
+        child: Obx(() {
+          // ✅ Check if logging out inside Obx
+          if (_isLoggingOut || !Get.isRegistered<AdminDashboardController>()) {
+            return const SizedBox.shrink();
+          }
+
+          if (controller.upcomingAppointments.isEmpty) {
+            return _buildEmptyState(
+                'No upcoming appointments', Icons.event_available);
+          }
+
+          return Column(
+            children: controller.upcomingAppointments.map((appointment) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _buildUpcomingAppointmentItem(
+                    controller, appointment, isMobile),
+              );
+            }).toList(),
+          );
+        }),
+        actionLabel: 'View All',
+        onAction: () => _handleNavigateToAppointments('all'),
+      );
+    } catch (e) {
+      print('>>> Error in _buildUpcomingAppointments: $e');
+      return const SizedBox.shrink();
+    }
   }
 
   Widget _buildUpcomingAppointmentItem(AdminDashboardController controller,
       Appointment appointment, bool isMobile) {
-    final daysDifference =
-        appointment.dateTime.difference(DateTime.now()).inDays;
-    final isToday = daysDifference == 0;
-    final isTomorrow = daysDifference == 1;
-
-    String dateLabel;
-    if (isToday) {
-      dateLabel = 'Today';
-    } else if (isTomorrow) {
-      dateLabel = 'Tomorrow';
-    } else {
-      dateLabel = DateFormat('MMM dd').format(appointment.dateTime);
+    if (_isLoggingOut || !Get.isRegistered<AdminDashboardController>()) {
+      return const SizedBox.shrink();
     }
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.green.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.green.withOpacity(0.3)),
-      ),
-      child: Row(
-        children: [
-          // Date container
-          Container(
-            width: 60,
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            decoration: BoxDecoration(
-              color: isToday ? Colors.orange : Colors.green,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              children: [
-                Text(
-                  dateLabel,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                Text(
-                  DateFormat('hh:mm a').format(appointment.dateTime),
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          // 🔧 FIXED: Use Obx instead of FutureBuilder
-          Obx(() {
-            final profilePictureUrl =
-                controller.petProfilePictures[appointment.petId];
+    try {
+      final daysDifference =
+          appointment.dateTime.difference(DateTime.now()).inDays;
+      final isToday = daysDifference == 0;
+      final isTomorrow = daysDifference == 1;
 
-            if (profilePictureUrl != null && profilePictureUrl.isNotEmpty) {
+      String dateLabel;
+      if (isToday) {
+        dateLabel = 'Today';
+      } else if (isTomorrow) {
+        dateLabel = 'Tomorrow';
+      } else {
+        dateLabel = DateFormat('MMM dd').format(appointment.dateTime);
+      }
+
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.green.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.green.withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 60,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: isToday ? Colors.orange : Colors.green,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    dateLabel,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    DateFormat('hh:mm a').format(appointment.dateTime),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Obx(() {
+              // ✅ Check if logging out inside Obx
+              if (_isLoggingOut ||
+                  !Get.isRegistered<AdminDashboardController>()) {
+                return const SizedBox.shrink();
+              }
+
+              final profilePictureUrl =
+                  controller.petProfilePictures[appointment.petId];
+
+              if (profilePictureUrl != null && profilePictureUrl.isNotEmpty) {
+                return Container(
+                  width: 40,
+                  height: 40,
+                  margin: const EdgeInsets.only(right: 12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.green,
+                      width: 2,
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.network(
+                      profilePictureUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade100,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Icon(
+                            Icons.pets,
+                            color: Colors.green,
+                            size: 20,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                );
+              }
+
               return Container(
                 width: 40,
                 height: 40,
                 margin: const EdgeInsets.only(right: 12),
                 decoration: BoxDecoration(
+                  color: Colors.green.shade100,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: Colors.green,
                     width: 2,
                   ),
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: Image.network(
-                    profilePictureUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade100,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Icon(
-                          Icons.pets,
-                          color: Colors.green,
-                          size: 20,
-                        ),
-                      );
-                    },
-                  ),
+                child: const Icon(
+                  Icons.pets,
+                  color: Colors.green,
+                  size: 20,
                 ),
               );
-            }
-
-            // Fallback icon
-            return Container(
-              width: 40,
-              height: 40,
-              margin: const EdgeInsets.only(right: 12),
-              decoration: BoxDecoration(
-                color: Colors.green.shade100,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: Colors.green,
-                  width: 2,
-                ),
-              ),
-              child: const Icon(
-                Icons.pets,
-                color: Colors.green,
-                size: 20,
-              ),
-            );
-          }),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  controller.getPetName(appointment.petId),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                Text(
-                  controller.getOwnerName(appointment.userId),
-                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    appointment.service,
-                    style: TextStyle(
-                      color: Colors.blue[700],
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
+            }),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    controller.getPetName(appointment.petId),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
                     ),
                   ),
-                ),
-              ],
+                  Text(
+                    controller.getOwnerName(appointment.userId),
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      appointment.service,
+                      style: TextStyle(
+                        color: Colors.blue[700],
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    } catch (e) {
+      print('>>> Error in _buildUpcomingAppointmentItem: $e');
+      return const SizedBox.shrink();
+    }
   }
 
   Widget _buildAppointmentCalendar(AdminDashboardController controller) {
-    final today = DateTime.now();
-    final todayDate = DateTime(today.year, today.month, today.day);
+    if (_isLoggingOut || !Get.isRegistered<AdminDashboardController>()) {
+      return const SizedBox.shrink();
+    }
 
-    return _buildDashboardCard(
-      title: 'Appointment Calendar',
-      subtitle: 'Monthly overview',
-      icon: Icons.calendar_month,
-      child: TableCalendar<Appointment>(
-        firstDay: DateTime.utc(2020, 1, 1),
-        lastDay: DateTime.utc(2030, 12, 31),
-        focusedDay: controller.selectedDate.value,
-        calendarFormat: CalendarFormat.month,
-        eventLoader: (day) {
-          return controller.calendarAppointments[
-                  DateTime(day.year, day.month, day.day)] ??
-              [];
-        },
-        startingDayOfWeek: StartingDayOfWeek.monday,
-        calendarStyle: CalendarStyle(
-          outsideDaysVisible: false,
-          weekendTextStyle: const TextStyle(color: Colors.red),
-          todayDecoration: const BoxDecoration(
-            color: Color.fromARGB(255, 81, 115, 153),
-            shape: BoxShape.circle,
-          ),
-          selectedDecoration: BoxDecoration(
-            color: Colors.blue.shade600,
-            shape: BoxShape.circle,
-          ),
-          // Remove markerDecoration since we're using custom markerBuilder
-          // markerDecoration: BoxDecoration(
-          //   color: Colors.green.shade400,
-          //   shape: BoxShape.circle,
-          // ),
-        ),
-        // Add custom marker builder
-        calendarBuilders: CalendarBuilders(
-          markerBuilder: (context, date, events) {
-            if (events.isEmpty) return const SizedBox.shrink();
+    try {
+      final today = DateTime.now();
+      final todayDate = DateTime(today.year, today.month, today.day);
 
-            return Positioned(
-              bottom: -2,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade400,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  '${events.length}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-        headerStyle: const HeaderStyle(
-          formatButtonVisible: false,
-          titleCentered: true,
-        ),
-        onDaySelected: (selectedDay, focusedDay) {
-          final selectedDate =
-              DateTime(selectedDay.year, selectedDay.month, selectedDay.day);
-          if (!selectedDate.isBefore(todayDate)) {
-            controller.setSelectedDate(selectedDay);
+      return _buildDashboardCard(
+        title: 'Appointment Calendar',
+        subtitle: 'Monthly overview',
+        icon: Icons.calendar_month,
+        child: Obx(() {
+          // ✅ Check if logging out inside Obx
+          if (_isLoggingOut || !Get.isRegistered<AdminDashboardController>()) {
+            return const SizedBox.shrink();
           }
-        },
-        selectedDayPredicate: (day) {
-          return isSameDay(controller.selectedDate.value, day);
-        },
-      ),
-    );
+
+          return TableCalendar<Appointment>(
+            firstDay: DateTime.utc(2020, 1, 1),
+            lastDay: DateTime.utc(2030, 12, 31),
+            focusedDay: controller.selectedDate.value,
+            calendarFormat: CalendarFormat.month,
+            eventLoader: (day) {
+              return controller.calendarAppointments[
+                      DateTime(day.year, day.month, day.day)] ??
+                  [];
+            },
+            startingDayOfWeek: StartingDayOfWeek.monday,
+            calendarStyle: CalendarStyle(
+              outsideDaysVisible: false,
+              weekendTextStyle: const TextStyle(color: Colors.red),
+              todayDecoration: const BoxDecoration(
+                color: Color.fromARGB(255, 81, 115, 153),
+                shape: BoxShape.circle,
+              ),
+              selectedDecoration: BoxDecoration(
+                color: Colors.blue.shade600,
+                shape: BoxShape.circle,
+              ),
+            ),
+            calendarBuilders: CalendarBuilders(
+              markerBuilder: (context, date, events) {
+                if (events.isEmpty) return const SizedBox.shrink();
+
+                return Positioned(
+                  bottom: -2,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade400,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${events.length}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+            headerStyle: const HeaderStyle(
+              formatButtonVisible: false,
+              titleCentered: true,
+            ),
+            onDaySelected: (selectedDay, focusedDay) {
+              final selectedDate = DateTime(
+                  selectedDay.year, selectedDay.month, selectedDay.day);
+              if (!selectedDate.isBefore(todayDate)) {
+                controller.setSelectedDate(selectedDay);
+              }
+            },
+            selectedDayPredicate: (day) {
+              return isSameDay(controller.selectedDate.value, day);
+            },
+          );
+        }),
+      );
+    } catch (e) {
+      print('>>> Error in _buildAppointmentCalendar: $e');
+      return const SizedBox.shrink();
+    }
   }
 
   Widget _buildDashboardCard({
@@ -1631,6 +1914,66 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         return 'DECLINED';
       default:
         return status.toUpperCase();
+    }
+  }
+
+  // ✅ NEW: Error-safe wrapper for pending appointments
+  Widget _buildPendingAppointmentsWithErrorHandling(
+      AdminDashboardController controller, bool isMobile) {
+    if (_isLoggingOut || !Get.isRegistered<AdminDashboardController>()) {
+      return const SizedBox.shrink();
+    }
+
+    try {
+      return _buildPendingAppointments(controller, isMobile);
+    } catch (e) {
+      print('>>> Error building pending appointments: $e');
+      return const SizedBox.shrink();
+    }
+  }
+
+// ✅ NEW: Error-safe wrapper for recent messages
+  Widget _buildRecentMessagesWithErrorHandling(
+      AdminDashboardController controller, bool isMobile) {
+    if (_isLoggingOut || !Get.isRegistered<AdminDashboardController>()) {
+      return const SizedBox.shrink();
+    }
+
+    try {
+      return _buildRecentMessages(controller, isMobile);
+    } catch (e) {
+      print('>>> Error building recent messages: $e');
+      return const SizedBox.shrink();
+    }
+  }
+
+// ✅ NEW: Error-safe wrapper for upcoming appointments
+  Widget _buildUpcomingAppointmentsWithErrorHandling(
+      AdminDashboardController controller, bool isMobile) {
+    if (_isLoggingOut || !Get.isRegistered<AdminDashboardController>()) {
+      return const SizedBox.shrink();
+    }
+
+    try {
+      return _buildUpcomingAppointments(controller, isMobile);
+    } catch (e) {
+      print('>>> Error building upcoming appointments: $e');
+      return const SizedBox.shrink();
+    }
+  }
+
+// ✅ NEW: Error-safe wrapper for appointment calendar
+  Widget _buildAppointmentCalendarWithErrorHandling(
+      AdminDashboardController controller) {
+    if (_isLoggingOut || !Get.isRegistered<AdminDashboardController>()) {
+      return const SizedBox.shrink();
+    }
+
+    try {
+      return _buildAppointmentCalendar(controller);
+    } catch (e) {
+      print('>>> Error building appointment calendar: $e');
+      return const SizedBox.shrink();
     }
   }
 }
