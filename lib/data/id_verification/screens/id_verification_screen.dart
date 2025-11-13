@@ -443,13 +443,11 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
 
   Future<void> _refreshVerificationStatus() async {
     try {
-      print('🔄 Refreshing verification status...');
 
       final storage = GetStorage();
       final userDocId = storage.read("userDocumentId") as String?;
 
       if (userDocId == null) {
-        print('⚠️ No user document ID found');
         return;
       }
 
@@ -458,7 +456,6 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
           .syncVerifiedNameToUserProfile(widget.userId, userDocId);
 
       if (synced) {
-        print('✅ Verification status refreshed and name synced');
 
         // Update the verified name in GetStorage
         final verifiedName = await widget.authRepository
@@ -467,11 +464,9 @@ class _IdVerificationScreenState extends State<IdVerificationScreen> {
         if (verifiedName != null && verifiedName.isNotEmpty) {
           await storage.write("userName", verifiedName);
           await storage.write("idVerified", true);
-          print('✅ Name updated in storage: $verifiedName');
         }
       }
     } catch (e) {
-      print('❌ Error refreshing verification status: $e');
     }
   }
 

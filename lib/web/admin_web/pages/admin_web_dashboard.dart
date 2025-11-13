@@ -223,7 +223,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
       );
     } catch (e) {
       // ✅ Catch ANY error and show blank loading screen
-      print('>>> ❌ CRITICAL DASHBOARD BUILD ERROR: $e');
       return Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
         body: Container(), // Completely blank page
@@ -239,7 +238,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         return const SizedBox.shrink();
       return _buildHeader(controller, isMobile);
     } catch (e) {
-      print('>>> Error building header: $e');
       return const SizedBox.shrink();
     }
   }
@@ -254,7 +252,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         return const SizedBox.shrink();
       return _buildQuickStats(controller, isMobile, isTablet);
     } catch (e) {
-      print('>>> Error building quick stats: $e');
       return const SizedBox.shrink();
     }
   }
@@ -267,7 +264,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         return const SizedBox.shrink();
       return _buildMobileLayout(controller);
     } catch (e) {
-      print('>>> Error building mobile layout: $e');
       return const SizedBox.shrink();
     }
   }
@@ -280,7 +276,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         return const SizedBox.shrink();
       return _buildTabletLayout(controller);
     } catch (e) {
-      print('>>> Error building tablet layout: $e');
       return const SizedBox.shrink();
     }
   }
@@ -293,7 +288,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         return const SizedBox.shrink();
       return _buildDesktopLayout(controller);
     } catch (e) {
-      print('>>> Error building desktop layout: $e');
       return const SizedBox.shrink();
     }
   }
@@ -564,7 +558,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         );
       });
     } catch (e) {
-      print('>>> Error in _buildHeader: $e');
       return const SizedBox.shrink();
     }
   }
@@ -707,7 +700,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         }
       });
     } catch (e) {
-      print('>>> Error in _buildQuickStats: $e');
       return const SizedBox.shrink();
     }
   }
@@ -854,7 +846,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
 
       return Column(children: children);
     } catch (e) {
-      print('>>> Error in mobile layout: $e');
       return const SizedBox.shrink();
     }
   }
@@ -900,7 +891,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
 
       return Column(children: children);
     } catch (e) {
-      print('>>> Error in tablet layout: $e');
       return const SizedBox.shrink();
     }
   }
@@ -956,7 +946,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         children: children,
       );
     } catch (e) {
-      print('>>> Error in desktop layout: $e');
       return const SizedBox.shrink();
     }
   }
@@ -992,7 +981,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         onAction: () => _handleNavigateToAppointments('pending'),
       );
     } catch (e) {
-      print('>>> Error in _buildPendingAppointments: $e');
       return const SizedBox.shrink();
     }
   }
@@ -1196,7 +1184,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         ),
       );
     } catch (e) {
-      print('>>> Error in _buildAppointmentItem: $e');
       return const SizedBox.shrink();
     }
   }
@@ -1283,7 +1270,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         },
       );
     } catch (e) {
-      print('>>> Error in _buildRecentMessages: $e');
       return const SizedBox.shrink();
     }
   }
@@ -1518,7 +1504,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         onAction: () => _handleNavigateToAppointments('all'),
       );
     } catch (e) {
-      print('>>> Error in _buildUpcomingAppointments: $e');
       return const SizedBox.shrink();
     }
   }
@@ -1683,7 +1668,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         ),
       );
     } catch (e) {
-      print('>>> Error in _buildUpcomingAppointmentItem: $e');
       return const SizedBox.shrink();
     }
   }
@@ -1773,7 +1757,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
         }),
       );
     } catch (e) {
-      print('>>> Error in _buildAppointmentCalendar: $e');
       return const SizedBox.shrink();
     }
   }
@@ -1927,7 +1910,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     try {
       return _buildPendingAppointments(controller, isMobile);
     } catch (e) {
-      print('>>> Error building pending appointments: $e');
       return const SizedBox.shrink();
     }
   }
@@ -1942,7 +1924,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     try {
       return _buildRecentMessages(controller, isMobile);
     } catch (e) {
-      print('>>> Error building recent messages: $e');
       return const SizedBox.shrink();
     }
   }
@@ -1957,7 +1938,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     try {
       return _buildUpcomingAppointments(controller, isMobile);
     } catch (e) {
-      print('>>> Error building upcoming appointments: $e');
       return const SizedBox.shrink();
     }
   }
@@ -1972,7 +1952,6 @@ class _AdminWebDashboardState extends State<AdminWebDashboard> {
     try {
       return _buildAppointmentCalendar(controller);
     } catch (e) {
-      print('>>> Error building appointment calendar: $e');
       return const SizedBox.shrink();
     }
   }

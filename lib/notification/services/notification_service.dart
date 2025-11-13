@@ -282,12 +282,10 @@ class NotificationService {
   /// Clear notification token (call on logout)
   Future<void> clearToken() async {
     try {
-      print('🔔 Clearing FCM token...');
 
       if (!kIsWeb) {
         // Delete the token from Firebase
         await _firebaseMessaging.deleteToken();
-        print('✅ FCM token deleted from Firebase');
       }
 
       // Clear local storage
@@ -295,9 +293,7 @@ class NotificationService {
       _storage.remove('fcm_token');
       _storage.remove('push_target_id'); // Also remove push target ID
 
-      print('✅ Local FCM data cleared');
     } catch (e) {
-      print('⚠️ Error clearing FCM token: $e');
       // Still clear local storage even if deleteToken fails
       _currentFCMToken = null;
       _storage.remove('fcm_token');

@@ -123,7 +123,6 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
         return conversationData;
       }
     } catch (e) {
-      print('Error getting clinic data: $e');
     }
 
     return {

@@ -192,7 +192,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
         _controller!.setSelectedTab(tabValues[currentIndex]);
       }
     } catch (e) {
-      print('>>> Error in tab controller change: $e');
     }
   }
 
@@ -220,13 +219,11 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
         _controller!.setSelectedTab(tabValues[currentIndex]);
       }
     } catch (e) {
-      print('>>> Error in mobile tab controller change: $e');
     }
   }
 
   @override
   void dispose() {
-    print('>>> Disposing AdminWebAppointments');
 
     _isDisposed = true;
 
@@ -235,7 +232,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
       _tabController.removeListener(_onTabControllerChanged);
       _mobileTabController.removeListener(_onMobileTabControllerChanged);
     } catch (e) {
-      print('>>> Error removing listeners: $e');
     }
 
     // Dispose controllers safely
@@ -245,7 +241,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
       _searchController.dispose();
       _statsScrollController.dispose();
     } catch (e) {
-      print('>>> Error disposing controllers: $e');
     }
 
     // ✅ CRITICAL: Don't touch the WebAppointmentController
@@ -395,7 +390,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
       );
     } catch (e) {
       // ✅ Catch ANY error and show blank loading screen
-      print('>>> ❌ CRITICAL BUILD ERROR: $e');
       return Scaffold(
         backgroundColor: const Color.fromARGB(255, 245, 245, 245),
         body: Container(), // Completely blank page
@@ -409,7 +403,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
       if (_controller == null) return const SizedBox.shrink();
       return const WebAppointmentStats();
     } catch (e) {
-      print('>>> Error building stats: $e');
       return const SizedBox.shrink();
     }
   }
@@ -420,7 +413,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
       if (_controller == null) return const SizedBox.shrink();
       return _buildMobileStats();
     } catch (e) {
-      print('>>> Error building mobile stats: $e');
       return const SizedBox.shrink();
     }
   }
@@ -432,7 +424,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
       if (_controller == null) return const SizedBox.shrink();
       return _buildSearchAndFilterBar(isMobile, isTablet);
     } catch (e) {
-      print('>>> Error building search bar: $e');
       return const SizedBox.shrink();
     }
   }
@@ -443,7 +434,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
       if (_controller == null) return const SizedBox.shrink();
       return _buildTabBar(isMobile, isTablet);
     } catch (e) {
-      print('>>> Error building tab bar: $e');
       return const SizedBox.shrink();
     }
   }
@@ -473,7 +463,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
       }
       return _buildTabContent(isMobile);
     } catch (e) {
-      print('>>> Error building tab content: $e');
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -627,7 +616,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
                   );
                 });
               } catch (e) {
-                print('>>> Error in mobile stats Obx: $e');
                 return const SizedBox.shrink();
               }
             },
@@ -957,7 +945,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
               );
             });
           } catch (e) {
-            print('>>> Error in tab bar Obx: $e');
             return const SizedBox.shrink();
           }
         },
@@ -1080,7 +1067,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
                 );
               });
             } catch (e) {
-              print('>>> Error in tab content Obx: $e');
               return const SizedBox.shrink();
             }
           },
@@ -1284,9 +1270,7 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
           // Now delete the controller
           Get.delete<WebAppointmentController>(force: true);
 
-          print('>>> ✅ Controller cleaned up and deleted');
         } catch (e) {
-          print('>>> ⚠️ Error during controller cleanup: $e');
         }
       }
 
@@ -1299,7 +1283,6 @@ class _AdminWebAppointmentsState extends State<AdminWebAppointments>
       // Step 6: Perform actual logout
       await LogoutHelper.logout();
     } catch (e) {
-      print('>>> ❌ Error during logout: $e');
 
       // Fallback: Force logout even if cleanup fails
       await LogoutHelper.logout();

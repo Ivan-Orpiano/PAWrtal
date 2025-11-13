@@ -2497,10 +2497,8 @@ class AuthRepository {
       final formattedName = _formatNameToProperCase(newName);
 
       await appWriteProvider.account!.updateName(name: formattedName);
-      print('✅ Updated Appwrite Auth account name: $formattedName');
       return true;
     } catch (e) {
-      print('❌ Error updating Auth account name: $e');
       return false;
     }
   }
@@ -2526,14 +2524,12 @@ class AuthRepository {
         if (rawName != null && rawName.isNotEmpty) {
           // 🆕 Convert to proper case
           final properName = _formatNameToProperCase(rawName);
-          print('📝 Formatted name: "$rawName" → "$properName"');
           return properName;
         }
       }
 
       return null;
     } catch (e) {
-      print('Error fetching verified name: $e');
       return null;
     }
   }
@@ -2546,11 +2542,9 @@ class AuthRepository {
       final verifiedName = await getVerifiedNameFromIdVerification(userId);
 
       if (verifiedName == null || verifiedName.isEmpty) {
-        print('No verified name found in ID verification');
         return false;
       }
 
-      print('🔄 Syncing verified name: "$verifiedName"');
 
       // 1. Update user document (database collection)
       await appWriteProvider.databases!.updateDocument(
@@ -2559,27 +2553,21 @@ class AuthRepository {
         documentId: userDocumentId,
         data: {'name': verifiedName},
       );
-      print('  ✅ Database updated');
 
       // 2. Update Appwrite Auth account name
       await appWriteProvider.account!.updateName(name: verifiedName);
-      print('  ✅ Auth updated');
 
       // 3. Update GetStorage
       await GetStorage().write('userName', verifiedName);
-      print('  ✅ GetStorage updated');
 
-      print('✅ User name synced everywhere: $verifiedName');
       return true;
     } catch (e) {
-      print('Error syncing verified name: $e');
       return false;
     }
   }
 
   Future<void> syncAuthNameOnLogin(String userId) async {
     try {
-      print('🔄 Syncing auth name with database...');
 
       final userDoc = await appWriteProvider.databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
@@ -2591,14 +2579,12 @@ class AuthRepository {
       );
 
       if (userDoc.documents.isEmpty) {
-        print('⚠️  User document not found');
         return;
       }
 
       final databaseName = userDoc.documents.first.data['name'] as String?;
 
       if (databaseName == null || databaseName.isEmpty) {
-        print('⚠️  No name found in database');
         return;
       }
 
@@ -2610,7 +2596,6 @@ class AuthRepository {
 
       if (authName != formattedName) {
         await appWriteProvider.account!.updateName(name: formattedName);
-        print('✅ Auth name synced: "$authName" → "$formattedName"');
 
         // Also update database if it wasn't properly formatted
         if (databaseName != formattedName) {
@@ -2620,16 +2605,12 @@ class AuthRepository {
             documentId: userDoc.documents.first.$id,
             data: {'name': formattedName},
           );
-          print('  ✅ Database also updated to proper case');
         }
 
         await GetStorage().write('userName', formattedName);
-        print('  ✅ GetStorage userName updated: "$formattedName"');
       } else {
-        print('✓ Auth name already matches database: "$formattedName"');
       }
     } catch (e) {
-      print('⚠️  Error syncing auth name: $e');
     }
   }
 }

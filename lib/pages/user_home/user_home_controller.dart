@@ -18,24 +18,17 @@ class UserHomeController extends GetxController {
   /// IMPROVED: Use LogoutHelper for consistent logout across the app
   logout() async {
     try {
-      print('🔍 CONTROLLER: logout() called');
       
       // CRITICAL DEBUG: Check session BEFORE calling LogoutHelper
       try {
         final appWriteProvider = Get.find<AppWriteProvider>();
         final user = await appWriteProvider.account!.get();
-        print('✅ CONTROLLER: Session is VALID before LogoutHelper! User: ${user.$id}');
       } catch (e) {
-        print('❌ CONTROLLER: Session is ALREADY INVALID before LogoutHelper!');
-        print('   Error: $e');
-        print('   ⚠️ CRITICAL: Something killed session before controller.logout() was called!');
       }
       
       // Use the centralized logout helper
       await LogoutHelper.logout();
-      print('✅ UserHomeController.logout() completed');
     } catch (e) {
-      print('>>> LOGOUT ERROR in UserHomeController: $e');
 
       // Fallback: Force local logout
       try {
@@ -51,7 +44,6 @@ class UserHomeController extends GetxController {
             title: "Logged Out",
             message: "You have been signed out locally");
       } catch (fallbackError) {
-        print('>>> Fallback logout error: $fallbackError');
       }
     }
   }

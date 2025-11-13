@@ -65,7 +65,6 @@ class PawmapCache extends GetxController {
       ratingStatsCache = statsCache;
       isInitialized = true;
     } catch (e) {
-      print('Error initializing Pawmap cache: $e');
     } finally {
       isLoading = false;
     }

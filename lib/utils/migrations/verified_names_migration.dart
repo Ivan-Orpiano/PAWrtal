@@ -67,33 +67,26 @@ class VerifiedNamesMigration {
 
   /// Run the complete migration
   Future<MigrationResult> runMigration() async {
-    print('🚀 Starting Verified Names Migration...\n');
     
     try {
       // Step 1: Get all approved ID verifications
-      print('📋 Step 1: Fetching all approved ID verifications...');
       final verifications = await _getAllApprovedVerifications();
-      print('✅ Found ${verifications.length} approved verifications\n');
 
       if (verifications.isEmpty) {
-        print('⚠️  No approved verifications found. Migration complete.');
         return _generateResult();
       }
 
       // Step 2: Process each verification
-      print('🔄 Step 2: Processing verifications...\n');
       for (var verification in verifications) {
         await _processVerification(verification);
       }
 
       // Step 3: Generate and display report
-      print('\n📊 Migration Complete!\n');
       final result = _generateResult();
       _displayReport(result);
 
       return result;
     } catch (e) {
-      print('❌ Migration failed with error: $e');
       rethrow;
     }
   }
@@ -126,7 +119,6 @@ class VerifiedNamesMigration {
           offset += limit;
         }
       } catch (e) {
-        print('⚠️  Error fetching verifications at offset $offset: $e');
         hasMore = false;
       }
     }
@@ -142,17 +134,14 @@ class VerifiedNamesMigration {
     final fullName = verification.data['fullName'] as String?;
     final email = verification.data['email'] as String?;
 
-    print('[$totalProcessed] Processing user: $email');
 
     // Validation
     if (userId == null || userId.isEmpty) {
-      print('   ⚠️  Skipped: Missing userId');
       skippedCount++;
       return;
     }
 
     if (fullName == null || fullName.isEmpty) {
-      print('   ⚠️  Skipped: Missing fullName in verification');
       skippedCount++;
       failedUsers.add(email ?? userId);
       return;
@@ -163,7 +152,6 @@ class VerifiedNamesMigration {
       final userDoc = await _findUserDocument(userId);
       
       if (userDoc == null) {
-        print('   ⚠️  Skipped: User document not found');
         skippedCount++;
         failedUsers.add(email ?? userId);
         return;
@@ -172,7 +160,6 @@ class VerifiedNamesMigration {
       // Check if user is clinic verified
       final verifyByClinic = userDoc.data['verifyByClinic'] as String?;
       if (verifyByClinic != null && verifyByClinic.isNotEmpty) {
-        print('   ℹ️  Skipped: User is clinic verified');
         alreadyClinicVerified++;
         return;
       }
@@ -181,7 +168,6 @@ class VerifiedNamesMigration {
       final currentName = userDoc.data['name'] as String? ?? '';
       
       if (currentName == fullName) {
-        print('   ✓ Name already matches in database: "$fullName"');
         // Still need to check and update auth name
         await _updateAuthName(userId, fullName);
         successCount++;
@@ -199,7 +185,6 @@ class VerifiedNamesMigration {
       // 2. 🆕 Update Appwrite Auth account name
       await _updateAuthName(userId, fullName);
 
-      print('   ✅ Updated everywhere: "$currentName" → "$fullName"');
       successCount++;
       
       updatedUsers.add({
@@ -210,7 +195,6 @@ class VerifiedNamesMigration {
       });
 
     } catch (e) {
-      print('   ❌ Failed: $e');
       failedCount++;
       failedUsers.add(email ?? userId);
     }
@@ -222,9 +206,7 @@ class VerifiedNamesMigration {
       // Note: We can't directly update another user's auth name from server-side
       // This would require the user's session token
       // So we'll log it for manual update or handle on next user login
-      print('   📝 Auth name should be: "$newName" (will update on next login)');
     } catch (e) {
-      print('   ⚠️  Could not update auth name: $e');
     }
   }
 
@@ -246,7 +228,6 @@ class VerifiedNamesMigration {
 
       return null;
     } catch (e) {
-      print('   ⚠️  Error finding user document: $e');
       return null;
     }
   }
@@ -266,37 +247,17 @@ class VerifiedNamesMigration {
 
   /// Display detailed migration report
   void _displayReport(MigrationResult result) {
-    print('═══════════════════════════════════════════════════════');
-    print('📊 MIGRATION REPORT');
-    print('═══════════════════════════════════════════════════════');
-    print('Total Verifications Processed: ${result.totalProcessed}');
-    print('✅ Successfully Updated: ${result.successCount}');
-    print('⚠️  Skipped: ${result.skippedCount}');
-    print('ℹ️  Clinic Verified (not updated): ${result.clinicVerifiedCount}');
-    print('❌ Failed: ${result.failedCount}');
-    print('═══════════════════════════════════════════════════════');
 
     if (result.updatedUsers.isNotEmpty) {
-      print('\n📝 UPDATED USERS (${result.updatedUsers.length}):');
-      print('───────────────────────────────────────────────────────');
       for (var user in result.updatedUsers) {
-        print('Email: ${user['email']}');
-        print('  Old Name: "${user['oldName']}"');
-        print('  New Name: "${user['newName']}"');
-        print('');
       }
     }
 
     if (result.failedUsers.isNotEmpty) {
-      print('\n❌ FAILED/SKIPPED USERS (${result.failedUsers.length}):');
-      print('───────────────────────────────────────────────────────');
       for (var user in result.failedUsers) {
-        print('  • $user');
       }
-      print('');
     }
 
-    print('═══════════════════════════════════════════════════════');
   }
 }
 
