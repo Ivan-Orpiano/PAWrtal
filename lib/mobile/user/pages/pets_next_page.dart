@@ -6,6 +6,7 @@ import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 class PetsNextPage extends StatefulWidget {
   final Pet pet;
@@ -51,7 +52,6 @@ class _PetsNextPageState extends State<PetsNextPage>
       if (Get.isRegistered<MobilePetsController>()) {
         final controller = Get.find<MobilePetsController>();
 
-
         // Clear previous data first
         controller.clearHistories();
 
@@ -61,7 +61,6 @@ class _PetsNextPageState extends State<PetsNextPage>
           controller.fetchPetMedicalRecordsForAppointments(widget.pet.petId),
           controller.fetchPetVaccinationHistory(widget.pet.petId),
         ]);
-
       }
     } catch (e) {
       debugPrint('>>> ❌ Error fetching histories: $e');
@@ -242,6 +241,22 @@ class _PetsNextPageState extends State<PetsNextPage>
                           "Gender",
                           widget.pet.gender ?? "Not specified",
                         ),
+                        // NEW: Add birthdate and age
+                        if (widget.pet.hasBirthdate) ...[
+                          const Divider(height: 24),
+                          _buildInfoRow(
+                            Icons.cake,
+                            "Birthdate",
+                            DateFormat('MMMM dd, yyyy')
+                                .format(widget.pet.birthdate!),
+                          ),
+                          const Divider(height: 24),
+                          _buildInfoRow(
+                            Icons.access_time,
+                            "Age",
+                            widget.pet.ageString,
+                          ),
+                        ],
                       ],
                     ),
 

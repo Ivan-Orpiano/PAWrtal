@@ -97,10 +97,8 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
         controller.fetchPetMedicalRecordsForAppointments(widget.pet.petId),
       ]);
 
-
       // ✅ Counts are now available and UI will show correct numbers
-    } catch (e, stackTrace) {
-    }
+    } catch (e, stackTrace) {}
   }
 
   @override
@@ -379,6 +377,16 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
                           : 'Not specified'),
                   const Divider(height: 24),
                   _buildIDRow('Gender', widget.pet.gender ?? 'Not specified'),
+                  // NEW: Add birthdate and age
+                  if (widget.pet.hasBirthdate) ...[
+                    const Divider(height: 24),
+                    _buildIDRow(
+                      'Birthdate',
+                      DateFormat('MMMM dd, yyyy').format(widget.pet.birthdate!),
+                    ),
+                    const Divider(height: 24),
+                    _buildIDRow('Age', widget.pet.ageString),
+                  ],
                 ],
               ),
             ),
@@ -663,7 +671,6 @@ class _WebPetDetailsPanelState extends State<WebPetDetailsPanel>
     final controller = Get.find<WebPetsController>();
     final appointmentId = appointment['\$id'];
     final petId = appointment['petId'];
-
 
     // Check medical records by appointmentId
     bool hasMedicalRecord = false;

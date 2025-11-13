@@ -3,10 +3,12 @@ import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/mobile/user/components/pets_components/pet_creation_controller.dart';
 import 'package:capstone_app/web/user_web/services/web_image_picker_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:intl/intl.dart'; // NEW: For date formatting
 
 class PetCardCreation extends StatelessWidget {
   final Pet? existingPet;
@@ -15,7 +17,7 @@ class PetCardCreation extends StatelessWidget {
     controller = Get.put(
       PetCreationController(Get.find(), existingPet: existingPet),
       tag: tag,
-      permanent: false, // Allow controller to be deleted
+      permanent: false,
     );
   }
 
@@ -24,13 +26,11 @@ class PetCardCreation extends StatelessWidget {
 
   Future<void> _pickImage(BuildContext context) async {
     if (kIsWeb) {
-      // ✅ Use Web image picker
       final result = await WebImagePickerService.pickImage();
       if (result != null && result.isWeb) {
         controller.pickWebImage(result.bytes!, result.name);
       }
     } else {
-      // ✅ Use Mobile image picker
       final source = await showModalBottomSheet<ImageSource>(
         context: context,
         shape: const RoundedRectangleBorder(
@@ -104,6 +104,36 @@ class PetCardCreation extends StatelessWidget {
     }
   }
 
+  // NEW: Show date picker for birthdate
+  Future<void> _pickBirthdate(BuildContext context) async {
+    final initialDate = controller.selectedBirthdate.value ?? DateTime.now();
+    final firstDate = DateTime(1990);
+    final lastDate = DateTime.now();
+
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: initialDate.isAfter(lastDate) ? lastDate : initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF3498DB),
+              onPrimary: Colors.white,
+              onSurface: Color(0xFF2C3E50),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (pickedDate != null) {
+      controller.selectedBirthdate.value = pickedDate;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isEditing = existingPet != null;
@@ -163,25 +193,21 @@ class PetCardCreation extends StatelessWidget {
                       ),
                       child: () {
                         if (kIsWeb && bytes != null) {
-                          // ✅ Web: display picked image bytes
                           return ClipRRect(
                             borderRadius: BorderRadius.circular(18),
                             child: Image.memory(bytes, fit: BoxFit.cover),
                           );
                         } else if (!kIsWeb && file != null) {
-                          // ✅ Mobile: display File image
                           return ClipRRect(
                             borderRadius: BorderRadius.circular(18),
                             child: Image.file(file, fit: BoxFit.cover),
                           );
                         } else if (url.isNotEmpty) {
-                          // ✅ Show existing pet image (from Appwrite)
                           return ClipRRect(
                             borderRadius: BorderRadius.circular(18),
                             child: Image.network(url, fit: BoxFit.cover),
                           );
                         } else {
-                          // ✅ No image picked yet
                           return Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -267,6 +293,9 @@ class PetCardCreation extends StatelessWidget {
                   ),
                 ],
               ),
+
+              // NEW: Birthdate Picker
+              _buildBirthdatePicker(context),
 
               // Color & Weight Row
               Row(
@@ -359,6 +388,106 @@ class PetCardCreation extends StatelessWidget {
     );
   }
 
+  // NEW: Birthdate Picker Widget
+  Widget _buildBirthdatePicker(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Birthdate",
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF2C3E50),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Obx(() {
+            final birthdate = controller.selectedBirthdate.value;
+            final displayText = birthdate != null
+                ? DateFormat('MMMM dd, yyyy').format(birthdate)
+                : 'Select birthdate';
+
+            return InkWell(
+              onTap: () => _pickBirthdate(context),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.cake, color: Colors.grey[500], size: 22),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        displayText,
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: birthdate != null
+                              ? const Color(0xFF2C3E50)
+                              : Colors.grey[400],
+                        ),
+                      ),
+                    ),
+                    if (birthdate != null)
+                      IconButton(
+                        icon: Icon(Icons.clear, color: Colors.grey[400], size: 20),
+                        onPressed: () {
+                          controller.selectedBirthdate.value = null;
+                        },
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          }),
+          // NEW: Show calculated age
+          Obx(() {
+            final birthdate = controller.selectedBirthdate.value;
+            if (birthdate == null) return const SizedBox.shrink();
+
+            final pet = Pet(
+              petId: '',
+              userId: '',
+              name: '',
+              type: '',
+              breed: '',
+              birthdate: birthdate,
+            );
+
+            return Padding(
+              padding: const EdgeInsets.only(top: 8, left: 12),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: Colors.blue[700]),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Age: ${pet.ageString}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.blue[700],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTextField(
     TextEditingController textController,
     String label,
@@ -385,7 +514,14 @@ class PetCardCreation extends StatelessWidget {
           TextFormField(
             controller: textController,
             maxLines: maxLines,
-            keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+            keyboardType: isNumber
+                ? const TextInputType.numberWithOptions(decimal: true) 
+                : TextInputType.text,
+            inputFormatters: isNumber
+                ? [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                  ]
+                : null,
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),

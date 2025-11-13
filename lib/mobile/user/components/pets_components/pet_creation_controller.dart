@@ -37,6 +37,9 @@ class PetCreationController extends GetxController {
   var imageBytes = Rxn<Uint8List>();
   var imageFileName = ''.obs;
 
+  // NEW: Birthdate reactive variable
+  var selectedBirthdate = Rxn<DateTime>();
+
   @override
   void onInit() {
     super.onInit();
@@ -49,6 +52,8 @@ class PetCreationController extends GetxController {
       weightController.text = existingPet!.weight?.toString() ?? '';
       imageUrl.value = existingPet!.image ?? '';
       genderController.text = existingPet!.gender ?? '';
+      // NEW: Initialize birthdate if exists
+      selectedBirthdate.value = existingPet!.birthdate;
     }
   }
 
@@ -64,6 +69,7 @@ class PetCreationController extends GetxController {
     imageUrl.value = '';
     imageBytes.value = null;
     imageFileName.value = '';
+    selectedBirthdate.value = null; // NEW: Clear birthdate
   }
 
   void pickImage(File file) {
@@ -115,6 +121,7 @@ class PetCreationController extends GetxController {
         notes: notesController.text.trim(),
         weight: double.tryParse(weightController.text.trim()),
         gender: genderController.text.trim(),
+        birthdate: selectedBirthdate.value, // NEW: Include birthdate
         createdAt: DateTime.now().toIso8601String(),
         documentId: '',
       );
@@ -189,6 +196,7 @@ class PetCreationController extends GetxController {
         notes: notesController.text.trim(),
         weight: double.tryParse(weightController.text.trim()),
         gender: genderController.text.trim(),
+        birthdate: selectedBirthdate.value, // NEW: Include birthdate
         image: finalImageUrl,
         createdAt: existingPet!.createdAt,
         documentId: existingPet!.documentId,
