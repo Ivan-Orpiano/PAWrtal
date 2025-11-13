@@ -201,9 +201,7 @@ class WebAppointmentController extends GetxController {
       isRealTimeConnected.value = true; // Set BEFORE setup
       _setupFallbackPolling();
 
-      print('>>> ✅ Realtime updates initialized successfully');
     } catch (e) {
-      print('>>> ❌ Realtime initialization failed: $e');
       isRealTimeConnected.value = false;
       _setupFallbackPolling(interval: 15);
     }
@@ -226,7 +224,6 @@ class WebAppointmentController extends GetxController {
           // Mark as connected when we receive messages
           if (!isRealTimeConnected.value) {
             isRealTimeConnected.value = true;
-            print('>>> ✅ Realtime connection established');
           }
 
           // CRITICAL: Verify this update is for OUR clinic
@@ -234,28 +231,22 @@ class WebAppointmentController extends GetxController {
           final ourClinicId = clinicData.value?.documentId;
 
           if (updateClinicId != ourClinicId) {
-            print('>>> ⏭️ Realtime update for different clinic, ignoring');
             return;
           }
 
-          print('>>> 📨 Realtime update received for our clinic');
           _handleAppointmentRealTimeUpdate(response);
         },
         onError: (error) {
-          print('>>> ❌ Realtime error: $error');
           isRealTimeConnected.value = false;
           _setupFallbackPolling(interval: 10);
         },
         onDone: () {
-          print('>>> ⚠️ Realtime subscription closed');
           isRealTimeConnected.value = false;
           _setupFallbackPolling(interval: 10);
         },
       );
 
-      print('>>> ✅ Realtime subscription created');
     } catch (e) {
-      print('>>> ❌ Failed to create realtime subscription: $e');
       rethrow;
     }
   }
@@ -266,23 +257,17 @@ class WebAppointmentController extends GetxController {
       final appointmentClinicId = payload['clinicId'];
 
       if (appointmentClinicId != clinicData.value?.documentId) {
-        print('>>> ⏭️ Update not for our clinic, ignoring');
         return;
       }
 
       final appointment = Appointment.fromMap(payload);
-      print(
-          '>>> 📨 Processing realtime update for appointment: ${appointment.documentId}');
 
       for (String event in response.events) {
         if (event.contains('.create')) {
-          print('>>> ➕ Create event');
           _handleNewAppointment(appointment);
         } else if (event.contains('.update')) {
-          print('>>> 🔄 Update event');
           _handleUpdatedAppointment(appointment);
         } else if (event.contains('.delete')) {
-          print('>>> 🗑️ Delete event');
           _handleDeletedAppointment(appointment);
         }
       }
@@ -298,9 +283,7 @@ class WebAppointmentController extends GetxController {
         _showNewAppointmentNotification(appointment);
       }
 
-      print('>>> ✅ Realtime update processed successfully');
     } catch (e) {
-      print('>>> ❌ Error in realtime update handler: $e');
     }
   }
 
@@ -355,29 +338,24 @@ class WebAppointmentController extends GetxController {
       // CRITICAL FIX: Only poll if realtime is NOT connected
       // Don't refetch if we're already connected
       if (!isRealTimeConnected.value) {
-        print('>>> 🔄 FALLBACK POLL: Realtime disconnected, refetching...');
         fetchClinicAppointments();
       } else {
-        print('>>> ✅ FALLBACK POLL: Realtime connected, skipping refetch');
       }
     });
   }
 
   Future<void> fetchClinicAppointments() async {
     if (clinicData.value?.documentId == null) {
-      print('>>> ⚠️ No clinic data, skipping fetch');
       return;
     }
 
     try {
-      print('>>> 🔄 Fetching clinic appointments from database...');
 
       // CRITICAL: Don't clear caches if we're just refreshing
       // Only clear on initial load or forced refresh
       final isInitialLoad = appointments.isEmpty;
 
       if (isInitialLoad) {
-        print('>>> 🆕 Initial load - clearing caches');
         appointments.clear();
         filteredAppointments.clear();
         petsCache.clear();
@@ -385,21 +363,18 @@ class WebAppointmentController extends GetxController {
         petProfilePictures.clear();
         petImagesCache.clear();
       } else {
-        print('>>> 🔄 Refresh - keeping caches');
       }
 
       // Fetch fresh appointments
       final result = await authRepository
           .getClinicAppointments(clinicData.value!.documentId!);
 
-      print('>>> 📊 Fetched ${result.length} appointments from database');
 
       // Log status breakdown
       final statusCounts = <String, int>{};
       for (var apt in result) {
         statusCounts[apt.status] = (statusCounts[apt.status] ?? 0) + 1;
       }
-      print('>>> 📊 Status breakdown: $statusCounts');
 
       appointments.assignAll(result);
 
@@ -409,9 +384,7 @@ class WebAppointmentController extends GetxController {
       // Update filtered view
       updateFilteredAppointments();
 
-      print('>>> ✅ Appointments fetch complete');
     } catch (e) {
-      print('>>> ❌ Error fetching appointments: $e');
       if (Get.context != null) {
         SnackbarHelper.showError(
           context: Get.context!,
@@ -423,12 +396,6 @@ class WebAppointmentController extends GetxController {
   }
 
   void debugRefetchTriggers() {
-    print('>>> 🔍 DEBUG: Checking what triggers refetch...');
-    print('>>> Realtime connected: ${isRealTimeConnected.value}');
-    print('>>> Auto-decline active: ${isAutoDeclineActive.value}');
-    print('>>> Fallback timer active: ${_fallbackTimer?.isActive}');
-    print(
-        '>>> Appointment subscription active: ${_appointmentSubscription != null}');
   }
 
   Future<void> _fetchOwnerData(String userId) async {
@@ -549,12 +516,6 @@ class WebAppointmentController extends GetxController {
     final now = DateTime.now();
     final todayDate = DateTime(now.year, now.month, now.day);
 
-    print('>>> 📋 updateFilteredAppointments called');
-    print('>>> Selected tab: ${selectedTab.value}');
-    print('>>> Calendar date: ${selectedCalendarDate.value}');
-    print('>>> View mode: ${viewMode.value.label}');
-    print('>>> Current Local Time: ${now.toString()}');
-    print('>>> Today Date: ${todayDate.toString()}');
 
     // Start with base filtered appointments (respects calendar date or view mode)
     List<Appointment> filtered = _getBaseFilteredAppointments();
@@ -563,33 +524,26 @@ class WebAppointmentController extends GetxController {
     switch (selectedTab.value) {
       case 'pending':
         filtered = filtered.where((a) => a.status == 'pending').toList();
-        print('>>> 📅 Tab filter: pending (${filtered.length} appointments)');
         break;
 
       case 'scheduled':
         filtered = filtered.where((a) => a.status == 'accepted').toList();
-        print('>>> 📅 Tab filter: scheduled (${filtered.length} appointments)');
         break;
 
       case 'in_progress':
         filtered = filtered.where((a) => a.status == 'in_progress').toList();
-        print(
-            '>>> 📅 Tab filter: in_progress (${filtered.length} appointments)');
         break;
 
       case 'completed':
         filtered = filtered.where((a) => a.status == 'completed').toList();
-        print('>>> 📅 Tab filter: completed (${filtered.length} appointments)');
         break;
 
       case 'cancelled':
         filtered = filtered.where((a) => a.status == 'cancelled').toList();
-        print('>>> 📅 Tab filter: cancelled (${filtered.length} appointments)');
         break;
 
       case 'declined':
         filtered = filtered.where((a) => a.status == 'declined').toList();
-        print('>>> 📅 Tab filter: declined (${filtered.length} appointments)');
         break;
     }
 
@@ -606,8 +560,6 @@ class WebAppointmentController extends GetxController {
             ownerName.contains(query) ||
             service.contains(query);
       }).toList();
-      print(
-          '>>> 🔍 Search filter: "${searchQuery.value}" ($beforeSearch -> ${filtered.length})');
     }
 
     // Sort by nearest date/time from current moment
@@ -624,10 +576,7 @@ class WebAppointmentController extends GetxController {
 
     filteredAppointments.assignAll(filtered);
 
-    print('>>> 📋 Final filtered appointments: ${filteredAppointments.length}');
     if (filtered.isNotEmpty) {
-      print('>>> 🕐 First appointment: ${filtered.first.dateTime}');
-      print('>>> 🕐 Last appointment: ${filtered.last.dateTime}');
     }
   }
 
@@ -725,9 +674,6 @@ class WebAppointmentController extends GetxController {
       return appointmentDate.isAtSameMomentAs(todayDate);
     }).toList();
 
-    print(
-        '>>> 📊 todayAppointments getter (LOCAL Time): ${todayAppts.length} appointments');
-    print('>>> 📊 Today date: ${todayDate.toString()}');
 
     return todayAppts;
   }
@@ -753,8 +699,6 @@ class WebAppointmentController extends GetxController {
     final filtered = _getFilteredAppointmentsForStats();
     final declinedList = filtered.where((a) => a.status == 'declined').toList();
 
-    print('>>> 📊 Declined getter - View mode: ${viewMode.value.label}');
-    print('>>> 📊 Total declined in filtered view: ${declinedList.length}');
 
     return declinedList;
   }
@@ -768,10 +712,6 @@ class WebAppointmentController extends GetxController {
     final now = DateTime.now();
     final todayDate = DateTime(now.year, now.month, now.day);
 
-    print('>>> 📊 _getFilteredAppointmentsForStats called');
-    print('>>> Current view mode: ${viewMode.value.label}');
-    print('>>> Current Local Time: ${now.toString()}');
-    print('>>> Today Date: ${todayDate.toString()}');
 
     List<Appointment> timeFilteredAppointments;
 
@@ -788,11 +728,6 @@ class WebAppointmentController extends GetxController {
           return appointmentDate.isAtSameMomentAs(todayDate);
         }).toList();
 
-        print('>>> 📅 Today filter (LOCAL Time):');
-        print(
-            '    Current Date: ${todayDate.year}-${todayDate.month.toString().padLeft(2, '0')}-${todayDate.day.toString().padLeft(2, '0')}');
-        print('    Total appointments in memory: ${appointments.length}');
-        print('    Filtered appointments: ${timeFilteredAppointments.length}');
 
         final statusBreakdown = <String, int>{};
         for (var apt in timeFilteredAppointments) {
@@ -801,10 +736,7 @@ class WebAppointmentController extends GetxController {
           // Debug each appointment
           final aptDate =
               DateTime(apt.dateTime.year, apt.dateTime.month, apt.dateTime.day);
-          print(
-              '    - Appointment ${apt.documentId}: ${aptDate.toString()} (${apt.status})');
         }
-        print('    Status breakdown: $statusBreakdown');
         break;
 
       case AppointmentViewMode.thisWeek:
@@ -824,10 +756,6 @@ class WebAppointmentController extends GetxController {
               !appointmentDate.isAfter(weekEndDate);
         }).toList();
 
-        print('>>> 📅 This Week filter:');
-        print(
-            '    Week Start: ${weekStartDate.year}-${weekStartDate.month.toString().padLeft(2, '0')}-${weekStartDate.day.toString().padLeft(2, '0')}');
-        print('    Filtered appointments: ${timeFilteredAppointments.length}');
         break;
 
       case AppointmentViewMode.thisMonth:
@@ -835,16 +763,11 @@ class WebAppointmentController extends GetxController {
           return a.dateTime.year == now.year && a.dateTime.month == now.month;
         }).toList();
 
-        print('>>> 📅 This Month filter:');
-        print('    Month: ${now.year}-${now.month.toString().padLeft(2, '0')}');
-        print('    Filtered appointments: ${timeFilteredAppointments.length}');
         break;
 
       case AppointmentViewMode.allTime:
         timeFilteredAppointments = appointments.toList();
 
-        print('>>> 📅 All Time filter:');
-        print('    Total appointments: ${timeFilteredAppointments.length}');
         break;
     }
 
@@ -852,9 +775,6 @@ class WebAppointmentController extends GetxController {
   }
 
   Future<void> debugDeclinedCounts() async {
-    print('>>> 🔍 DEBUG: Declined Counts by View Mode');
-    print('>>> Current view mode: ${viewMode.value.label}');
-    print('>>> Total appointments in memory: ${appointments.length}');
 
     final now = _nowInPhilippineTime;
 
@@ -897,12 +817,6 @@ class WebAppointmentController extends GetxController {
     final allTimeDeclined =
         appointments.where((a) => a.status == 'declined').length;
 
-    print('>>> 📊 Declined counts:');
-    print('    Today: $todayDeclined');
-    print('    This Week: $thisWeekDeclined');
-    print('    This Month: $thisMonthDeclined');
-    print('    All Time: $allTimeDeclined');
-    print('>>> Current stats showing: ${appointmentStats['declined']}');
   }
 
   void setViewMode(AppointmentViewMode mode) {
@@ -910,7 +824,6 @@ class WebAppointmentController extends GetxController {
     selectedCalendarDate.value =
         null; // Clear calendar date when changing view mode
 
-    print('>>> 🔄 View mode changed to: ${mode.label}');
 
     // Refresh filtered appointments and stats
     updateFilteredAppointments();
@@ -924,10 +837,7 @@ class WebAppointmentController extends GetxController {
     if (date != null) {
       // When calendar date is selected, keep current view mode
       // Don't force to 'today' view mode
-      print(
-          '>>> 📅 Calendar date selected: ${DateFormat('MMM dd, yyyy').format(date)}');
     } else {
-      print('>>> 📅 Calendar date filter cleared');
     }
 
     // Refresh filtered appointments and stats
@@ -1031,8 +941,6 @@ class WebAppointmentController extends GetxController {
 
       await updateFullAppointment(updatedAppointment);
 
-      print(
-          '>>> ✅ Appointment ${appointment.documentId} database status updated to declined');
 
       // STEP 2: Create in-app notification (non-critical - wrapped in try-catch)
       try {
@@ -1046,9 +954,7 @@ class WebAppointmentController extends GetxController {
         );
 
         await authRepository.createNotification(notification);
-        print('>>> ✅ In-app notification created');
       } catch (e) {
-        print('>>> ⚠️ In-app notification failed (non-critical): $e');
         // Continue - notification failure shouldn't fail the decline
       }
 
@@ -1059,9 +965,7 @@ class WebAppointmentController extends GetxController {
           'declined',
           declineReason: notes,
         );
-        print('>>> ✅ Push notification sent');
       } catch (e) {
-        print('>>> ⚠️ Push notification failed (non-critical): $e');
         // Continue - notification failure shouldn't fail the decline
       }
 
@@ -1072,9 +976,7 @@ class WebAppointmentController extends GetxController {
           messageType: 'declined',
           declineReason: notes,
         );
-        print('>>> ✅ Automated message sent');
       } catch (e) {
-        print('>>> ⚠️ Automated message failed (non-critical): $e');
         // Continue - message failure shouldn't fail the decline
       }
 
@@ -1088,10 +990,7 @@ class WebAppointmentController extends GetxController {
         );
       }
 
-      print('>>> ✅ declineAppointment completed successfully');
     } catch (e, stackTrace) {
-      print('>>> ❌ CRITICAL ERROR in declineAppointment: $e');
-      print('>>> Stack trace: $stackTrace');
 
       // Show error snackbar only if requested
       if (showSnackbar && Get.context != null) {
@@ -1561,7 +1460,6 @@ class WebAppointmentController extends GetxController {
       selectedTab.value = tab;
     } else {
       // Default to pending if invalid tab
-      print('>>> ⚠️ Invalid tab value: $tab, defaulting to pending');
       selectedTab.value = 'pending';
     }
   }
@@ -2817,8 +2715,6 @@ For more details, please check your appointments.
     // Reset connection status
     isRealTimeConnected.value = false;
 
-    print(
-        '>>> 🧹 Controller cleanup complete (tab reset to pending for fresh login)');
   }
 
   void _startAutoDeclineTimer() {
@@ -2829,37 +2725,29 @@ For more details, please check your appointments.
         const Duration(seconds: _autoDeclineCheckInterval),
         (timer) {
           if (clinicData.value?.documentId != null) {
-            print(
-                '>>> ⏰ AUTO-DECLINE: Running scheduled check (${DateTime.now()})');
             _checkAndDeclineOverlookedAppointments();
           }
         },
       );
 
       isAutoDeclineActive.value = true;
-      print(
-          '>>> ✅ AUTO-DECLINE: Timer started (checks every $_autoDeclineCheckInterval seconds)');
 
       // Initial check after 3 seconds
       Future.delayed(const Duration(seconds: 3), () {
         if (clinicData.value?.documentId != null) {
-          print('>>> ⏰ AUTO-DECLINE: Running initial check');
           _checkAndDeclineOverlookedAppointments();
         }
       });
     } catch (e) {
-      print('>>> ❌ Failed to start auto-decline timer: $e');
     }
   }
 
   Future<void> _checkAndDeclineOverlookedAppointments() async {
     try {
-      print('>>> 🔍 AUTO-DECLINE CHECK: Starting scan...');
 
       final now = DateTime.now();
 
       if (clinicData.value?.documentId == null) {
-        print('>>> ⚠️ No clinic data available, skipping check');
         return;
       }
 
@@ -2868,11 +2756,9 @@ For more details, please check your appointments.
           appointments.where((a) => a.status == 'pending').toList();
 
       if (pendingAppointments.isEmpty) {
-        print('>>> ℹ️ No pending appointments to check');
         return;
       }
 
-      print('>>> 📊 Found ${pendingAppointments.length} pending appointments');
 
       int declinedCount = 0;
       int errorCount = 0;
@@ -2898,8 +2784,6 @@ For more details, please check your appointments.
 
           if (isPast) {
             final minutesOverdue = now.difference(actualLocalTime).inMinutes;
-            print(
-                '>>> ⏰ Appointment ${appointment.documentId} is $minutesOverdue minutes overdue');
 
             try {
               // Use the EXISTING declineAppointment method
@@ -2908,33 +2792,22 @@ For more details, please check your appointments.
 
               declinedCount++;
               declinedIds.add(appointment.documentId!);
-              print(
-                  '>>> ✅ Successfully auto-declined appointment ${appointment.documentId}');
             } catch (e) {
               errorCount++;
-              print(
-                  '>>> ❌ Failed to auto-decline appointment ${appointment.documentId}: $e');
               // Continue with other appointments
             }
           }
         } catch (e) {
           errorCount++;
-          print(
-              '>>> ❌ Error processing appointment ${appointment.documentId}: $e');
           // Continue with other appointments
         }
       }
 
-      print('>>> 📈 AUTO-DECLINE CHECK COMPLETE:');
-      print('    - Declined: $declinedCount');
-      print('    - Errors: $errorCount');
 
       // CRITICAL FIX: Don't call fetchClinicAppointments() here!
       // The realtime subscription will handle updating the UI automatically
       // Only log the results
       if (declinedCount > 0) {
-        print(
-            '>>> ℹ️ Auto-declined $declinedCount appointments. Realtime will update UI.');
 
         // Optional: Manually update the local state without refetching
         for (var appointmentId in declinedIds) {
@@ -2954,12 +2827,8 @@ For more details, please check your appointments.
         appointments.refresh();
         updateFilteredAppointments();
 
-        print('>>> 🔄 Local state updated, no full refetch needed');
       }
     } catch (e, stackTrace) {
-      print(
-          '>>> ❌ CRITICAL ERROR in _checkAndDeclineOverlookedAppointments: $e');
-      print('>>> Stack trace: $stackTrace');
       // Silent fail - don't crash the app
     }
   }
@@ -2969,7 +2838,6 @@ For more details, please check your appointments.
     DateTime actualLocalTime,
   ) async {
     try {
-      print('>>> 🔄 AUTO-DECLINING appointment: ${appointment.documentId}');
 
       // Create a detailed auto-decline reason
       final formattedTime =
@@ -2986,18 +2854,13 @@ For more details, please check your appointments.
         showSnackbar: false, // Don't show snackbars for auto-decline
       );
 
-      print(
-          '>>> ✅ Auto-decline completed successfully for appointment ${appointment.documentId}');
     } catch (e, stackTrace) {
-      print('>>> ❌ CRITICAL ERROR in _autoDeclineUsingExistingMethod: $e');
-      print('>>> Stack trace: $stackTrace');
       // Don't rethrow - we want to continue processing other appointments
     }
   }
 
   Future<bool> verifyAppointmentDeclined(String appointmentId) async {
     try {
-      print('>>> 🔍 VERIFY: Checking appointment $appointmentId status');
 
       // Check local state first (much faster)
       final localAppointment = appointments.firstWhereOrNull(
@@ -3006,15 +2869,11 @@ For more details, please check your appointments.
 
       if (localAppointment != null) {
         final isDeclined = localAppointment.status == 'declined';
-        print('>>> ℹ️ VERIFY: Local status: ${localAppointment.status}');
-        print('>>> ℹ️ VERIFY: Is declined: $isDeclined');
         return isDeclined;
       }
 
-      print('>>> ⚠️ VERIFY: Appointment not found in local state');
       return false;
     } catch (e) {
-      print('>>> ❌ VERIFY: Error checking status: $e');
       return false;
     }
   }
@@ -3035,7 +2894,6 @@ For more details, please check your appointments.
 
       return actualLocalTime.isBefore(now);
     } catch (e) {
-      print('>>> ❌ Error checking if appointment overlooked: $e');
       return false;
     }
   }
@@ -3046,7 +2904,6 @@ For more details, please check your appointments.
         return apt.status == 'pending' && _isAppointmentOverlooked(apt);
       }).length;
     } catch (e) {
-      print('>>> ❌ Error getting overlooked count: $e');
       return 0;
     }
   }
@@ -3057,7 +2914,6 @@ For more details, please check your appointments.
         return apt.status == 'pending' && _isAppointmentOverlooked(apt);
       }).toList();
     } catch (e) {
-      print('>>> ❌ Error getting overlooked appointments: $e');
       return [];
     }
   }
@@ -3093,13 +2949,11 @@ For more details, please check your appointments.
         return 'Starting now';
       }
     } catch (e) {
-      print('>>> ❌ Error getting time until overlooked: $e');
       return 'Unknown';
     }
   }
 
   Future<void> manualCheckOverlookedAppointments() async {
-    print('>>> 🔍 MANUAL CHECK: Starting manual auto-decline check...');
     await _checkAndDeclineOverlookedAppointments();
   }
 
@@ -3109,21 +2963,16 @@ For more details, please check your appointments.
 
   Future<void> fetchTodayAppointmentsFromDatabase() async {
     if (clinicData.value?.documentId == null) {
-      print('>>> ⚠️ No clinic data, skipping today fetch');
       return;
     }
 
     try {
-      print('>>> 📅 Fetching today\'s appointments from database...');
 
       // Use local time to define "today" (same as dashboard)
       final today = DateTime.now();
       final startOfDay = DateTime(today.year, today.month, today.day, 0, 0, 0);
       final endOfDay = DateTime(today.year, today.month, today.day, 23, 59, 59);
 
-      print('>>> 📅 Today date range:');
-      print('    Start: ${startOfDay.toIso8601String()}');
-      print('    End: ${endOfDay.toIso8601String()}');
 
       // Fetch ALL today's appointments (same query as dashboard)
       final result =
@@ -3138,7 +2987,6 @@ For more details, please check your appointments.
         ],
       );
 
-      print('>>> 📊 Fetched ${result.documents.length} appointments for today');
 
       // Parse appointments
       final List<Appointment> todayAppts = [];
@@ -3147,7 +2995,6 @@ For more details, please check your appointments.
           final appointment = Appointment.fromMap(doc.data);
           todayAppts.add(appointment);
         } catch (e) {
-          print('>>> ⚠️ Error parsing appointment: $e');
         }
       }
 
@@ -3156,7 +3003,6 @@ For more details, please check your appointments.
       for (var apt in todayAppts) {
         statusBreakdown[apt.status] = (statusBreakdown[apt.status] ?? 0) + 1;
       }
-      print('>>> 📊 Today\'s status breakdown: $statusBreakdown');
 
       // Update main appointments list by merging with existing
       // Remove old today appointments and add new ones
@@ -3178,9 +3024,7 @@ For more details, please check your appointments.
       // Update filtered view
       updateFilteredAppointments();
 
-      print('>>> ✅ Today\'s appointments updated successfully');
     } catch (e) {
-      print('>>> ❌ Error fetching today\'s appointments: $e');
     }
   }
 
@@ -3191,7 +3035,6 @@ For more details, please check your appointments.
   }
 
   void resetToPendingTab() {
-    print('>>> 🔄 Resetting to Pending tab');
 
     // Reset tab selection to "pending"
     selectedTab.value = 'pending';
@@ -3208,12 +3051,10 @@ For more details, please check your appointments.
     // Trigger filter update to show pending appointments
     updateFilteredAppointments();
 
-    print('>>> ✅ Reset complete - showing pending appointments');
   }
 
   void syncTabControllerWithState(
       TabController desktopController, TabController mobileController) {
-    print('>>> 🔄 Syncing tab controllers with saved state');
 
     // Define tab values list (WITHOUT 'today')
     final tabValues = [
@@ -3233,16 +3074,12 @@ For more details, please check your appointments.
       desktopController.index = currentTabIndex;
       mobileController.index = currentTabIndex;
 
-      print(
-          '>>> ✅ Tab controllers synced to: ${selectedTab.value} (index: $currentTabIndex)');
     } else {
       // Fallback to pending if something went wrong
       // BUT DON'T change selectedTab.value - keep the controller state
       desktopController.index = 0;
       mobileController.index = 0;
 
-      print(
-          '>>> ⚠️ Invalid tab state detected, UI defaulting to pending (but controller state preserved)');
     }
 
     // Ensure filtered appointments match the selected tab
@@ -3250,7 +3087,6 @@ For more details, please check your appointments.
   }
 
   void initializeWithPendingTab() {
-    print('>>> 🔄 Initializing with Pending tab as default');
 
     // Set to pending tab
     selectedTab.value = 'pending';
@@ -3264,7 +3100,6 @@ For more details, please check your appointments.
     // Trigger filter update
     updateFilteredAppointments();
 
-    print('>>> ✅ Initialized with pending tab');
   }
 
   Map<String, int> get filteredAppointmentStats {
@@ -3283,16 +3118,6 @@ For more details, please check your appointments.
       'declined': baseFiltered.where((a) => a.status == 'declined').length,
     };
 
-    print('>>> 📊 Filtered Appointment Stats:');
-    print('    Calendar Date: ${selectedCalendarDate.value}');
-    print('    View Mode: ${viewMode.value.label}');
-    print('    Total: ${stats['total']}');
-    print('    Pending: ${stats['pending']}');
-    print('    Scheduled: ${stats['scheduled']}');
-    print('    In Progress: ${stats['in_progress']}');
-    print('    Completed: ${stats['completed']}');
-    print('    Cancelled: ${stats['cancelled']}');
-    print('    Declined: ${stats['declined']}');
 
     return stats;
   }
@@ -3319,8 +3144,6 @@ For more details, please check your appointments.
             appointmentDate.day == selectedDate.day;
       }).toList();
 
-      print(
-          '>>> 📅 Base filter: Calendar date (${filtered.length} appointments)');
       return filtered;
     }
 
@@ -3335,8 +3158,6 @@ For more details, please check your appointments.
           );
           return appointmentDate.isAtSameMomentAs(todayDate);
         }).toList();
-        print(
-            '>>> 📅 Base filter: Today view (${filtered.length} appointments)');
         break;
 
       case AppointmentViewMode.thisWeek:
@@ -3354,21 +3175,16 @@ For more details, please check your appointments.
           return !appointmentDate.isBefore(weekStartDate) &&
               !appointmentDate.isAfter(weekEndDate);
         }).toList();
-        print(
-            '>>> 📅 Base filter: This Week (${filtered.length} appointments)');
         break;
 
       case AppointmentViewMode.thisMonth:
         filtered = appointments.where((a) {
           return a.dateTime.year == now.year && a.dateTime.month == now.month;
         }).toList();
-        print(
-            '>>> 📅 Base filter: This Month (${filtered.length} appointments)');
         break;
 
       case AppointmentViewMode.allTime:
         filtered = appointments.toList();
-        print('>>> 📅 Base filter: All Time (${filtered.length} appointments)');
         break;
     }
 

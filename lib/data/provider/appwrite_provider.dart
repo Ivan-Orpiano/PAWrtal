@@ -72,24 +72,18 @@ class AppWriteProvider {
       final email = map["email"];
       final password = map["password"];
 
-      print('🔐 Starting login process for: $email');
 
       // CRITICAL FIX: Check for existing session and clear it first
       try {
         final existingUser = await account!.get();
-        print('⚠️ Found existing session for user: ${existingUser.$id}');
 
         // Delete the existing session
         try {
           await account!.deleteSession(sessionId: 'current');
-          print('✅ Cleared existing session');
         } catch (e) {
-          print('⚠️ Could not clear session, trying to delete all');
           try {
             await account!.deleteSessions();
-            print('✅ Cleared all sessions');
           } catch (e2) {
-            print('⚠️ Could not clear sessions: $e2');
           }
         }
 
@@ -97,7 +91,6 @@ class AppWriteProvider {
         await Future.delayed(const Duration(milliseconds: 500));
       } catch (e) {
         // No existing session, this is fine
-        print('✅ No existing session found (this is normal)');
       }
 
       // Step 1: Create NEW session
@@ -108,7 +101,6 @@ class AppWriteProvider {
 
       final user = await account!.get();
 
-      print('✅ New session created for: ${user.$id}');
 
       // Step 2: CRITICAL - Check if ADMIN first (highest priority)
       final clinicDoc = await getClinicByAdminId(user.$id);
@@ -2905,7 +2897,6 @@ class AppWriteProvider {
             (verifyByClinic != null && verifyByClinic.isNotEmpty),
       };
     } catch (e) {
-      print('Error getting verification status: $e');
       return {
         'hasVerification': false,
         'status': 'error',

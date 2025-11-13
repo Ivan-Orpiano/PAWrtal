@@ -32,20 +32,17 @@ void main() async {
 
 /// Initialize security features
 Future<void> _initializeSecurity() async {
-  print('🔒 Initializing security features...');
 
   final storage = GetStorage();
 
   // Initialize security monitoring
   final violations = storage.read<List>('security_violations') ?? [];
-  print('📋 Found ${violations.length} security violations in history');
 
   // REMOVED: Automatic session timeout check
   // This was causing issues with logout and FCM token cleanup
   // Users will be logged out only when they explicitly log out
   // or when they close the app completely
 
-  print('✅ Security initialization complete');
 }
 
 Future<void> _runMigrationIfNeeded() async {
@@ -54,7 +51,6 @@ Future<void> _runMigrationIfNeeded() async {
       storage.read('verified_names_migration_completed') ?? false;
 
   if (!migrationCompleted) {
-    print('🔄 Running verified names migration...');
 
     try {
       final authRepository = Get.find<AuthRepository>();
@@ -66,20 +62,12 @@ Future<void> _runMigrationIfNeeded() async {
         await storage.write('verified_names_migration_completed', true);
         await storage.write(
             'verified_names_migration_date', DateTime.now().toIso8601String());
-        print('✅ Migration completed and marked as done');
       } else {
-        print(
-            '⚠️  Migration completed with some failures (${result.successRate.toStringAsFixed(1)}% success).');
-        print('   Review logs and consider re-running.');
       }
     } catch (e) {
-      print('❌ Migration error: $e');
-      print('   Migration will retry on next app launch.');
     }
   } else {
     final migrationDate = storage.read('verified_names_migration_date');
-    print(
-        'ℹ️  Verified names migration already completed ${migrationDate != null ? "on $migrationDate" : ""}');
   }
 }
 
@@ -89,11 +77,9 @@ Future<void> _syncAuthNameIfLoggedIn() async {
     final user = await authRepository.appWriteProvider.getUser();
 
     if (user != null) {
-      print('🔄 User already logged in, syncing auth name...');
       await authRepository.syncAuthNameOnLogin(user.$id);
     }
   } catch (e) {
-    print('ℹ️  No active session or error syncing: $e');
   }
 }
 

@@ -163,8 +163,6 @@ class WebLoginController extends GetxController {
       if (role == "user") {
         await _authRepository.syncAuthNameOnLogin(user.$id);
         try {
-          print(
-              '🔔 Initializing appointment reminder service for user (Web)...');
 
           // Create user-specific reminder service instance
           final reminderService = AppointmentReminderService(
@@ -184,9 +182,7 @@ class WebLoginController extends GetxController {
           // Start the service
           reminderService.startReminderService();
 
-          print('✅ Appointment reminder service started for user: $userId');
         } catch (e) {
-          print('⚠️ Failed to start appointment reminder service: $e');
           // Don't fail login if reminder service fails
         }
       }

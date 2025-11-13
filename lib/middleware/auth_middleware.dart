@@ -28,7 +28,6 @@ class AuthMiddleware extends GetMiddleware {
     // CRITICAL FIX: Check if logout is in progress
     // If so, DON'T validate session - let logout complete
     if (LogoutHelper.isLoggingOut.value) {
-      print('⏭️ AuthMiddleware: Logout in progress, skipping session validation');
       return page;
     }
 

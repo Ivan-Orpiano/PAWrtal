@@ -156,11 +156,9 @@ class AdminDashboardController extends GetxController {
   @override
   Future<void> initializeDashboard() async {
     try {
-      print('>>> 🔄 DASHBOARD: Initializing...');
 
       // CRITICAL: Ensure WebAppointmentController is available
       if (!Get.isRegistered<WebAppointmentController>()) {
-        print('>>> ⚠️ WebAppointmentController not found, registering...');
 
         // Register the controller if it doesn't exist
         Get.put(
@@ -187,7 +185,6 @@ class AdminDashboardController extends GetxController {
         return;
       }
 
-      print('>>> ✅ Clinic data loaded');
 
       // Step 2: Fetch MINIMAL data in parallel
       try {
@@ -201,38 +198,30 @@ class AdminDashboardController extends GetxController {
         // CRITICAL: Mark cache as valid AFTER data is loaded
         isDashboardCached.value = true;
         lastCacheTime.value = DateTime.now();
-        print('>>> ✅ Dashboard data loaded and cached');
       } catch (e) {
-        print('>>> ❌ Error loading dashboard data: $e');
       }
 
       // Step 3: Generate calendar data
       try {
         await generateCalendarData();
       } catch (e) {
-        print('>>> ❌ Error generating calendar: $e');
       }
 
       // Step 4: Initialize real-time updates LAST
       try {
         await _initializeRealTimeUpdates();
       } catch (e) {
-        print('>>> ❌ Error initializing real-time: $e');
       }
 
       // Step 5: Trigger appointment controller to ensure it has data
       try {
         final appointmentController = Get.find<WebAppointmentController>();
         if (appointmentController.appointments.isEmpty) {
-          print(
-              '>>> 🔄 Appointment controller has no data, triggering fetch...');
           await appointmentController.fetchClinicData();
         }
       } catch (e) {
-        print('>>> ⚠️ Could not sync with appointment controller: $e');
       }
     } catch (e) {
-      print('>>> ❌ Dashboard initialization error: $e');
       Get.snackbar(
         "Error",
         "Failed to load dashboard: ${e.toString()}",
@@ -259,14 +248,11 @@ class AdminDashboardController extends GetxController {
       _appointmentSubscription = null;
 
       if (clinicData.value?.documentId == null) {
-        print('>>> ⚠️ Cannot subscribe: No clinic ID available');
         return;
       }
 
       final realtime = Realtime(authRepository.client);
 
-      print(
-          '>>> 🔌 Subscribing to appointment updates for clinic: ${clinicData.value!.documentId}');
 
       _appointmentSubscription = realtime.subscribe([
         'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.appointmentCollectionID}.documents'
@@ -275,37 +261,30 @@ class AdminDashboardController extends GetxController {
       _appointmentSubscription!.stream.listen(
         (response) {
           try {
-            print('>>> 📨 Real-time event received: ${response.events}');
 
             // CRITICAL: Verify this update is for OUR clinic
             final updateClinicId = response.payload['clinicId'];
             final ourClinicId = clinicData.value?.documentId;
 
             if (updateClinicId != ourClinicId) {
-              print('>>> ⏭️ Skipping event - different clinic');
               return;
             }
 
-            print('>>> ✅ Processing event for our clinic');
             _handleAppointmentRealTimeUpdate(response);
 
             // Update connection status
             isRealTimeConnected.value = true;
             lastUpdateTime.value = DateTime.now();
           } catch (e) {
-            print('>>> ❌ Error processing real-time event: $e');
           }
         },
         onError: (error) {
-          print('>>> ❌ Real-time subscription error: $error');
           isRealTimeConnected.value = false;
 
           // Try to reconnect after delay
           Future.delayed(const Duration(seconds: 5), () {
             if (clinicData.value?.documentId != null) {
-              print('>>> 🔄 Attempting to reconnect...');
               _subscribeToAppointmentUpdates().catchError((e) {
-                print('>>> ❌ Reconnection failed: $e');
               });
             }
           });
@@ -314,27 +293,21 @@ class AdminDashboardController extends GetxController {
           _setupFallbackPolling(interval: 10);
         },
         onDone: () {
-          print('>>> 🔌 Real-time subscription closed');
           isRealTimeConnected.value = false;
 
           // Try to reconnect
           Future.delayed(const Duration(seconds: 3), () {
             if (clinicData.value?.documentId != null) {
-              print('>>> 🔄 Attempting to reconnect after closure...');
               _subscribeToAppointmentUpdates().catchError((e) {
-                print('>>> ❌ Reconnection failed: $e');
               });
             }
           });
         },
       );
 
-      print('>>> ✅ Successfully subscribed to appointment updates');
       isRealTimeConnected.value = true;
       lastUpdateTime.value = DateTime.now();
     } catch (e, stackTrace) {
-      print('>>> ❌ Failed to subscribe to appointment updates: $e');
-      print('>>> Stack trace: $stackTrace');
       isRealTimeConnected.value = false;
 
       // Setup fallback polling
@@ -386,9 +359,6 @@ class AdminDashboardController extends GetxController {
 
   void _handleNewAppointment(Appointment appointment) {
     try {
-      print(
-          '>>> 🆕 DASHBOARD: Handling new appointment ${appointment.documentId}');
-      print('>>> Status: ${appointment.status}');
 
       // Check if appointment already exists in main list
       final existingIndex = appointments.indexWhere(
@@ -397,16 +367,13 @@ class AdminDashboardController extends GetxController {
 
       if (existingIndex == -1) {
         appointments.add(appointment);
-        print('>>> ✅ Added to main appointments list');
       } else {
         appointments[existingIndex] = appointment;
         appointments.refresh();
-        print('>>> ✅ Updated in main appointments list');
       }
 
       // CRITICAL: Only show in pending section if status is PENDING
       if (appointment.status == 'pending') {
-        print('>>> 📋 New appointment is PENDING - updating pending list');
 
         // FIXED: Work with current list, don't rebuild from scratch
         final currentList = List<Appointment>.from(todayAppointments);
@@ -419,7 +386,6 @@ class AdminDashboardController extends GetxController {
         if (existingPendingIndex != -1) {
           // Remove old version
           currentList.removeAt(existingPendingIndex);
-          print('>>> 🔄 Removed old version from pending list');
         }
 
         // Insert at the correct position based on date/time (soonest first)
@@ -435,23 +401,16 @@ class AdminDashboardController extends GetxController {
 
         // Insert at calculated position
         currentList.insert(insertIndex, appointment);
-        print('>>> ✅ Inserted at position $insertIndex');
 
         // Keep only top 5
         final top5 = currentList.take(5).toList();
 
-        print('>>> 📊 Updated pending appointments (top 5):');
         for (var i = 0; i < top5.length; i++) {
-          print(
-              '    ${i + 1}. ${top5[i].documentId} - ${top5[i].status} - ${top5[i].dateTime}');
         }
 
         // Update with smooth transition
         todayAppointments.value = List.from(top5);
-        print('>>> ✅ Pending count updated: ${todayAppointments.length}');
       } else {
-        print(
-            '>>> ℹ️ New appointment is NOT pending - status: ${appointment.status}');
       }
 
       // Update other lists
@@ -468,15 +427,11 @@ class AdminDashboardController extends GetxController {
       // Update cache timestamp
       lastCacheTime.value = DateTime.now();
     } catch (e) {
-      print('>>> ❌ Error handling new appointment: $e');
     }
   }
 
   void _handleUpdatedAppointment(Appointment appointment) {
     try {
-      print(
-          '>>> 🔄 DASHBOARD: Handling updated appointment ${appointment.documentId}');
-      print('>>> Status: ${appointment.status}');
 
       // Update in main list
       final index = appointments.indexWhere(
@@ -486,10 +441,8 @@ class AdminDashboardController extends GetxController {
       if (index != -1) {
         final oldStatus = appointments[index].status;
         appointments[index] = appointment;
-        print('>>> Status changed: $oldStatus -> ${appointment.status}');
       } else {
         appointments.add(appointment);
-        print('>>> ✅ Added to main list (was not present)');
       }
 
       // CRITICAL: Check if this appointment is in pending list
@@ -498,12 +451,9 @@ class AdminDashboardController extends GetxController {
       );
 
       if (isInPendingList) {
-        print('>>> 📋 Appointment is in pending list');
 
         // CRITICAL: If status changed from pending, REMOVE it from pending list
         if (appointment.status != 'pending') {
-          print(
-              '>>> 🗑️ Status is no longer PENDING - removing from pending list');
 
           final currentList = List<Appointment>.from(todayAppointments);
           currentList
@@ -511,8 +461,6 @@ class AdminDashboardController extends GetxController {
 
           // Try to fill the gap with another pending appointment
           if (currentList.length < 5) {
-            print(
-                '>>> 🔍 Looking for more pending appointments to fill the gap');
 
             final allPendingAppts = appointments.where((appt) {
               return appt.status == 'pending' &&
@@ -528,16 +476,12 @@ class AdminDashboardController extends GetxController {
             final toAdd = allPendingAppts.take(needed).toList();
             currentList.addAll(toAdd);
 
-            print('>>> ✅ Added ${toAdd.length} more pending appointments');
           }
 
           // Update with new list
           todayAppointments.value = List.from(currentList);
-          print(
-              '>>> ✅ Pending list updated: ${todayAppointments.length} items');
         } else {
           // Status is still pending - just update in place
-          print('>>> 🔄 Still PENDING - updating in place');
 
           final currentList = List<Appointment>.from(todayAppointments);
           final existingIndex = currentList.indexWhere(
@@ -561,13 +505,10 @@ class AdminDashboardController extends GetxController {
             // Reinsert at new position
             currentList.insert(insertIndex, appointment);
             todayAppointments.value = List.from(currentList.take(5));
-            print('>>> ✅ Reinserted at index $insertIndex');
           }
         }
       } else if (appointment.status == 'pending') {
         // Not in list but is now pending - check if it should be in top 5
-        print(
-            '>>> 📋 Appointment is now PENDING - checking if it should be in top 5');
 
         final allPendingAppts = appointments.where((appt) {
           return appt.status == 'pending';
@@ -584,10 +525,8 @@ class AdminDashboardController extends GetxController {
             top5.any((a) => a.documentId == appointment.documentId);
 
         if (isInTop5) {
-          print('>>> ✅ Appointment is now in top 5');
           todayAppointments.value = List.from(top5);
         } else {
-          print('>>> ℹ️ Appointment is not in top 5');
         }
       }
 
@@ -599,14 +538,11 @@ class AdminDashboardController extends GetxController {
       // Update cache timestamp
       lastCacheTime.value = DateTime.now();
     } catch (e) {
-      print('>>> ❌ Error handling updated appointment: $e');
     }
   }
 
   void _handleDeletedAppointment(Appointment appointment) {
     try {
-      print(
-          '>>> 🗑️ DASHBOARD: Handling deleted appointment ${appointment.documentId}');
 
       // Remove from main list
       final removedCount = appointments.length;
@@ -614,7 +550,6 @@ class AdminDashboardController extends GetxController {
       final actuallyRemoved = removedCount - appointments.length;
 
       if (actuallyRemoved > 0) {
-        print('>>> ✅ Removed from main list');
 
         // Check if it was in pending list
         final wasInPending = todayAppointments.any(
@@ -622,7 +557,6 @@ class AdminDashboardController extends GetxController {
         );
 
         if (wasInPending) {
-          print('>>> 📋 Was in pending list - reprocessing');
 
           // Remove from pending list
           final currentList = List<Appointment>.from(todayAppointments);
@@ -631,8 +565,6 @@ class AdminDashboardController extends GetxController {
 
           // Try to fill the gap with another pending appointment
           if (currentList.length < 5) {
-            print(
-                '>>> 🔍 Looking for more pending appointments to fill the gap');
 
             final allPendingAppts = appointments.where((appt) {
               return appt.status == 'pending' &&
@@ -648,7 +580,6 @@ class AdminDashboardController extends GetxController {
             final toAdd = allPendingAppts.take(needed).toList();
             currentList.addAll(toAdd);
 
-            print('>>> ✅ Added ${toAdd.length} more pending appointments');
           }
 
           // Create new list
@@ -658,7 +589,6 @@ class AdminDashboardController extends GetxController {
           }
 
           todayAppointments.value = newList;
-          print('>>> ✅ Pending count updated: ${todayAppointments.length}');
         }
       }
 
@@ -670,7 +600,6 @@ class AdminDashboardController extends GetxController {
       // Update cache timestamp
       lastCacheTime.value = DateTime.now();
     } catch (e) {
-      print('>>> ❌ Error handling deleted appointment: $e');
     }
   }
 
@@ -715,7 +644,6 @@ class AdminDashboardController extends GetxController {
 
   void _updateAppointmentStats() {
     try {
-      print('>>> 📊 DASHBOARD: Updating appointment stats');
 
       final stats = <String, int>{
         'total': appointments.length,
@@ -730,14 +658,8 @@ class AdminDashboardController extends GetxController {
       appointmentStats.assignAll(stats);
       appointmentStats.refresh();
 
-      print('>>> 📊 Stats updated:');
-      print('    Total: ${stats['total']}');
-      print('    Pending (Dashboard): ${stats['today']}'); // Changed label
-      print('    All Pending: ${stats['pending']}');
-      print('    Accepted: ${stats['accepted']}');
-      print('    Completed: ${stats['completed']}');
+      // Changed label
     } catch (e) {
-      print('>>> ❌ Error updating stats: $e');
     }
   }
 
@@ -1005,12 +927,10 @@ class AdminDashboardController extends GetxController {
 
   Future<void> _initializeRealTimeUpdates() async {
     if (clinicData.value == null || clinicData.value?.documentId == null) {
-      print('>>> ⚠️ Cannot initialize real-time: No clinic data');
       return;
     }
 
     try {
-      print('>>> 🔌 Initializing real-time updates...');
 
       // Close old subscriptions first
       await _appointmentSubscription?.close();
@@ -1037,10 +957,7 @@ class AdminDashboardController extends GetxController {
       isRealTimeConnected.value = true;
       lastUpdateTime.value = DateTime.now();
 
-      print('>>> ✅ Real-time updates initialized successfully');
     } catch (e, stackTrace) {
-      print('>>> ❌ Failed to initialize real-time updates: $e');
-      print('>>> Stack trace: $stackTrace');
       isRealTimeConnected.value = false;
 
       // Setup more frequent fallback polling on error
@@ -1547,14 +1464,12 @@ class AdminDashboardController extends GetxController {
 
   void _processPendingAppointments() {
     try {
-      print('>>> 📋 Processing pending appointments (PENDING STATUS ONLY)');
 
       // Get ONLY pending appointments (not all time, only pending status)
       final allPendingAppts = appointments.where((appointment) {
         return appointment.status == 'pending'; // CRITICAL: Only pending
       }).toList();
 
-      print('>>> 📊 Total pending appointments: ${allPendingAppts.length}');
 
       // Sort by date/time (upcoming first - soonest at top)
       allPendingAppts.sort((a, b) => a.dateTime.compareTo(b.dateTime));
@@ -1562,21 +1477,17 @@ class AdminDashboardController extends GetxController {
       // Take top 5 (or 3 if you prefer)
       final top5 = allPendingAppts.take(5).toList();
 
-      print('>>> 📊 Top 5 pending appointments:');
       for (var appt in top5) {
-        print('    - ${appt.documentId}: ${appt.dateTime} - ${appt.service}');
       }
 
       // Update the observable list
       todayAppointments.value = List.from(top5);
-      print('>>> ✅ Pending appointments updated: ${todayAppointments.length}');
 
       // Pre-load images if needed
       if (top5.isNotEmpty) {
         preloadPetImagesForAppointments(top5);
       }
     } catch (e) {
-      print('>>> ❌ Error processing pending appointments: $e');
     }
   }
 
@@ -2418,12 +2329,10 @@ class AdminDashboardController extends GetxController {
 
     // CRITICAL: Skip fetch if cache is valid and not forced
     if (!force && _isCacheValid() && todayAppointments.isNotEmpty) {
-      print('>>> ✅ Using cached pending appointments');
       return;
     }
 
     try {
-      print('>>> 📋 Fetching PENDING appointments from database...');
 
       // Fetch ONLY pending appointments
       final result =
@@ -2438,8 +2347,6 @@ class AdminDashboardController extends GetxController {
         ],
       );
 
-      print(
-          '>>> 📊 Fetched ${result.documents.length} pending appointments from database');
 
       // Parse all pending appointments
       final List<Appointment> allPendingAppts = [];
@@ -2448,21 +2355,17 @@ class AdminDashboardController extends GetxController {
           final appointment = Appointment.fromMap(doc.data);
           allPendingAppts.add(appointment);
         } catch (e) {
-          print('>>> ⚠️ Error parsing appointment: $e');
         }
       }
 
       // Take exactly 5 (or less if not enough)
       final top5 = allPendingAppts.take(5).toList();
 
-      print('>>> 📊 Top 5 pending appointments:');
       for (var appt in top5) {
-        print('    - ${appt.documentId}: ${appt.dateTime} - ${appt.service}');
       }
 
       // Update with new list instance
       todayAppointments.value = List.from(top5);
-      print('>>> ✅ Pending appointments loaded: ${todayAppointments.length}');
 
       // Pre-load images
       if (top5.isNotEmpty) {
@@ -2473,7 +2376,6 @@ class AdminDashboardController extends GetxController {
       lastCacheTime.value = DateTime.now();
       isDashboardCached.value = true;
     } catch (e) {
-      print('>>> ❌ Error fetching pending appointments: $e');
       // DON'T clear on error - keep existing data
     }
   }
@@ -2629,8 +2531,6 @@ class AdminDashboardController extends GetxController {
     // Sort by date/time (upcoming first)
     pendingAppts.sort((a, b) => a.dateTime.compareTo(b.dateTime));
 
-    print(
-        '>>> 📊 pendingAppointments getter: ${pendingAppts.length} pending appointments (all time)');
 
     return pendingAppts;
   }

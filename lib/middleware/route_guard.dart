@@ -25,7 +25,6 @@ class RouteGuard extends GetMiddleware {
     // CRITICAL FIX: If logout is in progress, allow navigation
     // Don't interfere with the logout process
     if (LogoutHelper.isLoggingOut.value) {
-      print('⏭️ RouteGuard: Logout in progress, allowing navigation');
       return null;
     }
 
@@ -36,7 +35,6 @@ class RouteGuard extends GetMiddleware {
 
     // If no session, redirect to landing page
     if (userId == null || sessionId == null || role == null) {
-      print('🔒 RouteGuard: No valid session, redirecting to landing');
 
       // IMPORTANT: Don't erase storage here - let logout handle it properly
       // Only clear if we're NOT in a logout process
@@ -51,7 +49,6 @@ class RouteGuard extends GetMiddleware {
     final hasAccess = _validateRoleAccess(route, role);
 
     if (!hasAccess) {
-      print('🔒 RouteGuard: Access denied for role $role to route $route');
 
       // Log security violation
       _logSecurityViolation(userId, role, route);
@@ -104,8 +101,6 @@ class RouteGuard extends GetMiddleware {
   /// Log security violation attempts
   void _logSecurityViolation(String userId, String role, String? targetRoute) {
     final timestamp = DateTime.now().toIso8601String();
-    print(
-        '⚠️ SECURITY VIOLATION: User $userId (role: $role) attempted to access $targetRoute at $timestamp');
 
     // Store violation in local storage for admin review
     final violations = _storage.read<List>('security_violations') ?? [];
