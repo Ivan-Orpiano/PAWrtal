@@ -60,7 +60,6 @@ class AdminMessagingController extends GetxController {
 
   @override
   void onClose() {
-
     try {
       _cancelAllSubscriptions();
       _disposeControllers();
@@ -73,54 +72,43 @@ class AdminMessagingController extends GetxController {
   }
 
   Future<void> cleanupBeforeLogout() async {
-
     try {
       _cancelAllSubscriptions();
       _clearAllData();
       await _setUserOfflineWithTimeout();
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   void _cancelAllSubscriptions() {
-
     try {
       _messageSubscription?.cancel();
       _messageSubscription = null;
       _activeConversationId = null;
-    } catch (e) {
-    }
+    } catch (e) {}
 
     try {
       _conversationSubscription?.cancel();
       _conversationSubscription = null;
       _activeClinicId = null;
-    } catch (e) {
-    }
+    } catch (e) {}
 
     try {
       _statusSubscription?.cancel();
       _statusSubscription = null;
-    } catch (e) {
-    }
-
+    } catch (e) {}
   }
 
   void _disposeControllers() {
-
     try {
       messageController.dispose();
       scrollController.dispose();
       searchController.dispose();
       starterTriggerController.dispose();
       starterResponseController.dispose();
-    } catch (e) {
-    }
-
+    } catch (e) {}
   }
 
   void _clearAllData() {
-
     try {
       conversations.clear();
       currentMessages.clear();
@@ -137,20 +125,16 @@ class AdminMessagingController extends GetxController {
       isSendingMessage.value = false;
       isLoadingConversation.value = false;
       isLoadingStarters.value = false;
-
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   Future<void> _setUserOfflineWithTimeout() async {
     try {
       await setUserOffline().timeout(
         const Duration(seconds: 2),
-        onTimeout: () {
-        },
+        onTimeout: () {},
       );
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   // ============= CLINIC SETUP =============
@@ -158,7 +142,6 @@ class AdminMessagingController extends GetxController {
   Future<void> initializeForClinic(String clinicId) async {
     try {
       currentClinicId.value = clinicId;
-
 
       if (!AppwriteConstants.messagingCollectionsConfigured) {
         Get.snackbar(
@@ -171,13 +154,21 @@ class AdminMessagingController extends GetxController {
         return;
       }
 
-      await Future.wait([
-        loadClinicConversations(clinicId),
-        initializeConversationStarters(clinicId),
-      ]);
+      // Only load if we don't have data already
+      if (conversations.isEmpty) {
+        await Future.wait([
+          loadClinicConversations(clinicId),
+          initializeConversationStarters(clinicId),
+        ]);
+      } else {
+        // Still initialize starters if needed
+        if (conversationStarters.isEmpty) {
+          await initializeConversationStarters(clinicId);
+        }
+      }
 
+      // Always subscribe to updates
       subscribeToClinicConversationUpdates(clinicId);
-
     } catch (e) {
       Get.snackbar(
         'Initialization Error',
@@ -193,17 +184,14 @@ class AdminMessagingController extends GetxController {
     try {
       isLoadingStarters.value = true;
 
-
       // ADDED: Run migration for existing starters
       try {
         await _authRepository.migrateConversationStarters();
-      } catch (e) {
-      }
+      } catch (e) {}
 
       final starters =
           await _authRepository.getClinicConversationStarters(clinicId);
       conversationStarters.value = starters;
-
 
       if (starters.isEmpty) {
         await _authRepository.initializeDefaultConversationStarters(clinicId);
@@ -213,7 +201,6 @@ class AdminMessagingController extends GetxController {
         final newStarters =
             await _authRepository.getClinicConversationStarters(clinicId);
         conversationStarters.value = newStarters;
-
 
         if (newStarters.isNotEmpty) {
           Get.snackbar(
@@ -241,6 +228,25 @@ class AdminMessagingController extends GetxController {
   // ============= CONVERSATION METHODS =============
 
   Future<void> loadClinicConversations(String clinicId) async {
+    // Only reload if we don't have conversations already
+    if (conversations.isNotEmpty) {
+      return;
+    }
+
+    try {
+      isLoading.value = true;
+      final clinicConversations =
+          await _authRepository.getClinicConversations(clinicId);
+      conversations.value = clinicConversations;
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to load conversations: $e',
+          backgroundColor: Colors.red, colorText: Colors.white);
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> forceReloadConversations(String clinicId) async {
     try {
       isLoading.value = true;
       final clinicConversations =
@@ -257,7 +263,6 @@ class AdminMessagingController extends GetxController {
   Future<void> openConversation(
       Conversation conversation, String receiverId, String receiverType) async {
     try {
-
       isLoadingConversation.value = true;
 
       currentConversation.value = conversation;
@@ -271,7 +276,6 @@ class AdminMessagingController extends GetxController {
       await markConversationAsRead(conversation.documentId!);
 
       await loadUserStatus(receiverId);
-
     } catch (e) {
       Get.snackbar('Error', 'Failed to open conversation: $e',
           backgroundColor: Colors.red, colorText: Colors.white);
@@ -314,14 +318,12 @@ class AdminMessagingController extends GetxController {
 
       if (text == null) messageController.clear();
 
-
       final sentMessage = await _authRepository.sendMessage(
         conversationId: currentConversation.value!.documentId!,
         senderId: _userSession.userId,
         messageText: messageText,
         attachment: attachmentUrl,
       );
-
 
       final updatedConversation = currentConversation.value!.copyWith(
         lastMessageId: sentMessage.documentId,
@@ -337,7 +339,6 @@ class AdminMessagingController extends GetxController {
         conversations.removeAt(index);
         conversations.insert(0, updatedConversation);
       }
-
     } catch (e) {
       Get.snackbar('Error', 'Failed to send message: $e',
           backgroundColor: Colors.red, colorText: Colors.white);
@@ -352,14 +353,12 @@ class AdminMessagingController extends GetxController {
 
   Future<void> markConversationAsRead(String conversationId) async {
     try {
-
       await _authRepository.markMessagesAsRead(
           conversationId, _userSession.userId);
 
       if (currentConversation.value != null &&
           currentConversation.value!.documentId == conversationId &&
           currentConversation.value!.clinicUnreadCount > 0) {
-
         final updatedConversation = currentConversation.value!.copyWith(
           clinicUnreadCount: 0,
         );
@@ -370,12 +369,8 @@ class AdminMessagingController extends GetxController {
         if (index != -1) {
           conversations[index] = updatedConversation;
         }
-
-      } else {
-      }
-
-    } catch (e) {
-    }
+      } else {}
+    } catch (e) {}
   }
 
   // ============= CONVERSATION STARTERS MANAGEMENT =============
@@ -471,7 +466,6 @@ class AdminMessagingController extends GetxController {
   /// Set a conversation starter as the auto-reply for first messages
   Future<void> setAutoReplyStarter(String starterId) async {
     try {
-
       // First, unset any existing auto-reply starter
       final currentAutoReply = conversationStarters.firstWhereOrNull(
         (s) => s.isAutoReply == true,
@@ -546,24 +540,20 @@ class AdminMessagingController extends GetxController {
           colorText: Colors.white,
         );
       }
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   /// Get the current auto-reply starter
   ConversationStarter? getAutoReplyStarter() {
     try {
-
-      for (var starter in conversationStarters) {
-      }
+      for (var starter in conversationStarters) {}
 
       final autoReply = conversationStarters.firstWhereOrNull(
         (s) => (s.isAutoReply == true) && (s.isActive == true),
       );
 
       if (autoReply != null) {
-      } else {
-      }
+      } else {}
 
       return autoReply;
     } catch (e) {
@@ -574,12 +564,10 @@ class AdminMessagingController extends GetxController {
   /// Check if a conversation is new (first message from user)
   Future<bool> isFirstUserMessage(String conversationId) async {
     try {
-
       final messages = await _authRepository.getConversationMessages(
         conversationId,
         limit: 100,
       );
-
 
       int userMessageCount = 0;
       int clinicMessageCount = 0;
@@ -590,7 +578,6 @@ class AdminMessagingController extends GetxController {
         final isFromAdmin = msg.senderId == _userSession.userId;
         final isFromUser = !isFromClinic && !isFromAdmin;
 
-
         if (isFromClinic || isFromAdmin) {
           clinicMessageCount++;
         } else if (isFromUser) {
@@ -598,13 +585,11 @@ class AdminMessagingController extends GetxController {
         }
       }
 
-
       // If clinic has NEVER replied = first user message
       final isFirst = clinicMessageCount == 0;
 
       if (isFirst) {
-      } else {
-      }
+      } else {}
 
       return isFirst;
     } catch (e) {
@@ -624,15 +609,13 @@ class AdminMessagingController extends GetxController {
   Future<void> setUserOnline() async {
     try {
       await _authRepository.setUserOnline(_userSession.userId);
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   Future<void> setUserOffline() async {
     try {
       await _authRepository.setUserOffline(_userSession.userId);
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   Future<void> loadUserStatus(String userId) async {
@@ -641,14 +624,12 @@ class AdminMessagingController extends GetxController {
       if (status != null) {
         userStatuses[userId] = status;
       }
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   // ============= REAL-TIME SUBSCRIPTION METHODS =============
 
   void subscribeToClinicConversationUpdates(String clinicId) {
-
     if (_activeClinicId == clinicId && _conversationSubscription != null) {
       return;
     }
@@ -660,7 +641,6 @@ class AdminMessagingController extends GetxController {
       _conversationSubscription =
           _authRepository.subscribeToConversations(clinicId).listen(
         (realtimeMessage) {
-
           try {
             final conversationData = realtimeMessage.payload;
             final updatedConversation = Conversation.fromMap(conversationData);
@@ -668,9 +648,7 @@ class AdminMessagingController extends GetxController {
               documentId: conversationData['\$id'],
             );
 
-
             if (conversationWithId.clinicId == clinicId) {
-
               if (realtimeMessage.events
                   .contains('databases.*.collections.*.documents.*.update')) {
                 _handleConversationUpdate(conversationWithId);
@@ -689,10 +667,8 @@ class AdminMessagingController extends GetxController {
                   _checkAndSendAutoReply(conversationWithId.documentId!);
                 }
               }
-            } else {
-            }
-          } catch (e) {
-          }
+            } else {}
+          } catch (e) {}
         },
         onError: (error) {
           Future.delayed(const Duration(seconds: 2), () {
@@ -707,18 +683,15 @@ class AdminMessagingController extends GetxController {
       );
 
       _activeClinicId = clinicId;
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   void _handleConversationUpdate(Conversation updatedConversation) {
-
     final index = conversations.indexWhere(
       (c) => c.documentId == updatedConversation.documentId,
     );
 
     if (index != -1) {
-
       final isCurrentConversation = currentConversation.value?.documentId ==
           updatedConversation.documentId;
 
@@ -740,14 +713,12 @@ class AdminMessagingController extends GetxController {
       if (updatedConversation.lastMessageId != null) {
         sendAutoReplyIfFirstMessage(updatedConversation.documentId!);
       }
-
     } else {
       _handleNewConversation(updatedConversation);
     }
   }
 
   void _handleNewConversation(Conversation newConversation) {
-
     final exists =
         conversations.any((c) => c.documentId == newConversation.documentId);
 
@@ -758,12 +729,10 @@ class AdminMessagingController extends GetxController {
       if (newConversation.lastMessageId != null) {
         sendAutoReplyIfFirstMessage(newConversation.documentId!);
       }
-    } else {
-    }
+    } else {}
   }
 
   void subscribeToMessages(String conversationId) {
-
     if (_activeConversationId == conversationId &&
         _messageSubscription != null) {
       return;
@@ -777,7 +746,6 @@ class AdminMessagingController extends GetxController {
       _messageSubscription = _authRepository
           .subscribeToMessages(conversationId)
           .listen((realtimeMessage) {
-
         if (realtimeMessage.events
             .contains('databases.*.collections.*.documents.*.create')) {
           try {
@@ -810,15 +778,12 @@ class AdminMessagingController extends GetxController {
                   currentConversation.value?.documentId == conversationId) {
                 markConversationAsRead(conversationId);
               }
-            } else {
-            }
-          } catch (e) {
-          }
+            } else {}
+          } catch (e) {}
         }
       }, onError: (error) {
         _activeConversationId = null;
       });
-
     } catch (e) {
       _activeConversationId = null;
     }
@@ -826,14 +791,12 @@ class AdminMessagingController extends GetxController {
 
   Future<void> _checkAndSendAutoReply(String conversationId) async {
     try {
-
       // Get auto-reply starter
       final autoReplyStarter = getAutoReplyStarter();
 
       if (autoReplyStarter == null) {
         return;
       }
-
 
       // Check if this is the first user message
       final isFirst = await isFirstUserMessage(conversationId);
@@ -842,14 +805,12 @@ class AdminMessagingController extends GetxController {
         return;
       }
 
-
       // Send the auto-reply
       await _authRepository.sendConversationStarterResponse(
         conversationId: conversationId,
         clinicId: currentClinicId.value,
         responseText: autoReplyStarter.responseText,
       );
-
 
       // ❌ REMOVE THIS ENTIRE BLOCK! This is causing the reload!
       // The real-time subscription will pick up the new message automatically
@@ -860,8 +821,7 @@ class AdminMessagingController extends GetxController {
       // }
 
       // ✅ ADD THIS INSTEAD: Just log that real-time will handle it
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   // ============= HELPER METHODS =============
@@ -873,7 +833,6 @@ class AdminMessagingController extends GetxController {
 
     final isAdminUserId = senderId == _userSession.userId;
     final isClinicId = senderId == currentClinicId.value;
-
 
     return isAdminUserId || isClinicId;
   }

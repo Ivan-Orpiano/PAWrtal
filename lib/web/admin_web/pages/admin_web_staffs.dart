@@ -51,6 +51,9 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
 
   final List<String> tags = const ['Clinic', 'Appointments', 'Messages'];
 
+  DateTime? _lastLoadTime;
+  static const Duration _cacheDuration = Duration(minutes: 30);
+
   @override
   void initState() {
     super.initState();
@@ -58,10 +61,36 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
-    _fadeAnimation =
-        CurvedAnimation(parent: _animationController, curve: Curves.easeIn);
+    _fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeIn,
+    );
     _animationController.forward();
-    _loadClinicAndStaff();
+
+    // Don't show loading if we have valid cache
+    if (_lastLoadTime != null && _clinic != null && staffList.isNotEmpty) {
+      final cacheAge = DateTime.now().difference(_lastLoadTime!);
+      if (cacheAge < _cacheDuration) {
+        _isLoading = false;
+      }
+    }
+
+    _initializeData();
+  }
+
+  Future<void> _initializeData() async {
+    // Check if we have valid cached data
+    if (_lastLoadTime != null && _clinic != null && staffList.isNotEmpty) {
+      final cacheAge = DateTime.now().difference(_lastLoadTime!);
+      if (cacheAge < _cacheDuration) {
+        // We have valid cache, don't reload
+        setState(() => _isLoading = false);
+        return;
+      }
+    }
+
+    // No valid cache, load data
+    await _loadClinicAndStaff();
   }
 
   @override
@@ -71,10 +100,27 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
     super.dispose();
   }
 
-  Future<void> _loadClinicAndStaff() async {
-    if (!mounted) return; // Add this check at the start
+  Future<void> _loadClinicAndStaff({bool forceRefresh = false}) async {
+    if (!mounted) return;
 
-    setState(() => _isLoading = true);
+    // Check cache validity - skip if we have valid cache and not forcing refresh
+    if (!forceRefresh && _lastLoadTime != null) {
+      final cacheAge = DateTime.now().difference(_lastLoadTime!);
+      if (cacheAge < _cacheDuration &&
+          _clinic != null &&
+          staffList.isNotEmpty) {
+        // Cache is still valid, skip loading
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+        return;
+      }
+    }
+
+    // Show loading only if we don't have any data
+    if (mounted && (_clinic == null || staffList.isEmpty)) {
+      setState(() => _isLoading = true);
+    }
 
     try {
       final role = _getStorage.read('role') as String?;
@@ -100,15 +146,15 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         final staff =
             await _authRepository.getClinicStaff(_clinic!.documentId!);
         if (mounted) {
-          // Add mounted check before setState
           setState(() {
             staffList = staff;
+            _lastLoadTime = DateTime.now(); // Update cache timestamp
+            _isLoading = false;
           });
         }
       }
     } catch (e) {
       if (mounted) {
-        // Add mounted check before showing snackbar
         Get.snackbar(
           'Error',
           'Failed to load staff: $e',
@@ -116,10 +162,6 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
           backgroundColor: Colors.red,
           colorText: Colors.white,
         );
-      }
-    } finally {
-      if (mounted) {
-        // Already has this check, but ensure it's correct
         setState(() => _isLoading = false);
       }
     }
@@ -133,7 +175,7 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
     List<String> authorities,
     Uint8List? imageBytes,
     String password,
-    bool isDoctor, // ADD THIS 8th parameter
+    bool isDoctor,
   ) async {
     if (_clinic == null || !mounted) return;
 
@@ -172,11 +214,12 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         image: imageUrl,
         phone: phone,
         email: email,
-        isDoctor: isDoctor, // ADD THIS parameter to the repository call
+        isDoctor: isDoctor,
       );
 
       if (result['success'] == true) {
-        await _loadClinicAndStaff();
+        // Force refresh to get new data
+        await _loadClinicAndStaff(forceRefresh: true);
         if (mounted) {
           SnackbarHelper.showSuccess(
             context: Get.context!,
@@ -202,28 +245,21 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
 
   Future<void> _updateStaffAuthorities(
       StaffModel.Staff staff, List<String> newAuthorities) async {
-    if (!mounted) return; // Add mounted check
+    if (!mounted) return;
 
     try {
       await _authRepository.updateStaffAuthorities(
         staff.documentId!,
         newAuthorities,
       );
-      await _loadClinicAndStaff();
+      // Force refresh to get updated data
+      await _loadClinicAndStaff(forceRefresh: true);
 
       if (mounted) {
-        // Add mounted check
-        // Get.snackbar(
-        //   'Success',
-        //   'Permissions updated successfully',
-        //   snackPosition: SnackPosition.BOTTOM,
-        //   backgroundColor: vetGreen,
-        //   colorText: Colors.white,
-        // );
+        // Success feedback (currently commented out in your code)
       }
     } catch (e) {
       if (mounted) {
-        // Add mounted check
         Get.snackbar(
           'Error',
           'Failed to update permissions: $e',
@@ -236,7 +272,7 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
   }
 
   Future<void> _removeStaff(StaffModel.Staff staff) async {
-    if (!mounted) return; // Add mounted check
+    if (!mounted) return;
 
     try {
       await _authRepository.deactivateStaffAccount(
@@ -244,21 +280,14 @@ class _AdminWebStaffsState extends State<AdminWebStaffs>
         staff.userId,
       );
 
-      await _loadClinicAndStaff();
+      // Force refresh to get updated data
+      await _loadClinicAndStaff(forceRefresh: true);
 
       if (mounted) {
-        // Add mounted check
-        // Get.snackbar(
-        //   'Success',
-        //   'Staff account deactivated',
-        //   snackPosition: SnackPosition.BOTTOM,
-        //   backgroundColor: vetOrange,
-        //   colorText: Colors.white,
-        // );
+        // Success feedback (currently commented out in your code)
       }
     } catch (e) {
       if (mounted) {
-        // Add mounted check
         Get.snackbar(
           'Error',
           'Failed to remove staff: $e',

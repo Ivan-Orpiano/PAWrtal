@@ -258,7 +258,15 @@ class AdminDashboardController extends GetxController {
       await _appointmentSubscription?.close();
       _appointmentSubscription = null;
 
+      if (clinicData.value?.documentId == null) {
+        print('>>> ⚠️ Cannot subscribe: No clinic ID available');
+        return;
+      }
+
       final realtime = Realtime(authRepository.client);
+
+      print(
+          '>>> 🔌 Subscribing to appointment updates for clinic: ${clinicData.value!.documentId}');
 
       _appointmentSubscription = realtime.subscribe([
         'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.appointmentCollectionID}.documents'
@@ -267,44 +275,70 @@ class AdminDashboardController extends GetxController {
       _appointmentSubscription!.stream.listen(
         (response) {
           try {
+            print('>>> 📨 Real-time event received: ${response.events}');
+
             // CRITICAL: Verify this update is for OUR clinic
             final updateClinicId = response.payload['clinicId'];
             final ourClinicId = clinicData.value?.documentId;
 
             if (updateClinicId != ourClinicId) {
+              print('>>> ⏭️ Skipping event - different clinic');
               return;
             }
 
+            print('>>> ✅ Processing event for our clinic');
             _handleAppointmentRealTimeUpdate(response);
 
             // Update connection status
             isRealTimeConnected.value = true;
             lastUpdateTime.value = DateTime.now();
-          } catch (e) {}
+          } catch (e) {
+            print('>>> ❌ Error processing real-time event: $e');
+          }
         },
         onError: (error) {
+          print('>>> ❌ Real-time subscription error: $error');
           isRealTimeConnected.value = false;
 
           // Try to reconnect after delay
           Future.delayed(const Duration(seconds: 5), () {
-            _subscribeToAppointmentUpdates().catchError((e) {});
+            if (clinicData.value?.documentId != null) {
+              print('>>> 🔄 Attempting to reconnect...');
+              _subscribeToAppointmentUpdates().catchError((e) {
+                print('>>> ❌ Reconnection failed: $e');
+              });
+            }
           });
 
           // Increase fallback polling frequency
           _setupFallbackPolling(interval: 10);
         },
         onDone: () {
+          print('>>> 🔌 Real-time subscription closed');
           isRealTimeConnected.value = false;
 
           // Try to reconnect
           Future.delayed(const Duration(seconds: 3), () {
             if (clinicData.value?.documentId != null) {
-              _subscribeToAppointmentUpdates().catchError((e) {});
+              print('>>> 🔄 Attempting to reconnect after closure...');
+              _subscribeToAppointmentUpdates().catchError((e) {
+                print('>>> ❌ Reconnection failed: $e');
+              });
             }
           });
         },
       );
+
+      print('>>> ✅ Successfully subscribed to appointment updates');
+      isRealTimeConnected.value = true;
+      lastUpdateTime.value = DateTime.now();
     } catch (e, stackTrace) {
+      print('>>> ❌ Failed to subscribe to appointment updates: $e');
+      print('>>> Stack trace: $stackTrace');
+      isRealTimeConnected.value = false;
+
+      // Setup fallback polling
+      _setupFallbackPolling(interval: 15);
       rethrow;
     }
   }
@@ -354,6 +388,7 @@ class AdminDashboardController extends GetxController {
     try {
       print(
           '>>> 🆕 DASHBOARD: Handling new appointment ${appointment.documentId}');
+      print('>>> Status: ${appointment.status}');
 
       // Check if appointment already exists in main list
       final existingIndex = appointments.indexWhere(
@@ -362,79 +397,61 @@ class AdminDashboardController extends GetxController {
 
       if (existingIndex == -1) {
         appointments.add(appointment);
+        print('>>> ✅ Added to main appointments list');
       } else {
         appointments[existingIndex] = appointment;
         appointments.refresh();
+        print('>>> ✅ Updated in main appointments list');
       }
 
-      // CRITICAL: Check if this appointment is for today
-      final today = DateTime.now();
-      final todayDate = DateTime(today.year, today.month, today.day);
-      final appointmentDate = DateTime(
-        appointment.dateTime.year,
-        appointment.dateTime.month,
-        appointment.dateTime.day,
-      );
-
-      if (appointmentDate.isAtSameMomentAs(todayDate)) {
-        print('>>> 📅 New appointment is for TODAY - updating today list');
+      // CRITICAL: Only show in pending section if status is PENDING
+      if (appointment.status == 'pending') {
+        print('>>> 📋 New appointment is PENDING - updating pending list');
 
         // FIXED: Work with current list, don't rebuild from scratch
         final currentList = List<Appointment>.from(todayAppointments);
 
-        // Check if appointment already exists in today's list
-        final existingTodayIndex = currentList.indexWhere(
+        // Check if appointment already exists in pending list
+        final existingPendingIndex = currentList.indexWhere(
           (a) => a.documentId == appointment.documentId,
         );
 
-        if (existingTodayIndex != -1) {
+        if (existingPendingIndex != -1) {
           // Remove old version
-          currentList.removeAt(existingTodayIndex);
+          currentList.removeAt(existingPendingIndex);
+          print('>>> 🔄 Removed old version from pending list');
         }
 
-        // Insert at the correct position based on priority
+        // Insert at the correct position based on date/time (soonest first)
         int insertIndex = 0;
-
-        // Find correct position: pending appointments first, then by time
         for (int i = 0; i < currentList.length; i++) {
           final current = currentList[i];
-
-          // If new appointment is pending and current is not, insert here
-          if (appointment.status == 'pending' && current.status != 'pending') {
+          if (appointment.dateTime.isBefore(current.dateTime)) {
             insertIndex = i;
             break;
           }
-
-          // If both same priority, sort by time
-          if ((appointment.status == 'pending' &&
-                  current.status == 'pending') ||
-              (appointment.status != 'pending' &&
-                  current.status != 'pending')) {
-            if (appointment.dateTime.isBefore(current.dateTime)) {
-              insertIndex = i;
-              break;
-            }
-          }
-
           insertIndex = i + 1;
         }
 
         // Insert at calculated position
         currentList.insert(insertIndex, appointment);
+        print('>>> ✅ Inserted at position $insertIndex');
 
-        // Keep only top 3
-        final top3 = currentList.take(3).toList();
+        // Keep only top 5
+        final top5 = currentList.take(5).toList();
 
-        print('>>> 📊 Updated today\'s appointments (top 3):');
-        for (var i = 0; i < top3.length; i++) {
-          print('    ${i + 1}. ${top3[i].documentId} - ${top3[i].status}');
+        print('>>> 📊 Updated pending appointments (top 5):');
+        for (var i = 0; i < top5.length; i++) {
+          print(
+              '    ${i + 1}. ${top5[i].documentId} - ${top5[i].status} - ${top5[i].dateTime}');
         }
 
         // Update with smooth transition
-        todayAppointments.value = List.from(top3);
-        print('>>> ✅ Today\'s count updated: ${todayAppointments.length}');
+        todayAppointments.value = List.from(top5);
+        print('>>> ✅ Pending count updated: ${todayAppointments.length}');
       } else {
-        print('>>> ℹ️ New appointment is NOT for today');
+        print(
+            '>>> ℹ️ New appointment is NOT pending - status: ${appointment.status}');
       }
 
       // Update other lists
@@ -472,160 +489,105 @@ class AdminDashboardController extends GetxController {
         print('>>> Status changed: $oldStatus -> ${appointment.status}');
       } else {
         appointments.add(appointment);
+        print('>>> ✅ Added to main list (was not present)');
       }
 
-      // Check if this appointment is for today
-      final today = DateTime.now();
-      final todayDate = DateTime(today.year, today.month, today.day);
-      final appointmentDate = DateTime(
-        appointment.dateTime.year,
-        appointment.dateTime.month,
-        appointment.dateTime.day,
+      // CRITICAL: Check if this appointment is in pending list
+      final isInPendingList = todayAppointments.any(
+        (a) => a.documentId == appointment.documentId,
       );
 
-      if (appointmentDate.isAtSameMomentAs(todayDate)) {
-        print(
-            '>>> 📅 Updated appointment is for TODAY - refreshing today list');
+      if (isInPendingList) {
+        print('>>> 📋 Appointment is in pending list');
 
-        // FIXED: Work with current list, update in place
-        final currentList = List<Appointment>.from(todayAppointments);
-
-        // Find if appointment exists in current list
-        final existingIndex = currentList.indexWhere(
-          (a) => a.documentId == appointment.documentId,
-        );
-
-        if (existingIndex != -1) {
-          print('>>> 🔄 Found in today\'s list at index $existingIndex');
-
-          // Remove from current position
-          currentList.removeAt(existingIndex);
-
-          // Find new correct position based on updated status/time
-          int insertIndex = 0;
-
-          for (int i = 0; i < currentList.length; i++) {
-            final current = currentList[i];
-
-            // If updated appointment is pending and current is not, insert here
-            if (appointment.status == 'pending' &&
-                current.status != 'pending') {
-              insertIndex = i;
-              break;
-            }
-
-            // If both same priority, sort by time
-            if ((appointment.status == 'pending' &&
-                    current.status == 'pending') ||
-                (appointment.status != 'pending' &&
-                    current.status != 'pending')) {
-              if (appointment.dateTime.isBefore(current.dateTime)) {
-                insertIndex = i;
-                break;
-              }
-            }
-
-            insertIndex = i + 1;
-          }
-
-          // Reinsert at new position
-          currentList.insert(insertIndex, appointment);
-          print('>>> ✅ Reinserted at index $insertIndex');
-        } else {
-          print('>>> ℹ️ Not in today\'s list - check if it should be in top 3');
-
-          // Not in today's list - check if it should be in top 3
-          // Get all today's appointments to determine if this should be shown
-          final allTodayAppts = appointments.where((appt) {
-            final apptDate = DateTime(
-              appt.dateTime.year,
-              appt.dateTime.month,
-              appt.dateTime.day,
-            );
-            return apptDate.isAtSameMomentAs(todayDate);
-          }).toList();
-
-          // Sort by priority
-          allTodayAppts.sort((a, b) {
-            if (a.status == 'pending' && b.status != 'pending') return -1;
-            if (b.status == 'pending' && a.status != 'pending') return 1;
-            return a.dateTime.compareTo(b.dateTime);
-          });
-
-          // Take top 3
-          final top3 = allTodayAppts.take(3).toList();
-
-          // Check if updated appointment made it to top 3
-          final isInTop3 =
-              top3.any((a) => a.documentId == appointment.documentId);
-
-          if (isInTop3) {
-            print('>>> ✅ Updated appointment is now in top 3');
-            todayAppointments.value = List.from(top3);
-          } else {
-            print('>>> ℹ️ Updated appointment is not in top 3');
-          }
-
-          // Early return since we already updated
-          _processUpcomingAppointments();
-          _updateAppointmentStats();
-          _updateCalendarData(appointment, isUpdate: true);
-          lastCacheTime.value = DateTime.now();
-          return;
-        }
-
-        // Keep only top 3
-        final top3 = currentList.take(3).toList();
-
-        print('>>> 📊 Updated today\'s appointments (top 3):');
-        for (var i = 0; i < top3.length; i++) {
-          print('    ${i + 1}. ${top3[i].documentId} - ${top3[i].status}');
-        }
-
-        // Update smoothly
-        todayAppointments.value = List.from(top3);
-        print('>>> ✅ Today\'s count updated: ${todayAppointments.length}');
-      } else {
-        print('>>> 📅 Updated appointment is NOT for today');
-
-        // Remove from today's list if it was moved to a different day
-        final wasInToday = todayAppointments.any(
-          (a) => a.documentId == appointment.documentId,
-        );
-
-        if (wasInToday) {
-          print('>>> 🗑️ Removing from today\'s list (moved to different day)');
+        // CRITICAL: If status changed from pending, REMOVE it from pending list
+        if (appointment.status != 'pending') {
+          print(
+              '>>> 🗑️ Status is no longer PENDING - removing from pending list');
 
           final currentList = List<Appointment>.from(todayAppointments);
           currentList
               .removeWhere((a) => a.documentId == appointment.documentId);
 
-          // If we now have less than 3, try to fill from main list
-          if (currentList.length < 3) {
-            final today = DateTime.now();
-            final todayDate = DateTime(today.year, today.month, today.day);
+          // Try to fill the gap with another pending appointment
+          if (currentList.length < 5) {
+            print(
+                '>>> 🔍 Looking for more pending appointments to fill the gap');
 
-            final allTodayAppts = appointments.where((appt) {
-              final apptDate = DateTime(
-                appt.dateTime.year,
-                appt.dateTime.month,
-                appt.dateTime.day,
-              );
-              return apptDate.isAtSameMomentAs(todayDate);
+            final allPendingAppts = appointments.where((appt) {
+              return appt.status == 'pending' &&
+                  !currentList.any(
+                      (existing) => existing.documentId == appt.documentId);
             }).toList();
 
-            allTodayAppts.sort((a, b) {
-              if (a.status == 'pending' && b.status != 'pending') return -1;
-              if (b.status == 'pending' && a.status != 'pending') return 1;
-              return a.dateTime.compareTo(b.dateTime);
-            });
+            // Sort by date/time (soonest first)
+            allPendingAppts.sort((a, b) => a.dateTime.compareTo(b.dateTime));
 
-            final top3 = allTodayAppts.take(3).toList();
-            todayAppointments.value = List.from(top3);
-            print('>>> ✅ Refilled today\'s list: ${todayAppointments.length}');
-          } else {
-            todayAppointments.value = List.from(currentList);
+            // Add to fill up to 5
+            final needed = 5 - currentList.length;
+            final toAdd = allPendingAppts.take(needed).toList();
+            currentList.addAll(toAdd);
+
+            print('>>> ✅ Added ${toAdd.length} more pending appointments');
           }
+
+          // Update with new list
+          todayAppointments.value = List.from(currentList);
+          print(
+              '>>> ✅ Pending list updated: ${todayAppointments.length} items');
+        } else {
+          // Status is still pending - just update in place
+          print('>>> 🔄 Still PENDING - updating in place');
+
+          final currentList = List<Appointment>.from(todayAppointments);
+          final existingIndex = currentList.indexWhere(
+            (a) => a.documentId == appointment.documentId,
+          );
+
+          if (existingIndex != -1) {
+            // Remove from current position
+            currentList.removeAt(existingIndex);
+
+            // Find new correct position based on date/time
+            int insertIndex = 0;
+            for (int i = 0; i < currentList.length; i++) {
+              if (appointment.dateTime.isBefore(currentList[i].dateTime)) {
+                insertIndex = i;
+                break;
+              }
+              insertIndex = i + 1;
+            }
+
+            // Reinsert at new position
+            currentList.insert(insertIndex, appointment);
+            todayAppointments.value = List.from(currentList.take(5));
+            print('>>> ✅ Reinserted at index $insertIndex');
+          }
+        }
+      } else if (appointment.status == 'pending') {
+        // Not in list but is now pending - check if it should be in top 5
+        print(
+            '>>> 📋 Appointment is now PENDING - checking if it should be in top 5');
+
+        final allPendingAppts = appointments.where((appt) {
+          return appt.status == 'pending';
+        }).toList();
+
+        // Sort by date/time
+        allPendingAppts.sort((a, b) => a.dateTime.compareTo(b.dateTime));
+
+        // Take top 5
+        final top5 = allPendingAppts.take(5).toList();
+
+        // Check if updated appointment is in top 5
+        final isInTop5 =
+            top5.any((a) => a.documentId == appointment.documentId);
+
+        if (isInTop5) {
+          print('>>> ✅ Appointment is now in top 5');
+          todayAppointments.value = List.from(top5);
+        } else {
+          print('>>> ℹ️ Appointment is not in top 5');
         }
       }
 
@@ -654,53 +616,49 @@ class AdminDashboardController extends GetxController {
       if (actuallyRemoved > 0) {
         print('>>> ✅ Removed from main list');
 
-        // Check if it was in today's list
-        final wasInToday = todayAppointments.any(
+        // Check if it was in pending list
+        final wasInPending = todayAppointments.any(
           (a) => a.documentId == appointment.documentId,
         );
 
-        if (wasInToday) {
-          print('>>> 📅 Was in today\'s list - reprocessing');
+        if (wasInPending) {
+          print('>>> 📋 Was in pending list - reprocessing');
 
-          // Reprocess today's appointments to get new top 3
-          final today = DateTime.now();
-          final todayDate = DateTime(today.year, today.month, today.day);
+          // Remove from pending list
+          final currentList = List<Appointment>.from(todayAppointments);
+          currentList
+              .removeWhere((a) => a.documentId == appointment.documentId);
 
-          final allTodayAppts = appointments.where((appt) {
-            final apptDate = DateTime(
-              appt.dateTime.year,
-              appt.dateTime.month,
-              appt.dateTime.day,
-            );
-            return apptDate.isAtSameMomentAs(todayDate);
-          }).toList();
+          // Try to fill the gap with another pending appointment
+          if (currentList.length < 5) {
+            print(
+                '>>> 🔍 Looking for more pending appointments to fill the gap');
 
-          print(
-              '>>> 📊 Total today appointments after deletion: ${allTodayAppts.length}');
+            final allPendingAppts = appointments.where((appt) {
+              return appt.status == 'pending' &&
+                  !currentList.any(
+                      (existing) => existing.documentId == appt.documentId);
+            }).toList();
 
-          // Sort by priority
-          allTodayAppts.sort((a, b) {
-            if (a.status == 'pending' && b.status != 'pending') return -1;
-            if (b.status == 'pending' && a.status != 'pending') return 1;
-            return a.dateTime.compareTo(b.dateTime);
-          });
+            // Sort by date/time (soonest first)
+            allPendingAppts.sort((a, b) => a.dateTime.compareTo(b.dateTime));
 
-          // Take top 3
-          final top3 = allTodayAppts.take(3).toList();
+            // Add to fill up to 5
+            final needed = 5 - currentList.length;
+            final toAdd = allPendingAppts.take(needed).toList();
+            currentList.addAll(toAdd);
 
-          print('>>> 📊 New top 3:');
-          for (var i = 0; i < top3.length; i++) {
-            print('    ${i + 1}. ${top3[i].documentId} - ${top3[i].status}');
+            print('>>> ✅ Added ${toAdd.length} more pending appointments');
           }
 
           // Create new list
           final newList = <Appointment>[];
-          for (var appt in top3) {
+          for (var appt in currentList) {
             newList.add(appt);
           }
 
           todayAppointments.value = newList;
-          print('>>> ✅ Today\'s count updated: ${todayAppointments.length}');
+          print('>>> ✅ Pending count updated: ${todayAppointments.length}');
         }
       }
 
@@ -766,7 +724,7 @@ class AdminDashboardController extends GetxController {
         'completed': appointments.where((a) => a.status == 'completed').length,
         'cancelled': appointments.where((a) => a.status == 'cancelled').length,
         'declined': appointments.where((a) => a.status == 'declined').length,
-        'today': todayAppointments.length, // CRITICAL: Use the observable list
+        'today': todayAppointments.length, // This is now pending count
       };
 
       appointmentStats.assignAll(stats);
@@ -774,8 +732,8 @@ class AdminDashboardController extends GetxController {
 
       print('>>> 📊 Stats updated:');
       print('    Total: ${stats['total']}');
-      print('    Today: ${stats['today']}');
-      print('    Pending: ${stats['pending']}');
+      print('    Pending (Dashboard): ${stats['today']}'); // Changed label
+      print('    All Pending: ${stats['pending']}');
       print('    Accepted: ${stats['accepted']}');
       print('    Completed: ${stats['completed']}');
     } catch (e) {
@@ -1047,10 +1005,13 @@ class AdminDashboardController extends GetxController {
 
   Future<void> _initializeRealTimeUpdates() async {
     if (clinicData.value == null || clinicData.value?.documentId == null) {
+      print('>>> ⚠️ Cannot initialize real-time: No clinic data');
       return;
     }
 
     try {
+      print('>>> 🔌 Initializing real-time updates...');
+
       // Close old subscriptions first
       await _appointmentSubscription?.close();
       _appointmentSubscription = null;
@@ -1075,7 +1036,11 @@ class AdminDashboardController extends GetxController {
 
       isRealTimeConnected.value = true;
       lastUpdateTime.value = DateTime.now();
+
+      print('>>> ✅ Real-time updates initialized successfully');
     } catch (e, stackTrace) {
+      print('>>> ❌ Failed to initialize real-time updates: $e');
+      print('>>> Stack trace: $stackTrace');
       isRealTimeConnected.value = false;
 
       // Setup more frequent fallback polling on error
@@ -1582,11 +1547,11 @@ class AdminDashboardController extends GetxController {
 
   void _processPendingAppointments() {
     try {
-      print('>>> 📋 Processing pending appointments (ALL TIME)');
+      print('>>> 📋 Processing pending appointments (PENDING STATUS ONLY)');
 
-      // Get all pending appointments
+      // Get ONLY pending appointments (not all time, only pending status)
       final allPendingAppts = appointments.where((appointment) {
-        return appointment.status == 'pending';
+        return appointment.status == 'pending'; // CRITICAL: Only pending
       }).toList();
 
       print('>>> 📊 Total pending appointments: ${allPendingAppts.length}');
@@ -1599,17 +1564,10 @@ class AdminDashboardController extends GetxController {
 
       print('>>> 📊 Top 5 pending appointments:');
       for (var appt in top5) {
-        final appointmentDate = DateTime(
-          appt.dateTime.year,
-          appt.dateTime.month,
-          appt.dateTime.day,
-        );
-        print(
-            '    - ${appt.documentId}: ${appointmentDate.toString()} - ${appt.service}');
+        print('    - ${appt.documentId}: ${appt.dateTime} - ${appt.service}');
       }
 
-      // CRITICAL: Use todayAppointments observable for dashboard display
-      // (We're repurposing it to show pending instead of today)
+      // Update the observable list
       todayAppointments.value = List.from(top5);
       print('>>> ✅ Pending appointments updated: ${todayAppointments.length}');
 
@@ -2465,16 +2423,16 @@ class AdminDashboardController extends GetxController {
     }
 
     try {
-      print('>>> 📋 Fetching ALL pending appointments from database...');
+      print('>>> 📋 Fetching PENDING appointments from database...');
 
-      // Fetch ALL pending appointments (no date filter)
+      // Fetch ONLY pending appointments
       final result =
           await authRepository.appWriteProvider.databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.appointmentCollectionID,
         queries: [
           Query.equal('clinicId', clinicData.value!.documentId!),
-          Query.equal('status', 'pending'),
+          Query.equal('status', 'pending'), // CRITICAL: Only pending
           Query.orderAsc('dateTime'), // Soonest first
           Query.limit(100), // Get all pending (up to 100)
         ],
@@ -2502,7 +2460,7 @@ class AdminDashboardController extends GetxController {
         print('    - ${appt.documentId}: ${appt.dateTime} - ${appt.service}');
       }
 
-      // Update with new list instance (repurpose todayAppointments for pending)
+      // Update with new list instance
       todayAppointments.value = List.from(top5);
       print('>>> ✅ Pending appointments loaded: ${todayAppointments.length}');
 
