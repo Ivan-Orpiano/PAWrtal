@@ -48,8 +48,6 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
   bool _isLoading = true;
   StreamSubscription<RealtimeMessage>? _userStatusSubscription;
 
-  bool _hasLoadedOnce = false;
-
   @override
   void initState() {
     super.initState();
@@ -78,9 +76,12 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
     }
 
     try {
+
       String? clinicId = _getStorage.read('clinicId') as String?;
 
+
       if (clinicId == null || clinicId.isEmpty) {
+
         if (_userRole == 'admin') {
           final clinicDoc =
               await _authRepository.getClinicByAdminId(_userSession.userId);
@@ -88,8 +89,10 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
           if (clinicDoc != null) {
             clinicId = clinicDoc.$id;
             await _getStorage.write('clinicId', clinicId);
+          } else {
           }
         } else if (_userRole == 'staff') {
+
           final staff =
               await _authRepository.getStaffByUserId(_userSession.userId);
           if (staff != null) {
@@ -97,44 +100,29 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
             await _getStorage.write('clinicId', clinicId);
           }
         }
+      } else {
       }
 
       if (clinicId != null && clinicId.isNotEmpty) {
         setState(() {
           _clinicId = clinicId;
+          _isLoading = false;
         });
 
-        // Check if we already have conversations loaded (navigating back)
-        if (_controller.conversations.isNotEmpty && _hasLoadedOnce) {
-          // Use cached data, just set loading to false
-          setState(() => _isLoading = false);
+        await _controller.initializeForClinic(_clinicId!);
 
-          // Still subscribe to updates if not already subscribed
-          _controller.subscribeToClinicConversationUpdates(_clinicId!);
-        } else {
-          // First time load
-          await _controller.initializeForClinic(_clinicId!);
-          _controller.subscribeToClinicConversationUpdates(_clinicId!);
+        _controller.subscribeToClinicConversationUpdates(_clinicId!);
 
-          setState(() {
-            _isLoading = false;
-            _hasLoadedOnce = true;
-          });
-        }
 
         await _checkForPendingConversation();
+
       } else {
+
         setState(() => _isLoading = false);
       }
     } catch (e) {
       setState(() => _isLoading = false);
     }
-  }
-
-  void _clearMessagingCache() {
-    _hasLoadedOnce = false;
-    _controller.conversations.clear();
-    _userCache.clear();
   }
 
   Future<void> _checkForPendingConversation() async {
@@ -143,7 +131,9 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
       final pendingData =
           Get.find<PendingConversationData>(tag: 'pending_conversation');
 
+
       await Future.delayed(const Duration(milliseconds: 800));
+
 
       Conversation? conversation;
 
@@ -152,7 +142,8 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
           conversation = _controller.conversations.firstWhere(
             (c) => c.documentId == pendingData.conversationId,
           );
-        } catch (e) {}
+        } catch (e) {
+        }
       }
 
       if (conversation == null) {
@@ -160,10 +151,12 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
           conversation = _controller.conversations.firstWhere(
             (c) => c.userId == pendingData.userId,
           );
-        } catch (e) {}
+        } catch (e) {
+        }
       }
 
       if (conversation != null) {
+
         final userData = await _getUserData(pendingData.userId);
 
         final screenWidth = MediaQuery.of(context).size.width;
@@ -181,11 +174,13 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
           );
         }
       } else {
-        for (var conv in _controller.conversations) {}
+        for (var conv in _controller.conversations) {
+        }
       }
 
       Get.delete<PendingConversationData>(tag: 'pending_conversation');
-    } else {}
+    } else {
+    }
   }
 
   Future<void> _setCurrentUserOnline() async {
@@ -194,7 +189,8 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
       if (userId != null && userId.isNotEmpty) {
         await _authRepository.setUserOnline(userId);
       }
-    } catch (e) {}
+    } catch (e) {
+    }
   }
 
   Future<void> _setCurrentUserOffline() async {
@@ -203,7 +199,8 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
       if (userId != null && userId.isNotEmpty) {
         await _authRepository.setUserOffline(userId);
       }
-    } catch (e) {}
+    } catch (e) {
+    }
   }
 
   Future<Map<String, dynamic>> _getUserData(String userId) async {
@@ -212,6 +209,7 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
     }
 
     try {
+
       final userDoc = await _authRepository.getUserById(userId);
       if (userDoc != null) {
         final user = User.fromMap(userDoc.data);
@@ -220,7 +218,8 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
         if (user.hasProfilePicture) {
           profilePictureUrl =
               _authRepository.getUserProfilePictureUrl(user.profilePictureId!);
-        } else {}
+        } else {
+        }
 
         final userData = {
           'name': user.name,
@@ -234,7 +233,8 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
         _userCache[userId] = userData;
         return userData;
       }
-    } catch (e) {}
+    } catch (e) {
+    }
 
     return {
       'name': 'Unknown User',
@@ -257,6 +257,7 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
 
   Future<void> _openConversationInMobile(
       Conversation conversation, String userId, String userName) async {
+
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -729,7 +730,8 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
           CircleAvatar(
             radius: 24,
             backgroundImage: NetworkImage(profilePictureUrl),
-            onBackgroundImageError: (exception, stackTrace) {},
+            onBackgroundImageError: (exception, stackTrace) {
+            },
           )
         else
           CircleAvatar(
@@ -950,6 +952,7 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
     final isFromAdmin = message.senderId == _userSession.userId;
     final isFromClinic = message.senderId == _clinicId;
     final isCurrentUser = isFromAdmin || isFromClinic;
+
 
     return Align(
       alignment: isCurrentUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -1197,7 +1200,8 @@ class _ConversationTileWidgetState extends State<_ConversationTileWidget> {
           CircleAvatar(
             radius: 24,
             backgroundImage: NetworkImage(profilePictureUrl),
-            onBackgroundImageError: (exception, stackTrace) {},
+            onBackgroundImageError: (exception, stackTrace) {
+            },
           )
         else
           CircleAvatar(
@@ -1304,7 +1308,8 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
           });
         }
       }
-    } catch (e) {}
+    } catch (e) {
+    }
   }
 
   @override
@@ -1485,7 +1490,8 @@ class _AdminMobileMessagesPageState extends State<_AdminMobileMessagesPage> {
           CircleAvatar(
             radius: 20,
             backgroundImage: NetworkImage(profilePictureUrl),
-            onBackgroundImageError: (exception, stackTrace) {},
+            onBackgroundImageError: (exception, stackTrace) {
+            },
           )
         else
           CircleAvatar(
