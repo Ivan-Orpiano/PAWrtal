@@ -190,12 +190,12 @@ class _PinnedFeedbackPageState extends State<PinnedFeedbackPage> {
               actions: [
                 Obx(() {
                 if (controller.isLoadingFeedback.value) {
-                  return Padding(
-                    padding: const EdgeInsets.all(14.0),
+                  return const Padding(
+                    padding: EdgeInsets.all(14.0),
                     child: SizedBox(
                       width: 20,
                       height: 20,
-                      child: const CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     ),
                   );
                 }
@@ -257,12 +257,12 @@ class _PinnedFeedbackPageState extends State<PinnedFeedbackPage> {
               actions: [
                 Obx(() {
                 if (controller.isLoadingFeedback.value) {
-                  return Padding(
-                    padding: const EdgeInsets.all(16.0),
+                  return const Padding(
+                    padding: EdgeInsets.all(16.0),
                     child: SizedBox(
                       width: 20,
                       height: 20,
-                      child: const CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     ),
                   );
                 }
@@ -498,7 +498,7 @@ class _PinnedFeedbackPageState extends State<PinnedFeedbackPage> {
                         ),
                       ),
                       const SizedBox(width: 4),
-                      Icon(
+                      const Icon(
                         Icons.arrow_drop_down,
                         color: Colors.white,
                         size: 16,
@@ -619,7 +619,7 @@ class _PinnedFeedbackPageState extends State<PinnedFeedbackPage> {
                         ),
                       ),
                       const SizedBox(width: 4),
-                      Icon(
+                      const Icon(
                         Icons.arrow_drop_down,
                         color: Colors.white,
                         size: 16,
@@ -2842,11 +2842,11 @@ void _markAsCompleted(FeedbackAndReport feedback) {
 
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Row(
+                content: const Row(
                   children: [
                     Icon(Icons.check_circle, color: Colors.white),
-                    const SizedBox(width: 12),
-                    const Text('Feedback marked as completed!'),
+                    SizedBox(width: 12),
+                    Text('Feedback marked as completed!'),
                   ],
                 ),
                 backgroundColor: Colors.green[600],

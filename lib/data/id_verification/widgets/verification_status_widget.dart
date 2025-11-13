@@ -13,13 +13,13 @@ class VerificationStatusWidget extends StatefulWidget {
   final VoidCallback? onVerificationComplete;
 
   const VerificationStatusWidget({
-    Key? key,
+    super.key,
     required this.userId,
     required this.email,
     required this.userRole,
     this.showButton = true,
     this.onVerificationComplete,
-  }) : super(key: key);
+  });
 
   @override
   State<VerificationStatusWidget> createState() =>
@@ -130,8 +130,9 @@ class _VerificationStatusWidgetState extends State<VerificationStatusWidget> {
   }
 
   String _getStatusDescription() {
-    if (_verificationStatus == null)
+    if (_verificationStatus == null) {
       return 'Verify your ID to access all features';
+    }
 
     final status = _verificationStatus!['status'] as String? ?? 'not_started';
 
@@ -279,10 +280,10 @@ class VerificationBadge extends StatelessWidget {
   final VoidCallback? onTap;
 
   const VerificationBadge({
-    Key? key,
+    super.key,
     required this.isVerified,
     this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

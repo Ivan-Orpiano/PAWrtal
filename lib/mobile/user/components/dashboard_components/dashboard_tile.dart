@@ -262,8 +262,8 @@ class _MyDashboardTileState extends State<MyDashboardTile> {
               children: [
                 Container(
                   height: 200,
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.only(
+                  decoration: const BoxDecoration(
+                    borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(16),
                       topRight: Radius.circular(16),
                     ),

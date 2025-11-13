@@ -156,7 +156,7 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
         }
       }
 
-    } catch (e, stackTrace) {
+    } catch (e) {
       if (mounted && !_isLoggingOut) {
         _isInitialized = true;
       }
@@ -362,7 +362,7 @@ class _AdminWebProfileState extends State<AdminWebProfile> {
         (ancestorState as dynamic)._setLoggingOut(true);
       } else {
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
     }
   }
 

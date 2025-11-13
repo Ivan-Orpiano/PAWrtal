@@ -223,7 +223,7 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                               value: controller.isClinicOpen.value,
                               onChanged: (value) =>
                                   controller.toggleClinicStatus(),
-                              activeColor: Colors.green,
+                              activeThumbColor: Colors.green,
                             ),
                           ),
                         ],
@@ -299,7 +299,7 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                             value: controller.isClinicOpen.value,
                             onChanged: (value) =>
                                 controller.toggleClinicStatus(),
-                            activeColor: Colors.green,
+                            activeThumbColor: Colors.green,
                           ),
                         ],
                       ),
@@ -582,7 +582,7 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                                 ? null
                                 : controller.setDashboardPicture,
                             icon: controller.isSaving.value
-                                ? SizedBox(
+                                ? const SizedBox(
                                     width: 16,
                                     height: 16,
                                     child: CircularProgressIndicator(
@@ -612,7 +612,7 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                                   ? null
                                   : controller.saveDashboardPicture,
                               icon: controller.isSaving.value
-                                  ? SizedBox(
+                                  ? const SizedBox(
                                       width: 16,
                                       height: 16,
                                       child: CircularProgressIndicator(
@@ -928,7 +928,7 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                               ),
                               const SizedBox(height: 8),
                               Obx(() => DropdownButtonFormField<int>(
-                                    value: controller.appointmentDuration.value,
+                                    initialValue: controller.appointmentDuration.value,
                                     decoration: const InputDecoration(
                                       border: OutlineInputBorder(),
                                       suffixText: "minutes",
@@ -964,7 +964,7 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                               ),
                               const SizedBox(height: 8),
                               Obx(() => DropdownButtonFormField<int>(
-                                    value: controller.maxAdvanceBooking.value,
+                                    initialValue: controller.maxAdvanceBooking.value,
                                     decoration: const InputDecoration(
                                       border: OutlineInputBorder(),
                                       suffixText: "days",
@@ -1003,7 +1003,7 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                                 ),
                                 const SizedBox(height: 8),
                                 Obx(() => DropdownButtonFormField<int>(
-                                      value:
+                                      initialValue:
                                           controller.appointmentDuration.value,
                                       decoration: const InputDecoration(
                                         border: OutlineInputBorder(),
@@ -1037,7 +1037,7 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                                 ),
                                 const SizedBox(height: 8),
                                 Obx(() => DropdownButtonFormField<int>(
-                                      value: controller.maxAdvanceBooking.value,
+                                      initialValue: controller.maxAdvanceBooking.value,
                                       decoration: const InputDecoration(
                                         border: OutlineInputBorder(),
                                         suffixText: "days",

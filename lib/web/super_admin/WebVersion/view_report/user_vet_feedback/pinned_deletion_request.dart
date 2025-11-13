@@ -583,7 +583,7 @@ void initState() {
                                             child: SizedBox(
                                               width: isMobile ? 16 : 20,
                                               height: isMobile ? 16 : 20,
-                                              child: CircularProgressIndicator(strokeWidth: 2),
+                                              child: const CircularProgressIndicator(strokeWidth: 2),
                                             ),
                                           );
                                         },

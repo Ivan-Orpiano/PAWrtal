@@ -65,7 +65,6 @@ class AdminMessagingController extends GetxController {
       _disposeControllers();
       _clearAllData();
       _setUserOfflineWithTimeout();
-    } catch (e) {
     } finally {
       super.onClose();
     }
@@ -388,7 +387,6 @@ class AdminMessagingController extends GetxController {
             await _authRepository.getClinicConversationStarters(clinicId);
         conversationStarters.value = newStarters;
       }
-    } catch (e) {
     } finally {
       isLoadingStarters.value = false;
     }

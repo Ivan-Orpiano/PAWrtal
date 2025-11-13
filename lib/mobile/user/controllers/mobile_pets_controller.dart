@@ -57,7 +57,6 @@ class MobilePetsController extends GetxController {
       }
       final petDocs = await authRepository.getUserPets(userId);
       pets.value = petDocs.map((doc) => Pet.fromMap(doc.data)).toList();
-    } catch (e) {
     } finally {
       isLoading.value = false;
     }
@@ -129,7 +128,7 @@ class MobilePetsController extends GetxController {
         for (var record in records) {
         }
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       medicalRecords.clear();
     } finally {
       isLoadingMedical.value = false;
@@ -311,7 +310,7 @@ class MobilePetsController extends GetxController {
 
 
       return userName;
-    } catch (e, stackTrace) {
+    } catch (e) {
       return 'Unknown';
     }
   }

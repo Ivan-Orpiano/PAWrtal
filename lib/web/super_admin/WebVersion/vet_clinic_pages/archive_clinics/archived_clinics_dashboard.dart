@@ -8,7 +8,7 @@ import 'package:appwrite/appwrite.dart';
 
 /// Super Admin Dashboard for Archived Clinics
 class ArchivedClinicsDashboard extends StatefulWidget {
-  const ArchivedClinicsDashboard({Key? key}) : super(key: key);
+  const ArchivedClinicsDashboard({super.key});
 
   @override
   State<ArchivedClinicsDashboard> createState() => _ArchivedClinicsDashboardState();
@@ -141,7 +141,7 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
+          gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [Colors.white, backgroundColor],
@@ -453,10 +453,10 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: darkRed.withOpacity(0.3)),
                       ),
-                      child: Row(
+                      child: const Row(
                         children: [
                           Icon(Icons.info_outline, color: darkRed, size: 20),
-                          const SizedBox(width: 12),
+                          SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               'This action is IRREVERSIBLE and will permanently remove all data.',
@@ -484,7 +484,7 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
                         onPressed: () => Navigator.pop(context, false),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          side: BorderSide(color: primaryColor),
+                          side: const BorderSide(color: primaryColor),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -608,7 +608,7 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
                   color: successGreen.withOpacity(0.2),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.check_circle, color: successGreen),
+                child: const Icon(Icons.check_circle, color: successGreen),
               ),
               const SizedBox(width: 12),
               const Text('No Deletions Needed'),
@@ -652,7 +652,7 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
             child: Container(
               constraints: const BoxConstraints(maxWidth: 550),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
+                gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [Colors.white, backgroundColor],
@@ -795,7 +795,7 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                   child: Row(
                                     children: [
-                                      Icon(Icons.local_hospital, size: 16, color: darkRed),
+                                      const Icon(Icons.local_hospital, size: 16, color: darkRed),
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: Text(
@@ -831,11 +831,11 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
+                              const Row(
                                 children: [
                                   Icon(Icons.keyboard, color: warningOrange, size: 20),
-                                  const SizedBox(width: 8),
-                                  const Text(
+                                  SizedBox(width: 8),
+                                  Text(
                                     'Type the following to confirm:',
                                     style: TextStyle(
                                       fontSize: 14,
@@ -855,7 +855,7 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
                                 ),
                                 child: SelectableText(
                                   confirmText,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                     color: darkRed,
@@ -924,7 +924,7 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
                             },
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              side: BorderSide(color: primaryColor),
+                              side: const BorderSide(color: primaryColor),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -1014,7 +1014,7 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    SizedBox(
+                    const SizedBox(
                       width: 50,
                       height: 50,
                       child: CircularProgressIndicator(
@@ -1061,7 +1061,7 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     colors: [successGreen, accentTeal],
                   ),
@@ -1100,11 +1100,11 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: successGreen.withOpacity(0.3)),
                 ),
-                child: Row(
+                child: const Row(
                   children: [
                     Icon(Icons.info_outline, color: successGreen, size: 20),
-                    const SizedBox(width: 8),
-                    const Expanded(
+                    SizedBox(width: 8),
+                    Expanded(
                       child: Text(
                         'All expired archived clinics have been permanently deleted.',
                         style: TextStyle(fontSize: 12),
@@ -1436,7 +1436,7 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
+                    gradient: const LinearGradient(
                       colors: [Colors.white, backgroundColor],
                     ),
                     borderRadius: BorderRadius.circular(16),
@@ -1479,7 +1479,7 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
               const SizedBox(width: 12),
               Container(
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
+                  gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [primaryColor, accentTeal],
@@ -1687,7 +1687,7 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
                         ),
                       ],
                     ),
-                    child: Center(
+                    child: const Center(
                       child: Icon(
                         Icons.local_hospital,
                         color: Colors.white,
@@ -1802,7 +1802,7 @@ class _ArchivedClinicsDashboardState extends State<ArchivedClinicsDashboard> {
                   width: double.infinity,
                   child: Container(
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
+                      gradient: const LinearGradient(
                         colors: [successGreen, accentTeal],
                       ),
                       borderRadius: BorderRadius.circular(8),

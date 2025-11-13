@@ -1096,7 +1096,7 @@ class _WebSettingsAndEverythingPageState
                 child: Switch(
                   value: value,
                   onChanged: onChanged,
-                  activeColor: iconColor,
+                  activeThumbColor: iconColor,
                 ),
               ),
           ],
@@ -1560,7 +1560,7 @@ class _WebSettingsAndEverythingPageState
                     DropdownButtonFormField<FeedbackCategory>(
                       menuMaxHeight: 300,
                       dropdownColor: Colors.white,
-                      value: feedbackController.selectedCategory.value,
+                      initialValue: feedbackController.selectedCategory.value,
                       decoration: InputDecoration(
                         hintText: 'Select a category',
                         prefixIcon: const Icon(Icons.category),
@@ -2308,7 +2308,7 @@ class _WebSettingsAndEverythingPageState
                 Switch(
                   value: value,
                   onChanged: (v) => _showSuccess('Setting updated'),
-                  activeColor: iconColor,
+                  activeThumbColor: iconColor,
                 )
               else
                 Icon(Icons.arrow_forward_ios,
@@ -2931,7 +2931,7 @@ class _WebSettingsAndEverythingPageState
       }
     }
 
-    Widget _buildRequirement(String text) {
+    Widget buildRequirement(String text) {
       return Padding(
         padding: const EdgeInsets.only(left: 8, top: 4),
         child: Row(
@@ -3027,10 +3027,10 @@ class _WebSettingsAndEverythingPageState
                           ],
                         ),
                         const SizedBox(height: 8),
-                        _buildRequirement('At least 8 characters'),
-                        _buildRequirement('One uppercase letter (A-Z)'),
-                        _buildRequirement('One number (0-9)'),
-                        _buildRequirement('One special character (!@#\$%^&*)'),
+                        buildRequirement('At least 8 characters'),
+                        buildRequirement('One uppercase letter (A-Z)'),
+                        buildRequirement('One number (0-9)'),
+                        buildRequirement('One special character (!@#\$%^&*)'),
                       ],
                     ),
                   ),

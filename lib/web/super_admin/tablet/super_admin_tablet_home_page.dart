@@ -97,10 +97,10 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
               width: 1.5,
             ),
             boxShadow: [
-              BoxShadow(
-                color: const Color.fromRGBO(81, 115, 153, 0.25),
+              const BoxShadow(
+                color: Color.fromRGBO(81, 115, 153, 0.25),
                 blurRadius: 12,
-                offset: const Offset(0, 4),
+                offset: Offset(0, 4),
               ),
               BoxShadow(
                 color: Colors.white.withOpacity(0.1),
@@ -119,7 +119,7 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
                 child: Container(
                   height: containerSize * 0.4,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.vertical(
+                    borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(14),
                     ),
                     gradient: LinearGradient(
@@ -292,8 +292,8 @@ class SuperAdminTabletHomePage extends GetView<WebSuperAdminHomeController> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      side: BorderSide(
-                        color: const Color.fromRGBO(81, 115, 153, 0.3),
+                      side: const BorderSide(
+                        color: Color.fromRGBO(81, 115, 153, 0.3),
                         width: 1.5,
                       ),
                     ),

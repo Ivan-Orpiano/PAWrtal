@@ -466,8 +466,7 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
                                       );
                                     }
                                     if (!text.startsWith('09')) {
-                                      text = '09' +
-                                          text.replaceAll(RegExp(r'^0*9*'), '');
+                                      text = '09${text.replaceAll(RegExp(r'^0*9*'), '')}';
                                     }
 
                                     if (text.length > vetContactLimit) {

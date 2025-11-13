@@ -82,6 +82,7 @@ class _StaffTileState extends State<StaffTile>
     );
   }
 
+  @override
   Widget build(BuildContext context) {
     return MouseRegion(
       onEnter: (_) {

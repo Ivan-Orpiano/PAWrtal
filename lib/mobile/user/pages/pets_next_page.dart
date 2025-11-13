@@ -304,8 +304,8 @@ class _PetsNextPageState extends State<PetsNextPage>
                               padding: const EdgeInsets.all(40),
                               child: Column(
                                 children: [
-                                  CircularProgressIndicator(
-                                    color: const Color(0xFF667eea),
+                                  const CircularProgressIndicator(
+                                    color: Color(0xFF667eea),
                                   ),
                                   const SizedBox(height: 16),
                                   Text(

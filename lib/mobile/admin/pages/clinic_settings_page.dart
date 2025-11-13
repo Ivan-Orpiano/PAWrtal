@@ -196,7 +196,7 @@ class _ClinicSettingsPageState extends State<ClinicSettingsPage>
                           value: isOpen,
                           onChanged: (value) =>
                               controller.toggleClinicStatus(value),
-                          activeColor: Colors.green,
+                          activeThumbColor: Colors.green,
                         ),
                       ],
                     ),
@@ -378,7 +378,7 @@ class _ClinicSettingsPageState extends State<ClinicSettingsPage>
                 Switch(
                   value: isOpen,
                   onChanged: (value) => controller.toggleDayStatus(day, value),
-                  activeColor: const Color(0xFF608BC1),
+                  activeThumbColor: const Color(0xFF608BC1),
                 ),
               ],
             ),

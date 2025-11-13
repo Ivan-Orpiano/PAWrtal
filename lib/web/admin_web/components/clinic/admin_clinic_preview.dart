@@ -351,12 +351,15 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
                 TextEditingController();
 
             bool hasChanges() {
-              if (tempSelectedServices.length != originalServices.length)
+              if (tempSelectedServices.length != originalServices.length) {
                 return true;
+              }
               for (var service in tempSelectedServices) {
                 if (!originalServices.contains(service)) return true;
                 if (tempMedicalServices[service] !=
-                    originalMedicalServices[service]) return true;
+                    originalMedicalServices[service]) {
+                  return true;
+                }
               }
               for (var service in originalServices) {
                 if (!tempSelectedServices.contains(service)) return true;
@@ -479,10 +482,10 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           if (isSelected)
-                                            Icon(
+                                            const Icon(
                                               Icons.check_circle,
                                               size: 16,
-                                              color: const Color.fromARGB(
+                                              color: Color.fromARGB(
                                                   255, 81, 115, 153),
                                             ),
                                           if (isSelected)

@@ -7,7 +7,6 @@ import 'package:capstone_app/mobile/user/components/appointment_tabs/components/
 import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 class EnhancedAppointmentDetailsPage extends StatefulWidget {

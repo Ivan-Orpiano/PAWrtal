@@ -383,11 +383,11 @@ class _SuperAdminVetClinicDetailPageState
                         ],
                       ),
                       borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
+                      boxShadow: const [
                         BoxShadow(
-                          color: const Color.fromRGBO(81, 115, 153, 0.4),
+                          color: Color.fromRGBO(81, 115, 153, 0.4),
                           blurRadius: 12,
-                          offset: const Offset(0, 4),
+                          offset: Offset(0, 4),
                         ),
                       ],
                     ),
@@ -900,11 +900,11 @@ class _SuperAdminVetClinicDetailPageState
           color: const Color.fromRGBO(81, 115, 153, 0.15),
           width: 1.5,
         ),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: const Color.fromRGBO(81, 115, 153, 0.08),
+            color: Color.fromRGBO(81, 115, 153, 0.08),
             blurRadius: 16,
-            offset: const Offset(0, 4),
+            offset: Offset(0, 4),
           ),
         ],
       ),
@@ -916,10 +916,10 @@ class _SuperAdminVetClinicDetailPageState
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
+                  gradient: const LinearGradient(
                     colors: [
-                      const Color.fromRGBO(81, 115, 153, 0.15),
-                      const Color.fromRGBO(81, 115, 153, 0.08),
+                      Color.fromRGBO(81, 115, 153, 0.15),
+                      Color.fromRGBO(81, 115, 153, 0.08),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(12),
@@ -1217,11 +1217,11 @@ class _SuperAdminVetClinicDetailPageState
           color: const Color.fromRGBO(81, 115, 153, 0.15),
           width: 1.5,
         ),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: const Color.fromRGBO(81, 115, 153, 0.08),
+            color: Color.fromRGBO(81, 115, 153, 0.08),
             blurRadius: 20,
-            offset: const Offset(0, 6),
+            offset: Offset(0, 6),
           ),
         ],
       ),
@@ -1488,11 +1488,11 @@ class _SuperAdminVetClinicDetailPageState
           color: const Color.fromRGBO(81, 115, 153, 0.15),
           width: 1.5,
         ),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: const Color.fromRGBO(81, 115, 153, 0.08),
+            color: Color.fromRGBO(81, 115, 153, 0.08),
             blurRadius: 20,
-            offset: const Offset(0, 6),
+            offset: Offset(0, 6),
           ),
         ],
       ),
@@ -1635,10 +1635,10 @@ class _SuperAdminVetClinicDetailPageState
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
               decoration: BoxDecoration(
                 gradient: isToday
-                    ? LinearGradient(
+                    ? const LinearGradient(
                         colors: [
-                          const Color.fromRGBO(81, 115, 153, 0.2),
-                          const Color.fromRGBO(81, 115, 153, 0.08),
+                          Color.fromRGBO(81, 115, 153, 0.2),
+                          Color.fromRGBO(81, 115, 153, 0.08),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -1654,10 +1654,10 @@ class _SuperAdminVetClinicDetailPageState
                 ),
                 boxShadow: [
                   if (isToday)
-                    BoxShadow(
-                      color: const Color.fromRGBO(81, 115, 153, 0.15),
+                    const BoxShadow(
+                      color: Color.fromRGBO(81, 115, 153, 0.15),
                       blurRadius: 12,
-                      offset: const Offset(0, 4),
+                      offset: Offset(0, 4),
                     ),
                 ],
               ),
@@ -1678,11 +1678,11 @@ class _SuperAdminVetClinicDetailPageState
                           ],
                         ),
                         borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
+                        boxShadow: const [
                           BoxShadow(
-                            color: const Color.fromRGBO(81, 115, 153, 0.3),
+                            color: Color.fromRGBO(81, 115, 153, 0.3),
                             blurRadius: 8,
-                            offset: const Offset(0, 2),
+                            offset: Offset(0, 2),
                           ),
                         ],
                       ),
@@ -1784,11 +1784,11 @@ class _SuperAdminVetClinicDetailPageState
           color: const Color.fromRGBO(81, 115, 153, 0.15),
           width: 1.5,
         ),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: const Color.fromRGBO(81, 115, 153, 0.08),
+            color: Color.fromRGBO(81, 115, 153, 0.08),
             blurRadius: 20,
-            offset: const Offset(0, 6),
+            offset: Offset(0, 6),
           ),
         ],
       ),
@@ -1968,10 +1968,10 @@ class _SuperAdminVetClinicDetailPageState
     return Container(
       padding: EdgeInsets.all(isMobile ? 20 : 24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           colors: [
-            const Color.fromRGBO(81, 115, 153, 0.08),
-            const Color.fromRGBO(81, 115, 153, 0.03),
+            Color.fromRGBO(81, 115, 153, 0.08),
+            Color.fromRGBO(81, 115, 153, 0.03),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -1981,11 +1981,11 @@ class _SuperAdminVetClinicDetailPageState
           color: const Color.fromRGBO(81, 115, 153, 0.25),
           width: 1.5,
         ),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: const Color.fromRGBO(81, 115, 153, 0.1),
+            color: Color.fromRGBO(81, 115, 153, 0.1),
             blurRadius: 20,
-            offset: const Offset(0, 6),
+            offset: Offset(0, 6),
           ),
         ],
       ),
@@ -2006,11 +2006,11 @@ class _SuperAdminVetClinicDetailPageState
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
+                  boxShadow: const [
                     BoxShadow(
-                      color: const Color.fromRGBO(81, 115, 153, 0.3),
+                      color: Color.fromRGBO(81, 115, 153, 0.3),
                       blurRadius: 12,
-                      offset: const Offset(0, 4),
+                      offset: Offset(0, 4),
                     ),
                   ],
                 ),
@@ -2214,12 +2214,12 @@ class _SuperAdminVetClinicDetailPageState
           width: 400,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(28),
-            gradient: LinearGradient(
+            gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
                 Colors.white,
-                const Color(0xFFF8FAFC),
+                Color(0xFFF8FAFC),
               ],
             ),
           ),
@@ -2569,8 +2569,8 @@ class _SuperAdminVetClinicDetailPageState
               children: [
                 Container(
                   padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
                       colors: [
                         Color.fromRGBO(81, 115, 153, 0.2),
                         Color.fromRGBO(81, 115, 153, 0.1),
@@ -2626,14 +2626,14 @@ class _SuperAdminVetClinicDetailPageState
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Row(
+              content: const Row(
                 children: [
-                  const Icon(Icons.archive, color: Colors.white),
-                  const SizedBox(width: 12),
+                  Icon(Icons.archive, color: Colors.white),
+                  SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'Clinic archived successfully. Will be permanently deleted in 30 days.',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      style: TextStyle(fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],

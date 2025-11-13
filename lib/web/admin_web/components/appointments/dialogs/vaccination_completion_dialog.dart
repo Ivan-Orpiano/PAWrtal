@@ -314,7 +314,7 @@ class _VaccinationCompletionDialogState
                         ),
                         const SizedBox(height: 8),
                         DropdownButtonFormField<String>(
-                          value: _selectedVaccineType,
+                          initialValue: _selectedVaccineType,
                           decoration: const InputDecoration(
                             border: OutlineInputBorder(),
                             hintText: 'Select vaccine type',

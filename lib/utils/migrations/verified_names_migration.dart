@@ -35,10 +35,10 @@ class VerifiedNamesMigration {
       // Handle special prefixes
       if (word.length >= 2) {
         if (word.startsWith('mc') && word.length > 2) {
-          return 'Mc' + word[2].toUpperCase() + word.substring(3);
+          return 'Mc${word[2].toUpperCase()}${word.substring(3)}';
         }
         if (word.startsWith('mac') && word.length > 3) {
-          return 'Mac' + word[3].toUpperCase() + word.substring(4);
+          return 'Mac${word[3].toUpperCase()}${word.substring(4)}';
         }
       }
       
@@ -298,7 +298,7 @@ class MigrationResult {
       'failedCount': failedCount,
       'skippedCount': skippedCount,
       'clinicVerifiedCount': clinicVerifiedCount,
-      'successRate': successRate.toStringAsFixed(2) + '%',
+      'successRate': '${successRate.toStringAsFixed(2)}%',
       'failedUsers': failedUsers,
       'updatedUsers': updatedUsers,
     };

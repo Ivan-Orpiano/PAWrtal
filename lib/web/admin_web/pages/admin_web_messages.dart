@@ -191,7 +191,7 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
   Future<void> _setCurrentUserOnline() async {
     try {
       final userId = _userSession.userId;
-      if (userId != null && userId.isNotEmpty) {
+      if (userId.isNotEmpty) {
         await _authRepository.setUserOnline(userId);
       }
     } catch (e) {}
@@ -200,7 +200,7 @@ class _AdminWebMessagesState extends State<AdminWebMessages> {
   Future<void> _setCurrentUserOffline() async {
     try {
       final userId = _userSession.userId;
-      if (userId != null && userId.isNotEmpty) {
+      if (userId.isNotEmpty) {
         await _authRepository.setUserOffline(userId);
       }
     } catch (e) {}
@@ -1053,13 +1053,13 @@ class _ConversationTileWidget extends StatefulWidget {
   final AdminMessagingController controller;
 
   const _ConversationTileWidget({
-    Key? key,
+    super.key,
     required this.conversation,
     required this.isSelected,
     required this.onTap,
     required this.onGetUserData,
     required this.controller,
-  }) : super(key: key);
+  });
 
   @override
   State<_ConversationTileWidget> createState() =>

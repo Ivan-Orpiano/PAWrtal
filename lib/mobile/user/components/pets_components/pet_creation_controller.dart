@@ -5,7 +5,6 @@ import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/mobile/user/components/pets_components/pets_controller.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
-import 'package:capstone_app/utils/custom_snack_bar.dart';
 import 'package:capstone_app/utils/full_screen_dialog_loader.dart';
 import 'package:capstone_app/utils/snackbar_helper.dart';
 import 'package:capstone_app/web/user_web/controllers/web_pets_controller.dart';

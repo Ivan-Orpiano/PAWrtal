@@ -140,7 +140,7 @@ Map<String, dynamic> toMap() {
     if (isPermanentlyDeleted) return 'Permanently Deleted';
     if (isRecovered) return 'Recovered';
     if (isDeletionDue) return 'Pending Permanent Deletion';
-    return 'Archived (${daysUntilDeletion} days left)';
+    return 'Archived ($daysUntilDeletion days left)';
   }
 
   ArchivedUser copyWith({

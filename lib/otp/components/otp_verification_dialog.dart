@@ -10,12 +10,12 @@ class OTPVerificationDialog extends StatefulWidget {
   final Function() onResend;
 
   const OTPVerificationDialog({
-    Key? key,
+    super.key,
     required this.email,
     required this.name,
     required this.onVerify,
     required this.onResend,
-  }) : super(key: key);
+  });
 
   @override
   State<OTPVerificationDialog> createState() => _OTPVerificationDialogState();

@@ -33,7 +33,7 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
   final AuthRepository _authRepo = Get.find<AuthRepository>();
   ClinicSettings? _clinicSettings;
   bool _isLoadingSettings = true;
-  bool _isSaved = false;
+  final bool _isSaved = false;
   Clinic? _updatedClinic;
 
   late UnifiedVerificationGuard _verificationGuard;
@@ -1470,8 +1470,8 @@ class _DashboardNextPageState extends State<DashboardNextPage> {
                 },
                 child: Container(
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color.fromARGB(255, 81, 115, 153),
+                  decoration: const BoxDecoration(
+                    color: Color.fromARGB(255, 81, 115, 153),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(

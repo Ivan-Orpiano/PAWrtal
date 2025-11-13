@@ -279,7 +279,7 @@ class _WebPetCreationPanelState extends State<WebPetCreationPanel> {
                                 ),
                                 const SizedBox(height: 8),
                                 DropdownButtonFormField<String>(
-                                  value:
+                                  initialValue:
                                       controller.genderController.text.isEmpty
                                           ? null
                                           : controller.genderController.text,

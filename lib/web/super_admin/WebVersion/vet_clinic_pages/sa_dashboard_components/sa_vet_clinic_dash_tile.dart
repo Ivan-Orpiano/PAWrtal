@@ -475,10 +475,10 @@ class _SuperAdminVetClinicTileState extends State<SuperAdminVetClinicTile>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                const Color(0xFFF8FAFC),
-                const Color.fromRGBO(81, 115, 153, 0.08),
-                const Color(0xFFF8FAFC),
+              colors: const [
+                Color(0xFFF8FAFC),
+                Color.fromRGBO(81, 115, 153, 0.08),
+                Color(0xFFF8FAFC),
               ],
               stops: [
                 (_shimmerAnimation.value - 1).clamp(0.0, 1.0),

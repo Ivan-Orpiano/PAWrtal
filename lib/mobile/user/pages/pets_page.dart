@@ -103,12 +103,12 @@ class _PetsPageState extends State<PetsPage>
               // Header with gradient
               Container(
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
+                  gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      const Color(0xFF3498DB),
-                      const Color(0xFF2C3E50),
+                      Color(0xFF3498DB),
+                      Color(0xFF2C3E50),
                     ],
                   ),
                   boxShadow: [
