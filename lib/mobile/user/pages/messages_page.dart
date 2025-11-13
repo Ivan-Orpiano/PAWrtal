@@ -16,8 +16,7 @@ class Messages extends StatefulWidget {
 }
 
 class _MessagesState extends State<Messages> with WidgetsBindingObserver {
-  final MessagingController _messagingController =
-      Get.find<MessagingController>();
+  late final MessagingController _messagingController;
   final AuthRepository _authRepository = Get.find<AuthRepository>();
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -28,6 +27,8 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    _messagingController = Get.put(MessagingController(), permanent: false);
 
     // STEP 1: Load conversations once
     _messagingController.loadUserConversations();
@@ -122,6 +123,7 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
         return conversationData;
       }
     } catch (e) {
+      print('Error getting clinic data: $e');
     }
 
     return {
@@ -214,7 +216,6 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
 
         return InkWell(
           onTap: () async {
-            // Navigate to conversation
             await Navigator.push(
               context,
               MaterialPageRoute(
@@ -228,8 +229,6 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
                 ),
               ),
             );
-            // REMOVED: Manual refresh - real-time handles it
-            // _messagingController.loadUserConversations();
           },
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -435,7 +434,7 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
                     ),
                   ),
 
-                  // Conversations List - WRAPPED IN OBX FOR REAL-TIME UPDATES
+                  // Conversations List
                   Expanded(
                     child: Obx(() {
                       if (_messagingController.isLoading.value) {
@@ -514,8 +513,6 @@ class _MessagesState extends State<Messages> with WidgetsBindingObserver {
                         );
                       }
 
-                      // REMOVED: RefreshIndicator - no manual refresh needed!
-                      // Real-time updates handle everything automatically
                       return ListView.builder(
                         padding: const EdgeInsets.only(bottom: 20),
                         itemCount: filteredConversations.length,
