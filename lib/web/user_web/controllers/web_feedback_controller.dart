@@ -601,8 +601,8 @@ bool _validateFile(PlatformFile file) {
   /// Submit feedback
   Future<bool> submitFeedback() async {
     if (!canSubmitFeedback()) {
-      _showError(
-          'Daily limit reached (3/3). You can submit again in ${getTimeUntilReset()}.');
+      // _showError(
+      //     'Daily limit reached (3/3). You can submit again in ${getTimeUntilReset()}.');
       return false;
     }
     if (!validateForm()) return false;
@@ -676,7 +676,7 @@ bool _validateFile(PlatformFile file) {
 
       // Show success with remaining count
       final remaining = getRemainingReports();
-      _showSuccess("Feedback submitted! ($remaining reports remaining today)");
+      // _showSuccess("Feedback submitted! ($remaining reports remai'Daily limit reached (3/3).ning today)");
 
       return true;
     } catch (e, stackTrace) {

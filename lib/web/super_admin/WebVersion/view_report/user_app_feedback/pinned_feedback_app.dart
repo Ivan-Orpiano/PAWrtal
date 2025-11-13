@@ -293,368 +293,126 @@ class _PinnedFeedbackPageState extends State<PinnedFeedbackPage> {
         }
 
 
-            Widget _buildPinnedStatsCard() {
-              return Obx(() {
-            
-                final pinnedCount = pinnedFeedback.length;
-                final criticalCount = pinnedFeedback
-                    .where((f) => f.priority == Priority.critical)
-                    .length;
-                final pendingCount = pinnedFeedback
-                    .where((f) => f.status == FeedbackStatus.pending)
-                    .length;
-                final completedCount = pinnedFeedback
-                    .where((f) => f.status == FeedbackStatus.completed)
-                    .length;
 
-                return Container(
-                  margin: const EdgeInsets.all(16),
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.amber[700]!, Colors.amber[500]!],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.amber.withOpacity(0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      // 📌 Icon Container
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.push_pin,
-                          color: Colors.white,
-                          size: 32,
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      
-                      // 📊 Stats Column
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Main Title
-                            Text(
-                              '$pinnedCount Pinned Report${pinnedCount != 1 ? 's' : ''}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            
-                            // Filter Chips Row
-                            Wrap(
-                              spacing: 12,
-                              runSpacing: 8,
-                              children: [
-                                _buildClickablePriorityFilter(
-                                  Icons.warning,
-                                  '$criticalCount Critical',
-                                  Priority.critical,
-                                ),
-                                _buildClickableStatusFilter(
-                                  Icons.schedule,
-                                  '$pendingCount Pending',
-                                  FeedbackStatus.pending,
-                                ),
-                                _buildClickableStatusFilter(
-                                  Icons.check_circle,
-                                  '$completedCount Completed',
-                                  FeedbackStatus.completed,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              });
-            }
-
-          // 🎯 NEW: Clickable Priority Filter Chip
-          Widget _buildClickablePriorityFilter(
-            IconData icon,
-            String label,
-            Priority priority,
-          ) {
+              // ==================== UPDATED STATS CARD (Non-clickable) ====================
+          Widget _buildPinnedStatsCard() {
             return Obx(() {
-              final isActive = controller.priorityFilter.value == priority;
+              final pinnedCount = pinnedFeedback.length;
+              final criticalCount = pinnedFeedback
+                  .where((f) => f.priority == Priority.critical)
+                  .length;
+              final pendingCount = pinnedFeedback
+                  .where((f) => f.status == FeedbackStatus.pending)
+                  .length;
+              final completedCount = pinnedFeedback
+                  .where((f) => f.status == FeedbackStatus.completed)
+                  .length;
 
-              return PopupMenuButton<Priority>(
-                color: const Color.fromRGBO(248, 253, 255, 1),
-                tooltip: 'Filter by Priority',
-                offset: const Offset(0, 40),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: Colors.grey[300]!),
-                ),
-                onSelected: (Priority? selectedPriority) {
-                  if (selectedPriority == null) {
-                    controller.updateFilters(clearPriority: true);
-                  } else {
-                    controller.updateFilters(priority: selectedPriority);
-                  }
-                },
-                itemBuilder: (BuildContext context) {
-                  return [
-                    PopupMenuItem<Priority>(
-                      value: null,
-                      child: Row(
-                        children: [
-                          Icon(Icons.clear_all, size: 16, color: Colors.grey[600]),
-                          const SizedBox(width: 12),
-                          const Text(
-                            'Show All',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuDivider(),
-                    ...Priority.values.map((Priority p) {
-                      final isSelected = p == controller.priorityFilter.value;
-                      final priorityColor = _getPriorityColor(p);
-                      final priorityIcon = _getPriorityIcon(p);
-
-                      return PopupMenuItem<Priority>(
-                        value: p,
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: priorityColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                priorityIcon,
-                                size: 16,
-                                color: priorityColor,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                p.displayName,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight:
-                                      isSelected ? FontWeight.w600 : FontWeight.w500,
-                                  color: isSelected ? priorityColor : Colors.grey[800],
-                                ),
-                              ),
-                            ),
-                            if (isSelected)
-                              Icon(Icons.check, size: 18, color: priorityColor),
-                          ],
-                        ),
-                      );
-                    }),
-                  ];
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: isActive
-                        ? Colors.white.withOpacity(0.3)
-                        : Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isActive
-                          ? Colors.white.withOpacity(0.6)
-                          : Colors.white.withOpacity(0.3),
-                      width: isActive ? 2 : 1,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(icon, color: Colors.white, size: 14),
-                      const SizedBox(width: 6),
-                      Text(
-                        label,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.arrow_drop_down,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            });
-          }
-
-          // 🎯 NEW: Clickable Status Filter Chip
-          Widget _buildClickableStatusFilter(
-            IconData icon,
-            String label,
-            FeedbackStatus status,
-          ) {
-            return Obx(() {
-              final isActive = controller.statusFilter.value == status;
-
-              return PopupMenuButton<FeedbackStatus>(
-                color: const Color.fromRGBO(248, 253, 255, 1),
-                tooltip: 'Filter by Status',
-                offset: const Offset(0, 40),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: Colors.grey[300]!),
-                ),
-                onSelected: (FeedbackStatus? selectedStatus) {
-                  if (selectedStatus == null) {
-                    controller.updateFilters(clearStatus: true);
-                  } else {
-                    controller.updateFilters(status: selectedStatus);
-                  }
-                },
-                itemBuilder: (BuildContext context) {
-                  return [
-                    PopupMenuItem<FeedbackStatus>(
-                      value: null,
-                      child: Row(
-                        children: [
-                          Icon(Icons.clear_all, size: 16, color: Colors.grey[600]),
-                          const SizedBox(width: 12),
-                          const Text(
-                            'Show All',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuDivider(),
-                    ...FeedbackStatus.values.map((FeedbackStatus s) {
-                      final isSelected = s == controller.statusFilter.value;
-                      final statusColor = _getStatusColor(s);
-                      final statusIcon = _getStatusIcon(s);
-
-                      return PopupMenuItem<FeedbackStatus>(
-                        value: s,
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: statusColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                statusIcon,
-                                size: 16,
-                                color: statusColor,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                s.displayName,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight:
-                                      isSelected ? FontWeight.w600 : FontWeight.w500,
-                                  color: isSelected ? statusColor : Colors.grey[800],
-                                ),
-                              ),
-                            ),
-                            if (isSelected)
-                              Icon(Icons.check, size: 18, color: statusColor),
-                          ],
-                        ),
-                      );
-                    }),
-                  ];
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: isActive
-                        ? Colors.white.withOpacity(0.3)
-                        : Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isActive
-                          ? Colors.white.withOpacity(0.6)
-                          : Colors.white.withOpacity(0.3),
-                      width: isActive ? 2 : 1,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(icon, color: Colors.white, size: 14),
-                      const SizedBox(width: 6),
-                      Text(
-                        label,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.arrow_drop_down,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            });
-          }
-
-            Widget _buildPinnedStatChip(IconData icon, String label, Color color) {
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                margin: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(
+                    colors: [Colors.amber[700]!, Colors.amber[500]!],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.amber.withOpacity(0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(icon, color: Colors.white, size: 14),
-                    const SizedBox(width: 6),
-                    Text(
-                      label,
-                      style: const TextStyle(
+                    // 📌 Icon Container
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.push_pin,
                         color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        size: 32,
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    
+                    // 📊 Stats Column
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Main Title
+                          Text(
+                            '$pinnedCount Pinned Report${pinnedCount != 1 ? 's' : ''}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          
+                          // ✅ UPDATED: Non-clickable Stats Chips
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 8,
+                            children: [
+                              _buildPinnedStatChip(
+                                Icons.warning,
+                                '$criticalCount Critical',
+                                Colors.red,
+                              ),
+        
+                              _buildPinnedStatChip(
+                                Icons.check_circle,
+                                '$completedCount Completed',
+                                Colors.green,
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               );
-            }
+            });
+          }
+
+          // ✅ Keep this existing helper method (no changes needed)
+          Widget _buildPinnedStatChip(IconData icon, String label, Color color) {
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, color: Colors.white, size: 14),
+                  const SizedBox(width: 6),
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+         
+
 
             // ==================== SEARCH BARS ====================
             Widget _buildMobileSearchBar() {
@@ -2715,7 +2473,7 @@ class _PinnedFeedbackPageState extends State<PinnedFeedbackPage> {
   
 
 void _markAsCompleted(FeedbackAndReport feedback) {
-  final TextEditingController resolutionController = TextEditingController();
+  
 
   showDialog(
     context: context,
@@ -2792,22 +2550,7 @@ void _markAsCompleted(FeedbackAndReport feedback) {
             ),
           ),
           const SizedBox(height: 16),
-          TextField(
-            controller: resolutionController,
-            decoration: InputDecoration(
-              labelText: 'Resolution Notes (Optional)',
-              hintText: 'Describe how the issue was fixed...',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF517399), width: 2),
-              ),
-            ),
-            maxLines: 3,
-          ),
-          const SizedBox(height: 16),
+    
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -2836,7 +2579,6 @@ void _markAsCompleted(FeedbackAndReport feedback) {
       actions: [
         TextButton(
           onPressed: () {
-            resolutionController.dispose();
             Navigator.pop(context);
           },
           child: Text(
@@ -2854,16 +2596,7 @@ void _markAsCompleted(FeedbackAndReport feedback) {
               FeedbackStatus.completed,
             );
 
-            if (resolutionController.text.trim().isNotEmpty) {
-              await controller.addReply(
-                feedback.documentId!,
-                'Resolution: ${resolutionController.text.trim()}',
-              );
-            }
-
-            resolutionController.dispose();
             Navigator.pop(context);
-
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Row(

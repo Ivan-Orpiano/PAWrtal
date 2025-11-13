@@ -322,9 +322,9 @@ bool _validateFile(PlatformFile file) {
   /// Submit feedback
   Future<bool> submitFeedback() async {
       if (!canSubmitFeedback()) {
-      _showError(
-        'Daily limit reached (3/3). You can submit again in ${getTimeUntilReset()}.'
-      );
+      // _showError(
+      //   'Daily limit reached (3/3). You can submit again in ${getTimeUntilReset()}.'
+      // );
       return false;
     }
     if (!validateForm()) return false;
