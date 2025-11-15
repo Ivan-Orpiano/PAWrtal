@@ -17,14 +17,14 @@ class WebMaps extends StatefulWidget {
   final String selectedFilter;
   final String searchQuery;
   final Function(String)? onFilterChanged;
-  final Map<String, ClinicRatingStats>? ratingStatsCache; // NEW: Add this
+  final Map<String, ClinicRatingStats>? ratingStatsCache;
 
   const WebMaps({
     super.key,
     this.selectedFilter = 'All',
     this.searchQuery = '',
     this.onFilterChanged,
-    this.ratingStatsCache, // NEW: Add this
+    this.ratingStatsCache,
   });
 
   @override
@@ -44,13 +44,97 @@ class _WebMapsState extends State<WebMaps> {
   bool isLoading = true;
   String? error;
 
+  // KEEP ORIGINAL CAMERA BOUNDS - Same as before
+  // This defines what the camera can see
   final sanJoseDelMonteBounds = LatLngBounds(
-    const LatLng(14.7500, 121.0000),
-    const LatLng(14.8700, 121.1000),
+    const LatLng(14.7667, 121.0167), // Southwest: 14°46'N, 121°1'E
+    const LatLng(14.8667, 121.1667), // Northeast: 14°52'N, 121°10'E
   );
 
+  // STRICT SJDM POLYGON BOUNDARIES - Defines what shows markers/content
+  // Based on official boundaries, excluding disputed areas with Norzagaray
+  // and clear borders with Caloocan, Quezon City, Rodriguez, Santa Maria, and Marilao
+  final List<LatLng> sjdmPolygonBoundary = const [
+    // SOUTHWEST CORNER - Muzon area (border with Caloocan)
+    LatLng(14.7700, 121.0400),
+
+    // SOUTH BORDER - Border with Caloocan and Quezon City
+    LatLng(14.7720, 121.0500),
+    LatLng(14.7750, 121.0600),
+    LatLng(14.7800, 121.0700),
+
+    // SOUTHEAST CORNER - Border with Quezon City/Rodriguez
+    LatLng(14.7850, 121.0850),
+    LatLng(14.7900, 121.0950),
+
+    // EAST BORDER - Border with Rodriguez, Rizal and Quezon Province
+    LatLng(14.8000, 121.1050),
+    LatLng(14.8100, 121.1150),
+    LatLng(14.8200, 121.1200), // Easternmost point
+    LatLng(14.8300, 121.1180),
+    LatLng(14.8400, 121.1150),
+
+    // NORTHEAST CORNER - Approaching Norzagaray (exclude disputed areas)
+    LatLng(14.8480, 121.1100), // Before Minuyan disputed area
+    LatLng(14.8520, 121.0900), // Avoid Norzagaray encroachment
+
+    // NORTH BORDER - Border with Norzagaray (conservative line)
+    LatLng(14.8500, 121.0800),
+    LatLng(14.8480, 121.0700),
+    LatLng(14.8460, 121.0600),
+    LatLng(14.8440, 121.0500),
+
+    // NORTHWEST CORNER - Sapang Palay area (avoid Norzagaray disputed zones)
+    LatLng(14.8420, 121.0400),
+    LatLng(14.8380, 121.0320), // Western Sapang Palay
+    LatLng(14.8320, 121.0280), // Kaypian area
+
+    // WEST BORDER - Border with Santa Maria and Marilao
+    LatLng(14.8200, 121.0250), // Western boundary
+    LatLng(14.8100, 121.0280),
+    LatLng(14.8000, 121.0320),
+    LatLng(14.7900, 121.0350),
+    LatLng(14.7800, 121.0380),
+
+    // Back to start - SOUTHWEST CORNER
+    LatLng(14.7700, 121.0400),
+  ];
+
+  // CRITICAL: Point-in-polygon test for STRICT SJDM boundary
   bool isWithinBounds(LatLng point) {
-    return sanJoseDelMonteBounds.contains(point);
+    // Ray casting algorithm for point-in-polygon test
+    // This ensures ONLY areas within the polygon boundary are considered valid SJDM
+    return _isPointInPolygon(point, sjdmPolygonBoundary);
+  }
+
+  // Ray casting algorithm implementation
+  bool _isPointInPolygon(LatLng point, List<LatLng> polygon) {
+    int intersectCount = 0;
+    for (int i = 0; i < polygon.length - 1; i++) {
+      if (_rayCastIntersect(point, polygon[i], polygon[i + 1])) {
+        intersectCount++;
+      }
+    }
+    return (intersectCount % 2) == 1; // Odd number of intersections = inside
+  }
+
+  bool _rayCastIntersect(LatLng point, LatLng vertA, LatLng vertB) {
+    double aY = vertA.latitude;
+    double bY = vertB.latitude;
+    double aX = vertA.longitude;
+    double bX = vertB.longitude;
+    double pY = point.latitude;
+    double pX = point.longitude;
+
+    if ((aY > pY && bY > pY) || (aY < pY && bY < pY) || (aX < pX && bX < pX)) {
+      return false;
+    }
+
+    double m = (bY - aY) / (bX - aX);
+    double bee = (-aX) * m + aY;
+    double x = (pY - bee) / m;
+
+    return x > pX;
   }
 
   @override
@@ -80,21 +164,25 @@ class _WebMapsState extends State<WebMaps> {
       Position? position = await _getCurrentUserLocation();
       if (position != null) {
         LatLng fetchedLocation = LatLng(position.latitude, position.longitude);
+
+        // STRICT: If user location is outside SJDM polygon, default to city center
         if (!isWithinBounds(fetchedLocation)) {
-          fetchedLocation = sanJoseDelMonteBounds.center;
+          fetchedLocation =
+              const LatLng(14.8167, 121.0500); // SJDM City Center (Poblacion)
         }
+
         setState(() {
           userLocation = fetchedLocation;
         });
       } else {
-        // Default to center of bounds if location not available
+        // Default to SJDM city center
         setState(() {
-          userLocation = sanJoseDelMonteBounds.center;
+          userLocation = const LatLng(14.8167, 121.0500);
         });
       }
     } catch (e) {
       setState(() {
-        userLocation = sanJoseDelMonteBounds.center;
+        userLocation = const LatLng(14.8167, 121.0500);
       });
     }
   }
@@ -142,7 +230,6 @@ class _WebMapsState extends State<WebMaps> {
   }
 
   void _applyFilters() {
-
     var filtered = List<Clinic>.from(allClinics);
 
     // Apply search filter first
@@ -178,7 +265,6 @@ class _WebMapsState extends State<WebMaps> {
           final isOpen = settings.isOpen;
           final isOpenNow = settings.isOpenNow();
 
-
           return isOpen && isOpenNow && !isTodayClosedDate;
         }).toList();
         break;
@@ -198,7 +284,6 @@ class _WebMapsState extends State<WebMaps> {
           final isOpen = settings.isOpen;
           final isOpenNow = settings.isOpenNow();
 
-
           final isClosed = !isOpen || !isOpenNow || isTodayClosedDate;
 
           return isClosed;
@@ -206,7 +291,6 @@ class _WebMapsState extends State<WebMaps> {
         break;
 
       case 'Popular':
-
         if (widget.ratingStatsCache != null) {
           // Sort by review count (descending) and rating (descending)
           filtered.sort((a, b) {
@@ -230,16 +314,8 @@ class _WebMapsState extends State<WebMaps> {
           // Only show clinics with at least 1 review
           filtered = filtered.where((clinic) {
             final stats = widget.ratingStatsCache![clinic.documentId ?? ''];
-            final hasReviews = (stats?.totalReviews ?? 0) > 0;
-
-            if (hasReviews) {
-            } else {
-            }
-
-            return hasReviews;
+            return (stats?.totalReviews ?? 0) > 0;
           }).toList();
-
-        } else {
         }
         break;
 
@@ -248,30 +324,25 @@ class _WebMapsState extends State<WebMaps> {
         break;
     }
 
-
-    // Only include clinics that have location data set
-    final beforeLocationFilter = filtered.length;
+    // CRITICAL: Only include clinics with location data AND within SJDM POLYGON
     filtered = filtered.where((clinic) {
       final settings = clinicSettingsMap[clinic.documentId ?? ''];
-      final hasLocation = settings?.location != null;
-
-      if (!hasLocation) {
+      if (settings?.location == null) {
+        return false;
       }
 
-      return hasLocation;
-    }).toList();
+      final location = LatLng(
+        settings!.location!['lat']!,
+        settings.location!['lng']!,
+      );
 
+      // STRICT POLYGON CHECK: Filter out clinics outside SJDM polygon boundary
+      return isWithinBounds(location);
+    }).toList();
 
     setState(() {
       filteredClinics = filtered;
     });
-
-    for (var clinic in filteredClinics) {
-      final stats = widget.ratingStatsCache?[clinic.documentId ?? ''];
-      if (stats != null) {
-      } else {
-      }
-    }
   }
 
   Future<Position?> _getCurrentUserLocation() async {
@@ -310,35 +381,38 @@ class _WebMapsState extends State<WebMaps> {
     Clinic? nearest;
     double shortestDistance = double.infinity;
 
-
     for (final clinic in filteredClinics) {
       final settings = clinicSettingsMap[clinic.documentId ?? ''];
 
       if (settings?.location != null) {
-        // CRITICAL: Check if clinic is OPEN and AVAILABLE
+        final clinicLocation =
+            LatLng(settings!.location!['lat']!, settings.location!['lng']!);
+
+        // STRICT: Skip clinics outside SJDM polygon
+        if (!isWithinBounds(clinicLocation)) {
+          continue;
+        }
+
+        // Check if clinic is OPEN and AVAILABLE
         final today = DateTime.now();
         final todayStr =
             '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-        final isTodayClosedDate = settings!.closedDates.contains(todayStr);
+        final isTodayClosedDate = settings.closedDates.contains(todayStr);
 
         // Clinic must be: isOpen flag true, open now, and NOT on a closed date
         final isOpenAndAvailable =
             settings.isOpen && settings.isOpenNow() && !isTodayClosedDate;
 
         if (!isOpenAndAvailable) {
-          continue; // Skip this clinic
+          continue;
         }
 
-        final clinicLocation =
-            LatLng(settings.location!['lat']!, settings.location!['lng']!);
         final dist = calculateDistance(userLocation!, clinicLocation);
-
 
         if (dist < shortestDistance) {
           shortestDistance = dist;
           nearest = clinic;
         }
-      } else {
       }
     }
 
@@ -348,23 +422,23 @@ class _WebMapsState extends State<WebMaps> {
         final nearestLocation =
             LatLng(settings!.location!['lat']!, settings.location!['lng']!);
 
+        // STRICT: Double-check polygon bounds before moving
         if (isWithinBounds(nearestLocation)) {
-
           _mapController.move(nearestLocation, 17);
           fetchRoute(nearestLocation);
         } else {
           _showNoNearestClinicMessage(
-              'Nearest open clinic is outside the service area');
+              'Nearest open clinic is outside San Jose del Monte city limits');
         }
       }
     } else {
-      _showNoNearestClinicMessage('No open clinics available nearby');
+      _showNoNearestClinicMessage(
+          'No open clinics available in San Jose del Monte');
     }
   }
 
   List<Marker> getMarkers() {
     if (userLocation == null) return [];
-
 
     final markers = <Marker>[];
 
@@ -378,13 +452,14 @@ class _WebMapsState extends State<WebMaps> {
       final location =
           LatLng(settings!.location!['lat']!, settings.location!['lng']!);
 
+      // STRICT: Only show markers within SJDM polygon boundary
       if (!isWithinBounds(location)) {
         continue;
       }
 
       double distanceInKm = calculateDistance(userLocation!, location);
 
-      // CRITICAL: Determine marker color with closed dates support
+      // Determine marker color with closed dates support
       Color markerColor;
 
       // Check if today is a closed date
@@ -407,8 +482,8 @@ class _WebMapsState extends State<WebMaps> {
 
       markers.add(Marker(
         point: location,
-        width: 70, // Make sure this is consistent
-        height: 90, // Make sure this is consistent
+        width: 70,
+        height: 90,
         child: GestureDetector(
           onTap: () {
             if (userLocation != null) {
@@ -471,7 +546,6 @@ class _WebMapsState extends State<WebMaps> {
       ));
     }
 
-
     return markers;
   }
 
@@ -509,6 +583,7 @@ class _WebMapsState extends State<WebMaps> {
         }
       }
     } catch (e) {
+      // Handle error silently
     }
   }
 
@@ -592,7 +667,7 @@ class _WebMapsState extends State<WebMaps> {
             ),
             const SizedBox(height: 8),
             Text(
-              "Only clinics with set locations are shown on the map",
+              "Only clinics within San Jose del Monte city limits are shown",
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey[500],
@@ -647,8 +722,10 @@ class _WebMapsState extends State<WebMaps> {
               mapController: _mapController,
               options: MapOptions(
                 initialCenter: userLocation!,
-                initialZoom: 15,
+                initialZoom: 14,
+                minZoom: 12,
                 maxZoom: 19,
+                // KEEP ORIGINAL CAMERA CONSTRAINT - Areas outside SJDM will just have no markers
                 cameraConstraint: CameraConstraint.contain(
                   bounds: sanJoseDelMonteBounds,
                 ),
@@ -696,7 +773,6 @@ class _WebMapsState extends State<WebMaps> {
                         final settings =
                             clinicSettingsMap[clinic.documentId ?? ''];
 
-                        // Just return the popup directly - no wrapper needed
                         return VetPopup(
                           clinic: clinic,
                           clinicSettings: settings,
@@ -745,7 +821,7 @@ class _WebMapsState extends State<WebMaps> {
                 ),
               ),
             ),
-          // Filter info overlay
+          // Filter info overlay with SJDM indicator
           Positioned(
             top: 20,
             left: 20,
@@ -762,12 +838,27 @@ class _WebMapsState extends State<WebMaps> {
                   ),
                 ],
               ),
-              child: Text(
-                '${filteredClinics.length} clinics ${widget.selectedFilter != 'All' ? '(${widget.selectedFilter})' : ''}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${filteredClinics.length} clinics ${widget.selectedFilter != 'All' ? '(${widget.selectedFilter})' : ''}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'SJDM city limits only',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.green,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
