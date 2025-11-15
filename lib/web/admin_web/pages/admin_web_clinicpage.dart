@@ -1106,33 +1106,6 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
                     border: OutlineInputBorder(),
                   ),
                 ),
-                const SizedBox(height: 8),
-                // Container(
-                //   padding: EdgeInsets.all(isMobile ? 10 : 12),
-                //   decoration: BoxDecoration(
-                //     color: Colors.grey[50],
-                //     borderRadius: BorderRadius.circular(8),
-                //     border: Border.all(color: Colors.grey[300]!),
-                //   ),
-                //   child: Column(
-                //     children: [
-                //       Obx(() => SwitchListTile(
-                //             title: Text("Auto-accept Appointments",
-                //                 style: TextStyle(fontSize: isMobile ? 13 : 14)),
-                //             subtitle: Text(
-                //                 "Automatically approve new appointment requests",
-                //                 style: TextStyle(fontSize: isMobile ? 11 : 12)),
-                //             value: controller.autoAcceptAppointments.value,
-                //             contentPadding: EdgeInsets.zero,
-                //             onChanged: (value) {
-                //               controller.autoAcceptAppointments.value = value;
-                //             },
-                //             activeColor:
-                //                 const Color.fromARGB(255, 81, 115, 153),
-                //           )),
-                //     ],
-                //   ),
-                // ),
                 const SizedBox(height: 20),
                 Row(
                   children: [
@@ -1172,63 +1145,94 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
             ),
           ),
           const SizedBox(height: 20),
-          _buildSectionCard(
-            title: "Clinic Location",
-            isMobile: isMobile,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Pin your clinic's location on the map so customers can find you easily",
-                  style: TextStyle(
-                    fontSize: isMobile ? 13 : 14,
-                    color: Colors.grey[700],
+
+          // MODIFIED: Wrap the location section in its own isolated card
+          // with overflow handling to prevent dropdown clipping
+          _buildLocationSectionCard(isMobile),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationSectionCard(bool isMobile) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: EdgeInsets.all(isMobile ? 12 : 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Clinic Location",
+            style: TextStyle(
+              fontSize: isMobile ? 16 : 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            "Pin your clinic's location on the map so customers can find you easily",
+            style: TextStyle(
+              fontSize: isMobile ? 13 : 14,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // CRITICAL: Wrap AdminPinMapsPage in ClipRect to prevent overflow
+          // and ensure dropdown is visible above other content
+          ClipRect(
+            child: Obx(() => AdminPinMapsPage(
+                  currentLocation: controller.selectedLocation.value,
+                  onLocationSelected: (location) {
+                    controller.selectedLocation.value = location;
+                  },
+                )),
+          ),
+
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Spacer(),
+              ElevatedButton.icon(
+                onPressed: controller.isSaving.value
+                    ? null
+                    : controller.saveClinicSettings,
+                icon: controller.isSaving.value
+                    ? SizedBox(
+                        width: isMobile ? 13 : 16,
+                        height: isMobile ? 13 : 16,
+                        child: const CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save),
+                label: Text(
+                    controller.isSaving.value ? "Saving..." : "Save Location",
+                    style: TextStyle(fontSize: isMobile ? 12 : 13)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color.fromARGB(255, 81, 115, 153),
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 12 : 20,
+                      vertical: isMobile ? 8 : 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                const SizedBox(height: 16),
-                Obx(() => AdminPinMapsPage(
-                      currentLocation: controller.selectedLocation.value,
-                      onLocationSelected: (location) {
-                        controller.selectedLocation.value = location;
-                      },
-                    )),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    const Spacer(),
-                    ElevatedButton.icon(
-                      onPressed: controller.isSaving.value
-                          ? null
-                          : controller.saveClinicSettings,
-                      icon: controller.isSaving.value
-                          ? SizedBox(
-                              width: isMobile ? 13 : 16,
-                              height: isMobile ? 13 : 16,
-                              child: const CircularProgressIndicator(
-                                  strokeWidth: 2),
-                            )
-                          : const Icon(Icons.save),
-                      label: Text(
-                          controller.isSaving.value
-                              ? "Saving..."
-                              : "Save Location",
-                          style: TextStyle(fontSize: isMobile ? 12 : 13)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            const Color.fromARGB(255, 81, 115, 153),
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(
-                            horizontal: isMobile ? 12 : 20,
-                            vertical: isMobile ? 8 : 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
