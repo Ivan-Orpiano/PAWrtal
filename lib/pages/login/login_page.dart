@@ -434,6 +434,28 @@ class _LoginPageState extends State<LoginPage> {
                           ],
                         ),
                       ),
+                      const SizedBox(height: 32,),
+                      // TextButton(
+                      //   onPressed: () =>
+                      //       Get.toNamed('/vet-clinic-registration'),
+                      //   child: const Text('Sign up as a veterinary clinic'),
+                      // ),
+                      RichText(
+                        text: TextSpan(
+                          style: const TextStyle(color: Colors.black),
+                          children: <TextSpan>[
+                            TextSpan(
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Color.fromARGB(255, 81, 115, 153),
+                              ),
+                              text: "Register your veterinary clinic here →",
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = _moveToSignUpVet,
+                            ),
+                          ],
+                        ),
+                      ),
                       const SizedBox(height: 32),
                     ],
                   ),
@@ -444,5 +466,8 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
     );
+  }
+  void _moveToSignUpVet() {
+    Get.toNamed(Routes.vetClinicRegistration);
   }
 }

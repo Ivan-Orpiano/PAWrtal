@@ -69,7 +69,6 @@ class AppWriteProvider {
       final email = map["email"];
       final password = map["password"];
 
-
       // CRITICAL FIX: Check for existing session and clear it first
       try {
         final existingUser = await account!.get();
@@ -80,8 +79,7 @@ class AppWriteProvider {
         } catch (e) {
           try {
             await account!.deleteSessions();
-          } catch (e2) {
-          }
+          } catch (e2) {}
         }
 
         // Wait a bit for session deletion to propagate
@@ -97,7 +95,6 @@ class AppWriteProvider {
       );
 
       final user = await account!.get();
-
 
       // Step 2: CRITICAL - Check if ADMIN first (highest priority)
       final clinicDoc = await getClinicByAdminId(user.$id);
@@ -6874,6 +6871,188 @@ class AppWriteProvider {
       };
     } catch (e) {
       return null;
+    }
+  }
+
+  // ============= VET CLINIC REGISTRATION REQUEST METHODS =============
+// Add these methods to your AppWriteProvider class
+
+  /// Create vet clinic registration request
+  Future<Document> createVetRegistrationRequest(
+      Map<String, dynamic> data) async {
+    try {
+      return await databases!.createDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.vetRegistrationRequestsCollectionID,
+        documentId: ID.unique(),
+        data: data,
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get all vet registration requests
+  Future<List<Document>> getAllVetRegistrationRequests({
+    String? status,
+  }) async {
+    try {
+      List<String> queries = [
+        Query.orderDesc('submittedAt'),
+        Query.limit(100),
+      ];
+
+      if (status != null && status != 'all') {
+        queries.add(Query.equal('status', status));
+      }
+
+      final result = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.vetRegistrationRequestsCollectionID,
+        queries: queries,
+      );
+
+      return result.documents;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Get single registration request by ID
+  Future<Document?> getVetRegistrationRequestById(String requestId) async {
+    try {
+      final doc = await databases!.getDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.vetRegistrationRequestsCollectionID,
+        documentId: requestId,
+      );
+      return doc;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Update registration request status
+  Future<void> updateVetRegistrationRequestStatus(
+    String requestId,
+    String status,
+    String reviewedBy,
+    String? reviewNotes,
+  ) async {
+    try {
+      await databases!.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.vetRegistrationRequestsCollectionID,
+        documentId: requestId,
+        data: {
+          'status': status,
+          'reviewedBy': reviewedBy,
+          'reviewNotes': reviewNotes ?? '',
+          'reviewedAt': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Upload registration document (PDF, images)
+  Future<models.File> uploadVetRegistrationDocument(PlatformFile file) async {
+    try {
+      final extension = file.extension ?? 'pdf';
+      String fileName =
+          "vet_reg_${DateTime.now().millisecondsSinceEpoch}.$extension";
+
+      InputFile inputFile;
+
+      // Web upload (using bytes)
+      if (file.bytes != null) {
+        inputFile = InputFile.fromBytes(
+          bytes: file.bytes!,
+          filename: fileName,
+        );
+      }
+      // Mobile upload (using path)
+      else if (file.path != null) {
+        inputFile = InputFile.fromPath(
+          path: file.path!,
+          filename: fileName,
+        );
+      } else {
+        throw Exception('Invalid file format');
+      }
+
+      final response = await storage!.createFile(
+        bucketId: AppwriteConstants.vetRegistrationDocumentsBucketID,
+        fileId: ID.unique(),
+        file: inputFile,
+      );
+
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Delete registration document
+  Future<void> deleteVetRegistrationDocument(String fileId) async {
+    try {
+      await storage!.deleteFile(
+        bucketId: AppwriteConstants.vetRegistrationDocumentsBucketID,
+        fileId: fileId,
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get registration document URL
+  String getVetRegistrationDocumentUrl(String fileId) {
+    if (fileId.isEmpty) return '';
+
+    return '${AppwriteConstants.endPoint}/storage/buckets/${AppwriteConstants.vetRegistrationDocumentsBucketID}/files/$fileId/view?project=${AppwriteConstants.projectID}';
+  }
+
+  /// Subscribe to registration requests (real-time)
+  Stream<RealtimeMessage> subscribeToVetRegistrationRequests() {
+    final realtime = Realtime(client);
+    return realtime.subscribe([
+      'databases.${AppwriteConstants.dbID}.collections.${AppwriteConstants.vetRegistrationRequestsCollectionID}.documents',
+    ]).stream;
+  }
+
+  /// Get registration statistics
+  Future<Map<String, int>> getVetRegistrationStats() async {
+    try {
+      final allRequests = await databases!.listDocuments(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.vetRegistrationRequestsCollectionID,
+      );
+
+      int pending = 0;
+      int approved = 0;
+      int rejected = 0;
+
+      for (var doc in allRequests.documents) {
+        final status = doc.data['status'];
+        if (status == 'pending') pending++;
+        if (status == 'approved') approved++;
+        if (status == 'rejected') rejected++;
+      }
+
+      return {
+        'total': allRequests.documents.length,
+        'pending': pending,
+        'approved': approved,
+        'rejected': rejected,
+      };
+    } catch (e) {
+      return {
+        'total': 0,
+        'pending': 0,
+        'approved': 0,
+        'rejected': 0,
+      };
     }
   }
 }

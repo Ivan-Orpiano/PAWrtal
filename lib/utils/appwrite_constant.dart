@@ -28,6 +28,9 @@ class AppwriteConstants {
   static String notificationsCollectionID = "68f859fe000532ab827a";
   static String userDailyReportsTrackerID = "userdailyreporttracker_";
 
+  static String vetRegistrationRequestsCollectionID = "6919e51d0015f00139f2";
+  static String vetRegistrationDocumentsBucketID = "67ef83bd0022c1e63789";
+
   static bool get messagingCollectionsConfigured {
     return conversationsCollectionID !=
             "REPLACE_WITH_CONVERSATIONS_COLLECTION_ID" &&
