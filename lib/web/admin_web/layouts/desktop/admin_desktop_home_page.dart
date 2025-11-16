@@ -2,6 +2,7 @@ import 'package:capstone_app/web/admin_web/components/appbar/admin_web_notif.dar
 import 'package:capstone_app/web/admin_web/components/appbar/admin_web_profile.dart';
 import 'package:capstone_app/web/admin_web/components/staffs/data/permission_guard.dart';
 import 'package:capstone_app/web/pages/web_admin_home/web_admin_home_controller.dart';
+import 'package:capstone_app/components/download_app_button.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -85,6 +86,8 @@ class _AdminDesktopHomePageState extends State<AdminDesktopHomePage> {
             padding: EdgeInsets.only(right: 60),
             child: Row(
               children: [
+                DownloadAppButton(),
+                SizedBox(width: 8),
                 AdminWebNotif(),
                 Padding(
                   padding: EdgeInsets.only(left: 30),

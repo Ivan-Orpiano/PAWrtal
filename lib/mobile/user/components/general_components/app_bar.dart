@@ -1,4 +1,5 @@
 import 'package:capstone_app/mobile/user/components/general_components/user_mobile_notif_button.dart';
+import 'package:capstone_app/components/download_app_button.dart';
 import 'package:flutter/material.dart';
 
 class MyAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -41,6 +42,8 @@ class MyAppBar extends StatelessWidget implements PreferredSizeWidget {
         }
       ),
       actions: const [
+        DownloadAppButton(isMobileLayout: true),
+        SizedBox(width: 8),
         MyNotifButton()
       ],
     );

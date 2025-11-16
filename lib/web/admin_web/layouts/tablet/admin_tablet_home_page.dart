@@ -2,6 +2,7 @@ import 'package:capstone_app/web/admin_web/components/appbar/admin_web_notif.dar
 import 'package:capstone_app/web/admin_web/components/appbar/admin_web_profile.dart';
 import 'package:capstone_app/web/admin_web/components/staffs/data/permission_guard.dart';
 import 'package:capstone_app/web/pages/web_admin_home/web_admin_home_controller.dart';
+import 'package:capstone_app/components/download_app_button.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -95,8 +96,10 @@ class _AdminTabletHomePageState extends State<AdminTabletHomePage> {
             ),
             child: const Row(
               children: [
+                DownloadAppButton(isMobileLayout: true),
+                SizedBox(width: 8),
                 AdminWebNotif(),
-                SizedBox(width: 12),
+                SizedBox(width: 16),
                 AdminWebProfile(),
               ],
             ),

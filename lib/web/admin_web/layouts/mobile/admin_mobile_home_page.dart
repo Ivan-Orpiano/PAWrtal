@@ -2,6 +2,7 @@ import 'package:capstone_app/web/admin_web/components/staffs/data/permission_gua
 import 'package:capstone_app/web/pages/web_admin_home/web_admin_home_controller.dart';
 import 'package:capstone_app/web/admin_web/components/appbar/admin_web_notif.dart';
 import 'package:capstone_app/web/admin_web/components/appbar/admin_web_profile.dart';
+import 'package:capstone_app/components/download_app_button.dart';
 import 'package:capstone_app/web/admin_web/pages/admin_settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -84,12 +85,14 @@ class _AdminMobileHomePageState extends State<AdminMobileHomePage> {
           ),
         ),
         actions: [
+          const DownloadAppButton(isMobileLayout: true),
           // Notification Icon with AdminWebNotif
-          AdminWebNotif(
+          const AdminWebNotif(
             right: 0,
             top: 70,
             width: 400,
           ),
+          const SizedBox(width: 8),
           // Profile Icon with AdminWebProfile - wrapped with custom navigation
           _buildProfileButton(controller),
         ],

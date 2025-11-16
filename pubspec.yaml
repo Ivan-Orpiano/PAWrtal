@@ -79,6 +79,7 @@ dependencies:
   web: ^1.1.1
   app_links: ^6.4.1
   timezone: ^0.10.1
+  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:
