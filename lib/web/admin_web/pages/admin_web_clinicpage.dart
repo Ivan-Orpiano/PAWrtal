@@ -24,6 +24,8 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
   bool _showEditingPage = false;
   bool _initialized = false;
 
+  String _fullAddressFromMap = '';
+
   @override
   bool get wantKeepAlive => true;
 
@@ -35,8 +37,18 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
     final storage = GetStorage();
     final storedTabIndex = storage.read('clinicPageInitialTab') as int?;
 
+    // Clear the stored value after reading
+    if (storedTabIndex != null) {
+      storage.remove('clinicPageInitialTab');
+    }
+
     _initializeTabController(
-        initialTab: storedTabIndex ?? widget.initialTabIndex);
+      initialTab: storedTabIndex ?? widget.initialTabIndex,
+    );
+
+    if (controller.addressController.text.isNotEmpty) {
+      _fullAddressFromMap = controller.addressController.text;
+    }
   }
 
   void _initializeTabController({int initialTab = 0}) {
@@ -149,7 +161,18 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
   }
 
   Widget _buildPreviewPage() {
-    return AdminClinicPreview(controller: controller);
+    return AdminClinicPreview(
+      controller: controller,
+      onNavigateToSettings: () {
+        setState(() {
+          _showEditingPage = true; // Switch to editing page
+        });
+        // Switch to Settings tab
+        if (_tabController.index != 2) {
+          _tabController.animateTo(2); // Animate to Settings tab
+        }
+      },
+    );
   }
 
   Widget _buildEditingPage(bool isMobile) {
@@ -1184,7 +1207,7 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
           ),
           const SizedBox(height: 16),
           Text(
-            "Pin your clinic's location on the map so customers can find you easily",
+            "Pin your clinic's location on the map and provide complete address details",
             style: TextStyle(
               fontSize: isMobile ? 13 : 14,
               color: Colors.grey[700],
@@ -1192,16 +1215,68 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
           ),
           const SizedBox(height: 16),
 
-          // CRITICAL: Wrap AdminPinMapsPage in ClipRect to prevent overflow
-          // and ensure dropdown is visible above other content
+          // MODIFIED: Add onAddressChanged callback
           ClipRect(
             child: Obx(() => AdminPinMapsPage(
                   currentLocation: controller.selectedLocation.value,
                   onLocationSelected: (location) {
                     controller.selectedLocation.value = location;
                   },
+                  // NEW: Handle address updates from map component
+                  onAddressChanged: (address) {
+                    setState(() {
+                      _fullAddressFromMap = address;
+                    });
+                    // Update controller's address if needed
+                    if (address.isNotEmpty) {
+                      controller.addressController.text = address;
+                    }
+                  },
                 )),
           ),
+
+          const SizedBox(height: 16),
+
+          // NEW: Show current address preview
+          if (_fullAddressFromMap.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green[200]!),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green[700], size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Complete Address:',
+                          style: TextStyle(
+                            fontSize: isMobile ? 11 : 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green[700],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _fullAddressFromMap,
+                          style: TextStyle(
+                            fontSize: isMobile ? 12 : 13,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
           const SizedBox(height: 16),
           Row(
@@ -1210,7 +1285,14 @@ class _AdminWebClinicpageState extends State<AdminWebClinicpage>
               ElevatedButton.icon(
                 onPressed: controller.isSaving.value
                     ? null
-                    : controller.saveClinicSettings,
+                    : () async {
+                        // Ensure address is saved to controller before saving
+                        if (_fullAddressFromMap.isNotEmpty) {
+                          controller.addressController.text =
+                              _fullAddressFromMap;
+                        }
+                        await controller.saveClinicSettings();
+                      },
                 icon: controller.isSaving.value
                     ? SizedBox(
                         width: isMobile ? 13 : 16,
