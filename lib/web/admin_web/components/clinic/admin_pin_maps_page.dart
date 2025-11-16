@@ -14,11 +14,13 @@ class Barangay {
 class AdminPinMapsPage extends StatefulWidget {
   final Function(Map<String, double>) onLocationSelected;
   final Map<String, double>? currentLocation;
+  final Function(String)? onAddressChanged; // NEW: Callback for address updates
 
   const AdminPinMapsPage({
     super.key,
     required this.onLocationSelected,
     this.currentLocation,
+    this.onAddressChanged, // NEW
   });
 
   @override
@@ -38,10 +40,28 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
   Barangay? selectedBarangay;
 
   final sanJoseDelMonteBounds = LatLngBounds(
-    const LatLng(14.7500, 121.0200), // Southwest corner (near Sapang Palay)
-    const LatLng(
-        14.8700, 121.0900), // Northeast corner (near Minuyan/upper areas)
+    const LatLng(14.7667, 121.0167), // Southwest: 14°46'N, 121°1'E
+    const LatLng(14.8667, 121.1667), // Northeast: 14°52'N, 121°10'E
   );
+
+  bool _rayCastIntersect(LatLng point, LatLng vertA, LatLng vertB) {
+    double aY = vertA.latitude;
+    double bY = vertB.latitude;
+    double aX = vertA.longitude;
+    double bX = vertB.longitude;
+    double pY = point.latitude;
+    double pX = point.longitude;
+
+    if ((aY > pY && bY > pY) || (aY < pY && bY < pY) || (aX < pX && bX < pX)) {
+      return false;
+    }
+
+    double m = (bY - aY) / (bX - aX);
+    double bee = (-aX) * m + aY;
+    double x = (pY - bee) / m;
+
+    return x > pX;
+  }
 
   // Complete list of SJDM Barangays with approximate coordinates
   // NOTE: These are approximate coordinates distributed across SJDM bounds
@@ -159,6 +179,85 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
         'Bagong Buhay III', const LatLng(14.8240, 121.0710)), // Central east
   ];
 
+  final List<LatLng> sjdmPolygonBoundary = const [
+    // Start from SOUTHWEST - Muzon area (border with Caloocan City)
+    LatLng(14.7680, 121.0480), // Muzon South - southernmost point
+
+    // SOUTH BORDER - Muzon to San Manuel (Caloocan & Quezon City border)
+    LatLng(14.7700, 121.0520), // Muzon South boundary
+    LatLng(14.7720, 121.0580), // Between Muzon and Gaya-Gaya
+    LatLng(14.7750, 121.0650), // Gaya-Gaya/Graceville area
+    LatLng(14.7780, 121.0720), // San Manuel area
+
+    // SOUTHEAST CURVE - San Manuel to Ciudad Real (Quezon City border)
+    LatLng(14.7820, 121.0800), // Tungkong Mangga south
+    LatLng(14.7860, 121.0880), // Ciudad Real west
+    LatLng(14.7900, 121.0950), // Ciudad Real center
+
+    // EAST BORDER START - Ciudad Real to Paradise III (Rodriguez, Rizal border)
+    LatLng(14.7950, 121.1020), // Ciudad Real east
+    LatLng(14.8000, 121.1080), // Paradise III south
+    LatLng(14.8050, 121.1140), // Paradise III center
+
+    // EAST BORDER MIDDLE - Paradise III to San Isidro (Rodriguez/Quezon border)
+    LatLng(14.8100, 121.1180), // Paradise III north / San Isidro
+    LatLng(14.8150, 121.1200), // San Isidro - easternmost point
+    LatLng(14.8200, 121.1190), // San Roque east
+
+    // NORTHEAST CURVE - San Roque to Minuyan areas
+    LatLng(14.8250, 121.1160), // Kaybanban east
+    LatLng(14.8300, 121.1120), // Minuyan II east
+    LatLng(14.8350, 121.1080), // Minuyan III east
+    LatLng(14.8400, 121.1050), // Minuyan IV east
+
+    // NORTH BORDER START - Minuyan to Citrus (Norzagaray border - conservative)
+    LatLng(14.8450, 121.1000), // Minuyan Proper east
+    LatLng(14.8480, 121.0920), // Citrus north - avoid disputed areas
+    LatLng(14.8500, 121.0850), // Minuyan V north (conservative boundary)
+
+    // NORTH BORDER MIDDLE - Minuyan to Sapang Palay (Norzagaray border)
+    LatLng(14.8510, 121.0780), // Santo Nino II north
+    LatLng(14.8500, 121.0700), // Bagong Buhay north
+    LatLng(14.8480, 121.0620), // San Rafael V north
+    LatLng(14.8460, 121.0550), // San Martin de Porres / Lawang Pari
+    LatLng(14.8440, 121.0480), // Assumption / Maharlika north
+
+    // NORTHWEST CORNER - Sapang Palay area (Norzagaray border)
+    LatLng(14.8420, 121.0410), // Sapang Palay north
+    LatLng(14.8390, 121.0350), // Sapang Palay northwest
+    LatLng(14.8350, 121.0300), // Gaya-Gaya north / Kaypian
+
+    // WEST BORDER - Kaypian to Dulong Bayan (Santa Maria border)
+    LatLng(14.8300, 121.0270), // Kaypian west - westernmost point
+    LatLng(14.8250, 121.0290), // Kaybanban west
+    LatLng(14.8200, 121.0310), // San Pedro west
+    LatLng(14.8150, 121.0330), // Santo Cristo west
+
+    // WEST BORDER SOUTH - Santo Cristo to Muzon (Santa Maria/Marilao border)
+    LatLng(14.8100, 121.0350), // Dulong Bayan west
+    LatLng(14.8050, 121.0370), // Poblacion west
+    LatLng(14.8000, 121.0390), // Gumaoc West
+    LatLng(14.7950, 121.0410), // Gaya-Gaya west
+    LatLng(14.7900, 121.0430), // Gaya-Gaya southwest
+    LatLng(14.7850, 121.0450), // Muzon West
+    LatLng(14.7800, 121.0460), // Muzon area
+    LatLng(14.7750, 121.0470), // Muzon South area
+
+    // Close polygon - back to start
+    LatLng(14.7680, 121.0480), // Muzon South - southernmost point
+  ];
+
+  // REPLACE _isWithinBounds with polygon-based checking
+  bool _isPointInPolygon(LatLng point, List<LatLng> polygon) {
+    int intersectCount = 0;
+    for (int i = 0; i < polygon.length - 1; i++) {
+      if (_rayCastIntersect(point, polygon[i], polygon[i + 1])) {
+        intersectCount++;
+      }
+    }
+    return (intersectCount % 2) == 1; // Odd number of intersections = inside
+  }
+
   @override
   void initState() {
     super.initState();
@@ -167,13 +266,11 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
 
     // Listen to search text changes
     _barangaySearchController.addListener(_filterBarangays);
-  }
 
-  @override
-  void dispose() {
-    _mapController.dispose();
-    _barangaySearchController.dispose();
-    super.dispose();
+    // NEW: Listen to address field changes
+    _streetController.addListener(_updateFullAddress);
+    _blockController.addListener(_updateFullAddress);
+    _buildingController.addListener(_updateFullAddress);
   }
 
   void _filterBarangays() {
@@ -201,9 +298,8 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
     // Navigate map to selected barangay with smooth animation
     _mapController.move(barangay.coordinates, 17);
 
-    // Optional: Auto-select the barangay location as clinic location
-    // Uncomment if you want this behavior:
-    // _onMapTap(TapPosition(null, null), barangay.coordinates);
+    // Do NOT auto-select the barangay location as clinic location
+    // User must manually tap the map to pin their clinic location
   }
 
   void _clearBarangaySearch() {
@@ -225,9 +321,13 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
       Position? position = await _getCurrentUserLocation();
       if (position != null) {
         LatLng fetchedLocation = LatLng(position.latitude, position.longitude);
+
+        // STRICT: If user location is outside SJDM polygon, default to city center
         if (!_isWithinBounds(fetchedLocation)) {
-          fetchedLocation = sanJoseDelMonteBounds.center;
+          fetchedLocation =
+              const LatLng(14.8167, 121.0500); // SJDM City Center (Poblacion)
         }
+
         if (mounted) {
           setState(() {
             userLocation = fetchedLocation;
@@ -236,14 +336,16 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
       } else {
         if (mounted) {
           setState(() {
-            userLocation = sanJoseDelMonteBounds.center;
+            userLocation =
+                const LatLng(14.8167, 121.0500); // Default to city center
           });
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          userLocation = sanJoseDelMonteBounds.center;
+          userLocation =
+              const LatLng(14.8167, 121.0500); // Default to city center
         });
       }
     }
@@ -316,7 +418,8 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
         return AlertDialog(
           title: const Text('Location Not Available'),
           content: const Text(
-            'Please select a location within San Jose del Monte, Bulacan area.',
+            'Please select a location within San Jose del Monte, Bulacan city limits. '
+            'Only locations within the official SJDM boundary are allowed.',
           ),
           actions: [
             TextButton(
@@ -461,16 +564,15 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // MODIFIED: Wrap search section in its own container with proper z-index handling
+        // Barangay search section
         Container(
-          // Add this to ensure dropdown appears above other content
           decoration: const BoxDecoration(),
           child: _buildBarangaySearchSection(isMobile),
         ),
 
         const SizedBox(height: 16),
 
-        // Original Info Container
+        // Info Container
         _buildInfoContainer(isMobile),
 
         const SizedBox(height: 16),
@@ -478,13 +580,15 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
         // Map Container
         _buildMapContainer(isMobile),
 
-        const SizedBox(height: 16),
-
-        // Selected Location Display
-        _buildLocationDisplay(isMobile),
+        // REMOVED: _buildLocationDisplay(isMobile) - No more coordinate display
       ],
     );
   }
+
+  // NEW: Text controllers for detailed address
+  final TextEditingController _streetController = TextEditingController();
+  final TextEditingController _blockController = TextEditingController();
+  final TextEditingController _buildingController = TextEditingController();
 
   Widget _buildBarangaySearchSection(bool isMobile) {
     return Container(
@@ -516,8 +620,6 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
           ),
           const SizedBox(height: 12),
 
-          // CRITICAL FIX: Use CompositedTransformTarget/Follower for proper overlay
-          // Or simpler approach: Use LayoutBuilder with Overlay
           LayoutBuilder(
             builder: (context, constraints) {
               return Column(
@@ -713,7 +815,7 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      'Map navigated to ${selectedBarangay!.name}',
+                      'Map navigated to ${selectedBarangay!.name}. Tap the map to pin your clinic location.',
                       style: TextStyle(
                         fontSize: isMobile ? 11 : 12,
                         color: Colors.green[900],
@@ -725,9 +827,268 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
               ),
             ),
           ],
+
+          // NEW: Detailed Address Fields
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 16),
+
+          Text(
+            'Complete Address Details',
+            style: TextStyle(
+              fontSize: isMobile ? 14 : 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Street/Subdivision TextField
+          TextField(
+            controller: _streetController,
+            decoration: InputDecoration(
+              labelText: 'Street/Subdivision Name',
+              hintText: 'e.g., Main Street, Greenfield Subdivision',
+              prefixIcon: const Icon(Icons.route, size: 20),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey[300]!),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey[300]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Colors.green, width: 2),
+              ),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 10 : 12,
+                vertical: isMobile ? 10 : 12,
+              ),
+            ),
+            style: TextStyle(fontSize: isMobile ? 13 : 14),
+            onChanged: (value) => _updateFullAddress(),
+          ),
+          const SizedBox(height: 12),
+
+          // Block/Lot Number and Building/Unit in a Row
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _blockController,
+                  decoration: InputDecoration(
+                    labelText: 'Block/Lot No. (Optional)',
+                    hintText: 'e.g., Block 5 Lot 10',
+                    prefixIcon: const Icon(Icons.tag, size: 20),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide:
+                          const BorderSide(color: Colors.green, width: 2),
+                    ),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 8 : 10,
+                      vertical: isMobile ? 10 : 12,
+                    ),
+                  ),
+                  style: TextStyle(fontSize: isMobile ? 13 : 14),
+                  onChanged: (value) => _updateFullAddress(),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: _buildingController,
+                  decoration: InputDecoration(
+                    labelText: 'Building/Unit (Optional)',
+                    hintText: 'e.g., Unit 201',
+                    prefixIcon: const Icon(Icons.apartment, size: 20),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide:
+                          const BorderSide(color: Colors.green, width: 2),
+                    ),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 8 : 10,
+                      vertical: isMobile ? 10 : 12,
+                    ),
+                  ),
+                  style: TextStyle(fontSize: isMobile ? 13 : 14),
+                  onChanged: (value) => _updateFullAddress(),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Auto-populated City/Province (Read-only)
+          Container(
+            padding: EdgeInsets.all(isMobile ? 12 : 14),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.location_city, size: 20, color: Colors.grey[600]),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'City / Province',
+                        style: TextStyle(
+                          fontSize: isMobile ? 11 : 12,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'San Jose del Monte, Bulacan',
+                        style: TextStyle(
+                          fontSize: isMobile ? 13 : 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[100],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'Auto',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue[700],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Full Address Preview
+          if (_getPreviewAddress().isNotEmpty)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.preview, size: 16, color: Colors.blue[700]),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Address Preview:',
+                        style: TextStyle(
+                          fontSize: isMobile ? 11 : 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blue[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _getPreviewAddress(),
+                    style: TextStyle(
+                      fontSize: isMobile ? 12 : 13,
+                      color: Colors.black87,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
+  }
+
+  // NEW: Helper method to build full address string
+  String _getPreviewAddress() {
+    List<String> addressParts = [];
+
+    // Add building/unit if provided
+    if (_buildingController.text.trim().isNotEmpty) {
+      addressParts.add(_buildingController.text.trim());
+    }
+
+    // Add block/lot if provided
+    if (_blockController.text.trim().isNotEmpty) {
+      addressParts.add(_blockController.text.trim());
+    }
+
+    // Add street if provided
+    if (_streetController.text.trim().isNotEmpty) {
+      addressParts.add(_streetController.text.trim());
+    }
+
+    // Add barangay if selected
+    if (selectedBarangay != null) {
+      addressParts.add('Brgy. ${selectedBarangay!.name}');
+    }
+
+    // Always add city and province
+    addressParts.add('San Jose del Monte');
+    addressParts.add('Bulacan');
+
+    return addressParts.join(', ');
+  }
+
+  // NEW: Method to update full address and notify parent
+  void _updateFullAddress() {
+    final fullAddress = _getPreviewAddress();
+    widget.onAddressChanged?.call(fullAddress);
+  }
+
+  @override
+  void dispose() {
+    _mapController.dispose();
+    _barangaySearchController.dispose();
+    _streetController.dispose();
+    _blockController.dispose();
+    _buildingController.dispose();
+    super.dispose();
   }
 
   Widget _buildInfoContainer(bool isMobile) {
@@ -744,7 +1105,7 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
           SizedBox(width: isMobile ? 6 : 8),
           Expanded(
             child: Text(
-              'Tap on the map to pin your clinic location. Only locations within San Jose del Monte area are allowed.',
+              'Tap on the map to pin your clinic location. Only locations within San Jose del Monte city limits are allowed.',
               style:
                   TextStyle(color: Colors.blue, fontSize: isMobile ? 12 : 13),
             ),
@@ -824,68 +1185,10 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
     );
   }
 
+  // MODIFIED: This method now returns an empty widget instead of showing coordinates
   Widget _buildLocationDisplay(bool isMobile) {
-    if (selectedLocation != null) {
-      return Container(
-        padding: EdgeInsets.all(isMobile ? 10 : 12),
-        decoration: BoxDecoration(
-          color: Colors.green.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.green.withOpacity(0.3)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.location_on,
-                    color: Colors.green, size: isMobile ? 18 : 20),
-                SizedBox(width: isMobile ? 6 : 8),
-                Text(
-                  'Selected Location:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: Colors.green,
-                    fontSize: isMobile ? 13 : 14,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Latitude: ${selectedLocation!.latitude.toStringAsFixed(6)}',
-              style: TextStyle(fontSize: isMobile ? 11 : 12),
-            ),
-            Text(
-              'Longitude: ${selectedLocation!.longitude.toStringAsFixed(6)}',
-              style: TextStyle(fontSize: isMobile ? 11 : 12),
-            ),
-          ],
-        ),
-      );
-    } else {
-      return Container(
-        padding: EdgeInsets.all(isMobile ? 10 : 12),
-        decoration: BoxDecoration(
-          color: Colors.orange.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.orange.withOpacity(0.3)),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.warning, color: Colors.orange, size: isMobile ? 18 : 20),
-            SizedBox(width: isMobile ? 6 : 8),
-            Expanded(
-              child: Text(
-                'No location selected yet. Tap on the map to pin your clinic location.',
-                style: TextStyle(
-                    color: Colors.orange, fontSize: isMobile ? 12 : 13),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+    return const SizedBox
+        .shrink(); // Returns invisible widget - no coordinate display
   }
 
   String _getBarangayAreaDescription(String barangayName) {
@@ -897,15 +1200,11 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
       'Minuyan IV',
       'Minuyan V',
       'Minuyan Proper'
-    ].contains(barangayName)) {
-      return 'Northern District - Upper SJDM (near Norzagaray border)';
-    }
+    ].contains(barangayName)) {}
 
     // NORTHERN DISTRICT - Sapang Palay Area (Upper SJDM)
     // CRITICAL: Sapang Palay is in the NORTH, verified at 14.8390 latitude
-    if (barangayName == 'Sapang Palay') {
-      return 'Northern District - Sapang Palay Resettlement Area';
-    }
+    if (barangayName == 'Sapang Palay') {}
 
     // NORTHWESTERN AREA
     if ([
@@ -915,71 +1214,47 @@ class _AdminPinMapsPageState extends State<AdminPinMapsPage> {
       'Gaya-Gaya',
       'Lawang Pari',
       'Maharlika'
-    ].contains(barangayName)) {
-      return 'Northwestern District - Upper West SJDM';
-    }
+    ].contains(barangayName)) {}
 
     // NORTHEASTERN AREA - San Rafael District
-    if (barangayName.startsWith('San Rafael')) {
-      return 'Northeastern District - San Rafael Area';
-    }
+    if (barangayName.startsWith('San Rafael')) {}
 
     // CENTRAL-EAST - Francisco Homes
-    if (barangayName.startsWith('Francisco Homes')) {
-      return 'Central-East District - Francisco Homes Subdivision';
-    }
+    if (barangayName.startsWith('Francisco Homes')) {}
 
     // CENTRAL DISTRICT - Poblacion/City Center
     if (['Poblacion', 'Poblacion I', 'Dulong Bayan', 'Tungkong Mangga']
-        .contains(barangayName)) {
-      return 'City Center - Poblacion District (Government Center)';
-    }
+        .contains(barangayName)) {}
 
     // CENTRAL-WEST - Gumaoc District
-    if (barangayName.startsWith('Gumaoc')) {
-      return 'Central-West District - Gumaoc Area';
-    }
+    if (barangayName.startsWith('Gumaoc')) {}
 
     // CENTRAL-SOUTH - Fatima District
-    if (barangayName.startsWith('Fatima')) {
-      return 'Central-South District - Fatima Area';
-    }
+    if (barangayName.startsWith('Fatima')) {}
 
     // EASTERN DISTRICT - Santo Niño & Santa Cruz
     if (barangayName.startsWith('Santo Niño') ||
-        barangayName.startsWith('Santa Cruz')) {
-      return 'Eastern District - Santo Niño/Santa Cruz Area';
-    }
+        barangayName.startsWith('Santa Cruz')) {}
 
     // SOUTHEASTERN - Paradise/Graceville
     if (['Paradise III', 'Graceville', 'Citrus', 'Ciudad Real']
-        .contains(barangayName)) {
-      return 'Southeastern District - Paradise/Graceville Area';
-    }
+        .contains(barangayName)) {}
 
     // SOUTH-CENTRAL AREA
     if (['San Pedro', 'San Manuel', 'San Isidro', 'San Roque']
-        .contains(barangayName)) {
-      return 'South-Central District';
-    }
+        .contains(barangayName)) {}
 
     // SOUTHWESTERN - San Martin District
     if (barangayName.startsWith('San Martin') ||
         barangayName.contains('Saint Martin') ||
-        barangayName == 'Santo Cristo') {
-      return 'Southwestern District - San Martin Area';
-    }
+        barangayName == 'Santo Cristo') {}
 
     // SOUTHERN DISTRICT - Muzon Area (LOWER SJDM, near Metro Manila)
     // Muzon is actually in the SOUTH, bordering Caloocan City
-    if (barangayName.startsWith('Muzon')) {
-      return 'Southern District - Muzon Area (borders Metro Manila/Caloocan)';
-    }
+    if (barangayName.startsWith('Muzon')) {}
 
     // CENTRAL-EAST - Bagong Buhay
-    if (barangayName.startsWith('Bagong Buhay')) {
-      return 'Central-East District - Bagong Buhay Area';
-    }
+    if (barangayName.startsWith('Bagong Buhay')) {}
 
     // Default
     return 'San Jose del Monte City, Bulacan';

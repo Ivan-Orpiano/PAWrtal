@@ -51,53 +51,76 @@ class _WebMapsState extends State<WebMaps> {
     const LatLng(14.8667, 121.1667), // Northeast: 14°52'N, 121°10'E
   );
 
-  // STRICT SJDM POLYGON BOUNDARIES - Defines what shows markers/content
-  // Based on official boundaries, excluding disputed areas with Norzagaray
-  // and clear borders with Caloocan, Quezon City, Rodriguez, Santa Maria, and Marilao
+  // STRICT SJDM POLYGON BOUNDARIES - Based on official barangay map
+  // Traced from the actual SJDM city boundary map showing all 62 barangays
+  // Excludes neighboring municipalities: Norzagaray (N), Rodriguez/Quezon (E),
+  // Quezon City/Caloocan (S), Santa Maria/Marilao (W)
   final List<LatLng> sjdmPolygonBoundary = const [
-    // SOUTHWEST CORNER - Muzon area (border with Caloocan)
-    LatLng(14.7700, 121.0400),
+    // Start from SOUTHWEST - Muzon area (border with Caloocan City)
+    LatLng(14.7680, 121.0480), // Muzon South - southernmost point
 
-    // SOUTH BORDER - Border with Caloocan and Quezon City
-    LatLng(14.7720, 121.0500),
-    LatLng(14.7750, 121.0600),
-    LatLng(14.7800, 121.0700),
+    // SOUTH BORDER - Muzon to San Manuel (Caloocan & Quezon City border)
+    LatLng(14.7700, 121.0520), // Muzon South boundary
+    LatLng(14.7720, 121.0580), // Between Muzon and Gaya-Gaya
+    LatLng(14.7750, 121.0650), // Gaya-Gaya/Graceville area
+    LatLng(14.7780, 121.0720), // San Manuel area
 
-    // SOUTHEAST CORNER - Border with Quezon City/Rodriguez
-    LatLng(14.7850, 121.0850),
-    LatLng(14.7900, 121.0950),
+    // SOUTHEAST CURVE - San Manuel to Ciudad Real (Quezon City border)
+    LatLng(14.7820, 121.0800), // Tungkong Mangga south
+    LatLng(14.7860, 121.0880), // Ciudad Real west
+    LatLng(14.7900, 121.0950), // Ciudad Real center
 
-    // EAST BORDER - Border with Rodriguez, Rizal and Quezon Province
-    LatLng(14.8000, 121.1050),
-    LatLng(14.8100, 121.1150),
-    LatLng(14.8200, 121.1200), // Easternmost point
-    LatLng(14.8300, 121.1180),
-    LatLng(14.8400, 121.1150),
+    // EAST BORDER START - Ciudad Real to Paradise III (Rodriguez, Rizal border)
+    LatLng(14.7950, 121.1020), // Ciudad Real east
+    LatLng(14.8000, 121.1080), // Paradise III south
+    LatLng(14.8050, 121.1140), // Paradise III center
 
-    // NORTHEAST CORNER - Approaching Norzagaray (exclude disputed areas)
-    LatLng(14.8480, 121.1100), // Before Minuyan disputed area
-    LatLng(14.8520, 121.0900), // Avoid Norzagaray encroachment
+    // EAST BORDER MIDDLE - Paradise III to San Isidro (Rodriguez/Quezon border)
+    LatLng(14.8100, 121.1180), // Paradise III north / San Isidro
+    LatLng(14.8150, 121.1200), // San Isidro - easternmost point
+    LatLng(14.8200, 121.1190), // San Roque east
 
-    // NORTH BORDER - Border with Norzagaray (conservative line)
-    LatLng(14.8500, 121.0800),
-    LatLng(14.8480, 121.0700),
-    LatLng(14.8460, 121.0600),
-    LatLng(14.8440, 121.0500),
+    // NORTHEAST CURVE - San Roque to Minuyan areas
+    LatLng(14.8250, 121.1160), // Kaybanban east
+    LatLng(14.8300, 121.1120), // Minuyan II east
+    LatLng(14.8350, 121.1080), // Minuyan III east
+    LatLng(14.8400, 121.1050), // Minuyan IV east
 
-    // NORTHWEST CORNER - Sapang Palay area (avoid Norzagaray disputed zones)
-    LatLng(14.8420, 121.0400),
-    LatLng(14.8380, 121.0320), // Western Sapang Palay
-    LatLng(14.8320, 121.0280), // Kaypian area
+    // NORTH BORDER START - Minuyan to Citrus (Norzagaray border - conservative)
+    LatLng(14.8450, 121.1000), // Minuyan Proper east
+    LatLng(14.8480, 121.0920), // Citrus north - avoid disputed areas
+    LatLng(14.8500, 121.0850), // Minuyan V north (conservative boundary)
 
-    // WEST BORDER - Border with Santa Maria and Marilao
-    LatLng(14.8200, 121.0250), // Western boundary
-    LatLng(14.8100, 121.0280),
-    LatLng(14.8000, 121.0320),
-    LatLng(14.7900, 121.0350),
-    LatLng(14.7800, 121.0380),
+    // NORTH BORDER MIDDLE - Minuyan to Sapang Palay (Norzagaray border)
+    LatLng(14.8510, 121.0780), // Santo Nino II north
+    LatLng(14.8500, 121.0700), // Bagong Buhay north
+    LatLng(14.8480, 121.0620), // San Rafael V north
+    LatLng(14.8460, 121.0550), // San Martin de Porres / Lawang Pari
+    LatLng(14.8440, 121.0480), // Assumption / Maharlika north
 
-    // Back to start - SOUTHWEST CORNER
-    LatLng(14.7700, 121.0400),
+    // NORTHWEST CORNER - Sapang Palay area (Norzagaray border)
+    LatLng(14.8420, 121.0410), // Sapang Palay north
+    LatLng(14.8390, 121.0350), // Sapang Palay northwest
+    LatLng(14.8350, 121.0300), // Gaya-Gaya north / Kaypian
+
+    // WEST BORDER - Kaypian to Dulong Bayan (Santa Maria border)
+    LatLng(14.8300, 121.0270), // Kaypian west - westernmost point
+    LatLng(14.8250, 121.0290), // Kaybanban west
+    LatLng(14.8200, 121.0310), // San Pedro west
+    LatLng(14.8150, 121.0330), // Santo Cristo west
+
+    // WEST BORDER SOUTH - Santo Cristo to Muzon (Santa Maria/Marilao border)
+    LatLng(14.8100, 121.0350), // Dulong Bayan west
+    LatLng(14.8050, 121.0370), // Poblacion west
+    LatLng(14.8000, 121.0390), // Gumaoc West
+    LatLng(14.7950, 121.0410), // Gaya-Gaya west
+    LatLng(14.7900, 121.0430), // Gaya-Gaya southwest
+    LatLng(14.7850, 121.0450), // Muzon West
+    LatLng(14.7800, 121.0460), // Muzon area
+    LatLng(14.7750, 121.0470), // Muzon South area
+
+    // Close polygon - back to start
+    LatLng(14.7680, 121.0480), // Muzon South - southernmost point
   ];
 
   // CRITICAL: Point-in-polygon test for STRICT SJDM boundary
@@ -141,6 +164,14 @@ class _WebMapsState extends State<WebMaps> {
   void initState() {
     super.initState();
     _initializeMap();
+
+    // MODIFIED: Force map to be interactive immediately after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && userLocation != null) {
+        // Trigger a tiny move to "wake up" the map controller
+        _mapController.move(userLocation!, 14);
+      }
+    });
   }
 
   @override
@@ -716,93 +747,102 @@ class _WebMapsState extends State<WebMaps> {
       bool isMobile = constraints.maxWidth < mobileWidth;
       return Stack(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: FlutterMap(
-              mapController: _mapController,
-              options: MapOptions(
-                initialCenter: userLocation!,
-                initialZoom: 14,
-                minZoom: 12,
-                maxZoom: 19,
-                // KEEP ORIGINAL CAMERA CONSTRAINT - Areas outside SJDM will just have no markers
-                cameraConstraint: CameraConstraint.contain(
-                  bounds: sanJoseDelMonteBounds,
+          // MODIFIED: Use Listener to absorb pointer events and prevent parent scroll
+          Listener(
+            onPointerDown: (_) {},
+            onPointerMove: (_) {},
+            onPointerUp: (_) {},
+            onPointerSignal: (_) {},
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: FlutterMap(
+                mapController: _mapController,
+                options: MapOptions(
+                  initialCenter: userLocation!,
+                  initialZoom: 14,
+                  minZoom: 12,
+                  maxZoom: 19,
+                  cameraConstraint: CameraConstraint.contain(
+                    bounds: sanJoseDelMonteBounds,
+                  ),
+                  // MODIFIED: Simplified interaction options - enable all gestures
+                  interactionOptions: const InteractionOptions(
+                    flags: InteractiveFlag.all,
+                  ),
+                  onTap: (_, __) {
+                    setState(() {
+                      routePoints.clear();
+                      _popupController.hideAllPopups();
+                    });
+                  },
                 ),
-                onTap: (_, __) {
-                  setState(() {
-                    routePoints.clear();
-                    _popupController.hideAllPopups();
-                  });
-                },
-              ),
-              children: [
-                TileLayer(
-                  urlTemplate:
-                      "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
-                  subdomains: const ['a', 'b', 'c', 'd'],
-                ),
-                if (routePoints.isNotEmpty)
-                  PolylineLayer(
-                    polylines: [
-                      Polyline(
-                        points: routePoints,
-                        color: Colors.blue,
-                        strokeWidth: 5.0,
+                children: [
+                  TileLayer(
+                    urlTemplate:
+                        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+                    subdomains: const ['a', 'b', 'c', 'd'],
+                  ),
+                  if (routePoints.isNotEmpty)
+                    PolylineLayer(
+                      polylines: [
+                        Polyline(
+                          points: routePoints,
+                          color: Colors.blue,
+                          strokeWidth: 5.0,
+                        ),
+                      ],
+                    ),
+                  PopupMarkerLayer(
+                    options: PopupMarkerLayerOptions(
+                      popupController: _popupController,
+                      markers: getMarkers(),
+                      popupDisplayOptions: PopupDisplayOptions(
+                        builder: (BuildContext context, Marker marker) {
+                          final clinic = filteredClinics.firstWhere(
+                            (c) {
+                              final settings =
+                                  clinicSettingsMap[c.documentId ?? ''];
+                              if (settings?.location == null) return false;
+                              final clinicLocation = LatLng(
+                                  settings!.location!['lat']!,
+                                  settings.location!['lng']!);
+                              return clinicLocation == marker.point;
+                            },
+                          );
+                          final settings =
+                              clinicSettingsMap[clinic.documentId ?? ''];
+
+                          return VetPopup(
+                            clinic: clinic,
+                            clinicSettings: settings,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: userLocation!,
+                        width: 40,
+                        height: 40,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.blue,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: const Icon(
+                            Icons.my_location,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                PopupMarkerLayer(
-                  options: PopupMarkerLayerOptions(
-                    popupController: _popupController,
-                    markers: getMarkers(),
-                    popupDisplayOptions: PopupDisplayOptions(
-                      builder: (BuildContext context, Marker marker) {
-                        // Find the clinic that corresponds to this marker
-                        final clinic = filteredClinics.firstWhere(
-                          (c) {
-                            final settings =
-                                clinicSettingsMap[c.documentId ?? ''];
-                            if (settings?.location == null) return false;
-                            final clinicLocation = LatLng(
-                                settings!.location!['lat']!,
-                                settings.location!['lng']!);
-                            return clinicLocation == marker.point;
-                          },
-                        );
-                        final settings =
-                            clinicSettingsMap[clinic.documentId ?? ''];
-
-                        return VetPopup(
-                          clinic: clinic,
-                          clinicSettings: settings,
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: userLocation!,
-                      width: 40,
-                      height: 40,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.blue,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                        child: const Icon(
-                          Icons.my_location,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           // Floating action button for finding nearest clinic

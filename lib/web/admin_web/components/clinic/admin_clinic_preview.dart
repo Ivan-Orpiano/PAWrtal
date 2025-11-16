@@ -4,14 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AdminClinicPreview extends StatefulWidget {
   final ClinicSettingsController controller;
+  final VoidCallback? onNavigateToSettings; // NEW: Optional callback
 
-  const AdminClinicPreview({super.key, required this.controller});
+  const AdminClinicPreview({
+    super.key,
+    required this.controller,
+    this.onNavigateToSettings, // NEW
+  });
 
   @override
   State<AdminClinicPreview> createState() => _AdminClinicPreviewState();
@@ -108,17 +114,17 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
     }
   }
 
-  bool _editingAddress = false;
+  // bool _editingAddress = false;
   bool _editingEmail = false;
   bool _editingContact = false;
   bool _editingDescription = false;
 
-  late TextEditingController _tempAddressController;
+  // late TextEditingController _tempAddressController;
   late TextEditingController _tempEmailController;
   late TextEditingController _tempContactController;
   late TextEditingController _tempDescriptionController;
 
-  String _originalAddress = '';
+  // String _originalAddress = '';
   String _originalEmail = '';
   String _originalContact = '';
   String _originalDescription = '';
@@ -131,7 +137,7 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
   @override
   void initState() {
     super.initState();
-    _tempAddressController = TextEditingController();
+    // _tempAddressController = TextEditingController();
     _tempEmailController = TextEditingController();
     _tempContactController = TextEditingController();
     _tempDescriptionController = TextEditingController();
@@ -141,7 +147,7 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
   void dispose() {
     _scrollController.dispose();
     _mapController.dispose();
-    _tempAddressController.dispose();
+    // _tempAddressController.dispose();
     _tempEmailController.dispose();
     _tempContactController.dispose();
     _tempDescriptionController.dispose();
@@ -183,12 +189,7 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
   void _startEditing(String field) {
     setState(() {
       switch (field) {
-        case 'address':
-          _originalAddress =
-              _safeGetControllerText(widget.controller.addressController);
-          _tempAddressController.text = _originalAddress;
-          _editingAddress = true;
-          break;
+        // Remove 'address' case entirely
         case 'email':
           _originalEmail =
               _safeGetControllerText(widget.controller.emailController);
@@ -218,8 +219,8 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
 
   bool _hasUnsavedChanges(String field) {
     switch (field) {
-      case 'address':
-        return _tempAddressController.text != _originalAddress;
+      // case 'address':
+      //   return _tempAddressController.text != _originalAddress;
       case 'email':
         return _tempEmailController.text != _originalEmail;
       case 'contact':
@@ -259,11 +260,11 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
       setState(() => _editingEmail = false);
     } else {
       switch (field) {
-        case 'address':
-          widget.controller.addressController.text =
-              _tempAddressController.text;
-          setState(() => _editingAddress = false);
-          break;
+        // case 'address':
+        //   widget.controller.addressController.text =
+        //       _tempAddressController.text;
+        //   setState(() => _editingAddress = false);
+        //   break;
         case 'description':
           widget.controller.descriptionController.text =
               _tempDescriptionController.text;
@@ -283,9 +284,9 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
 
     setState(() {
       switch (field) {
-        case 'address':
-          _editingAddress = false;
-          break;
+        // case 'address':
+        //   _editingAddress = false;
+        //   break;
         case 'email':
           _editingEmail = false;
           break;
@@ -835,7 +836,6 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
                           const SizedBox(width: 8),
                           ElevatedButton.icon(
                             onPressed: () async {
-
                               // Ensure all selected services have medical status
                               for (var service in tempSelectedServices) {
                                 if (!tempMedicalServices.containsKey(service)) {
@@ -850,10 +850,8 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
                               widget.controller.medicalServices
                                   .assignAll(tempMedicalServices);
 
-
                               // Save to database
                               await widget.controller.saveClinicSettings();
-
 
                               if (context.mounted) Navigator.pop(context);
                             },
@@ -914,221 +912,221 @@ class _AdminClinicPreviewState extends State<AdminClinicPreview> {
   }
 
   @override
-Widget build(BuildContext context) {
-  final screenWidth = MediaQuery.of(context).size.width;
-  final screenHeight = MediaQuery.of(context).size.height;
-  final horizontalPadding = getResponsivePadding(screenWidth);
-  final isMobile = _isMobileLayout(screenWidth);
-  final isTablet = _isTabletLayout(screenWidth);
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final horizontalPadding = getResponsivePadding(screenWidth);
+    final isMobile = _isMobileLayout(screenWidth);
+    final isTablet = _isTabletLayout(screenWidth);
 
-  return Obx(() {
-    final clinic = widget.controller.clinic.value;
-    final settings = widget.controller.clinicSettings.value;
+    return Obx(() {
+      final clinic = widget.controller.clinic.value;
+      final settings = widget.controller.clinicSettings.value;
 
-    if (clinic == null) {
-      return const Center(child: CircularProgressIndicator());
-    }
+      if (clinic == null) {
+        return const Center(child: CircularProgressIndicator());
+      }
 
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      body: Stack(
-        children: [
-          // Main scrollable content
-          SingleChildScrollView(
-            controller: _scrollController,
-            child: Column(
-              children: [
-                Container(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: horizontalPadding, vertical: 16),
-                  color: Colors.blue.shade50,
-                  child: Row(
-                    children: [
-                      Icon(Icons.visibility,
-                          color: Colors.blue.shade700, size: 20),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          "Preview Mode - This is how customers see your clinic. Click edit icons to update basic information.",
-                          style: TextStyle(
-                              fontSize: isMobile ? 12 : 14,
-                              color: Colors.blue.shade700,
-                              fontWeight: FontWeight.w500),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: horizontalPadding),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              widget.controller.clinic.value!.clinicName,
-                              style: const TextStyle(
-                                  fontSize: 24, fontWeight: FontWeight.bold),
-                            ),
+      return Scaffold(
+        backgroundColor: Colors.grey.shade50,
+        body: Stack(
+          children: [
+            // Main scrollable content
+            SingleChildScrollView(
+              controller: _scrollController,
+              child: Column(
+                children: [
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: horizontalPadding, vertical: 16),
+                    color: Colors.blue.shade50,
+                    child: Row(
+                      children: [
+                        Icon(Icons.visibility,
+                            color: Colors.blue.shade700, size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            "Preview Mode - This is how customers see your clinic. Click edit icons to update basic information.",
+                            style: TextStyle(
+                                fontSize: isMobile ? 12 : 14,
+                                color: Colors.blue.shade700,
+                                fontWeight: FontWeight.w500),
                           ),
-                        ],
-                      ),
-                      _buildGalleryPreview(isMobile),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                // MODIFIED: Remove the Row wrapper and just use full width
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: _buildLeftContent(isMobile),
-                  ),
-                ),
-                const SizedBox(height: 64),
-                _buildLocationSection(isMobile),
-                const SizedBox(height: 64),
-              ],
-            ),
-          ),
-
-          // Floating Appointment Panel (Chat-style)
-          if (_showAppointmentPanel)
-            Positioned(
-              right: 24,
-              bottom: 24,
-              child: Container(
-                width: 420,
-                height: screenHeight * 0.75,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      blurRadius: 20,
-                      spreadRadius: 0,
-                      offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    // Header
-                    InkWell(
-                      onTap: _toggleAppointmentPanel,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF5173B8),
-                          borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(16),
-                            topRight: Radius.circular(16),
-                          ),
-                        ),
-                        child: Row(
+                  ),
+                  const SizedBox(height: 24),
+                  Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: horizontalPadding),
+                    child: Column(
+                      children: [
+                        Row(
                           children: [
-                            const Icon(
-                              Icons.calendar_today,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Book Appointment',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                            Expanded(
+                              child: Text(
+                                widget.controller.clinic.value!.clinicName,
+                                style: const TextStyle(
+                                    fontSize: 24, fontWeight: FontWeight.bold),
                               ),
-                            ),
-                            const Spacer(),
-                            IconButton(
-                              onPressed: _toggleAppointmentPanel,
-                              icon: const Icon(Icons.close,
-                                  color: Colors.white, size: 20),
-                              tooltip: 'Close',
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
                             ),
                           ],
                         ),
-                      ),
+                        _buildGalleryPreview(isMobile),
+                      ],
                     ),
-                    // Scrollable content
-                    Expanded(
-                      child: Container(
-                        color: Colors.grey.shade50,
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(20),
-                          child: settings != null
-                              ? _buildAppointmentPanel(settings, isMobile)
-                              : const Center(
-                                  child: CircularProgressIndicator()),
-                        ),
-                      ),
+                  ),
+                  const SizedBox(height: 24),
+                  // MODIFIED: Remove the Row wrapper and just use full width
+                  Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: horizontalPadding),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: _buildLeftContent(isMobile),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 64),
+                  _buildLocationSection(isMobile),
+                  const SizedBox(height: 64),
+                ],
               ),
             ),
-        ],
-      ),
-      // Floating Action Button
-      floatingActionButton: !_showAppointmentPanel
-          ? FloatingActionButton.extended(
-              onPressed: _toggleAppointmentPanel,
-              backgroundColor: const Color(0xFF5173B8),
-              icon: const Icon(Icons.calendar_today, color: Colors.white),
-              label: const Text(
-                'Book Appointment',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
+
+            // Floating Appointment Panel (Chat-style)
+            if (_showAppointmentPanel)
+              Positioned(
+                right: 24,
+                bottom: 24,
+                child: Container(
+                  width: 420,
+                  height: screenHeight * 0.75,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 20,
+                        spreadRadius: 0,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      // Header
+                      InkWell(
+                        onTap: _toggleAppointmentPanel,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF5173B8),
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(16),
+                              topRight: Radius.circular(16),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.calendar_today,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Book Appointment',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const Spacer(),
+                              IconButton(
+                                onPressed: _toggleAppointmentPanel,
+                                icon: const Icon(Icons.close,
+                                    color: Colors.white, size: 20),
+                                tooltip: 'Close',
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Scrollable content
+                      Expanded(
+                        child: Container(
+                          color: Colors.grey.shade50,
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.all(20),
+                            child: settings != null
+                                ? _buildAppointmentPanel(settings, isMobile)
+                                : const Center(
+                                    child: CircularProgressIndicator()),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            )
-          : null,
-    );
-  });
-}
+          ],
+        ),
+        // Floating Action Button
+        floatingActionButton: !_showAppointmentPanel
+            ? FloatingActionButton.extended(
+                onPressed: _toggleAppointmentPanel,
+                backgroundColor: const Color(0xFF5173B8),
+                icon: const Icon(Icons.calendar_today, color: Colors.white),
+                label: const Text(
+                  'Book Appointment',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              )
+            : null,
+      );
+    });
+  }
 
   Widget _buildLeftContent(bool isMobile) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      _buildClinicHeader(isMobile),
-      const SizedBox(height: 32),
-      _buildAboutSection(widget.controller.clinicSettings.value, isMobile),
-      const SizedBox(height: 32),
-      _buildServicesSection(isMobile),
-      const Padding(
-        padding: EdgeInsets.symmetric(vertical: 32),
-        child: SizedBox(
-          width: double.infinity,
-          child: Divider(height: 1, thickness: 0.5),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildClinicHeader(isMobile),
+        const SizedBox(height: 32),
+        _buildAboutSection(widget.controller.clinicSettings.value, isMobile),
+        const SizedBox(height: 32),
+        _buildServicesSection(isMobile),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 32),
+          child: SizedBox(
+            width: double.infinity,
+            child: Divider(height: 1, thickness: 0.5),
+          ),
         ),
-      ),
-      if (widget.controller.clinic.value?.documentId != null)
-        AdminRatingsAndReviews(
-          reviewsEndKey: reviewsEndKey,
-          clinicId: widget.controller.clinic.value!.documentId!,
-        ),
-    ],
-  );
-}
+        if (widget.controller.clinic.value?.documentId != null)
+          AdminRatingsAndReviews(
+            reviewsEndKey: reviewsEndKey,
+            clinicId: widget.controller.clinic.value!.documentId!,
+          ),
+      ],
+    );
+  }
 
   Widget _buildGalleryPreview(bool isMobile) {
     return Obx(() {
       final images = widget.controller.galleryImages;
 
-      for (var img in images) {
-      }
+      for (var img in images) {}
 
       if (images.isEmpty) {
         return Container(
@@ -1862,19 +1860,15 @@ Widget build(BuildContext context) {
       ),
       child: Column(
         children: [
-          _buildEditableInfoRow(
+          // Address - READ ONLY with navigation to Settings
+          _buildReadOnlyInfoRow(
             icon: Icons.location_on_outlined,
             label: 'Address',
             value: _safeGetControllerText(widget.controller.addressController),
-            isEditing: _editingAddress,
-            controller: _tempAddressController,
-            maxLength: 200,
-            onEdit: () => _startEditing('address'),
-            onSave: () => _saveEdit('address'),
-            onCancel: () => _cancelEdit('address'),
             isMobile: isMobile,
           ),
           const SizedBox(height: 8),
+          // Contact - Keep editable
           _buildEditableInfoRow(
             icon: Icons.phone_outlined,
             label: 'Contact',
@@ -1890,6 +1884,7 @@ Widget build(BuildContext context) {
             isMobile: isMobile,
           ),
           const SizedBox(height: 8),
+          // Email - Keep editable
           _buildEditableInfoRow(
             icon: Icons.email_outlined,
             label: 'Email',
@@ -2739,5 +2734,99 @@ Widget build(BuildContext context) {
         ],
       ),
     );
+  }
+
+  Widget _buildReadOnlyInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    required bool isMobile,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: isMobile ? 18 : 20, color: Colors.grey.shade600),
+        SizedBox(width: isMobile ? 8 : 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: isMobile ? 12 : 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  // Clickable badge to navigate to Settings tab
+                  InkWell(
+                    onTap: () => _navigateToSettingsTab(),
+                    borderRadius: BorderRadius.circular(4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.blue[200]!),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.settings,
+                            size: 12,
+                            color: Colors.blue[700],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Edit in Settings',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.blue[700],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value.isNotEmpty ? value : 'Not provided',
+                style: TextStyle(
+                  fontSize: isMobile ? 13 : 15,
+                  color:
+                      value.isNotEmpty ? Colors.black87 : Colors.grey.shade500,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _navigateToSettingsTab() {
+    // Store the target tab index in GetStorage
+    final storage = GetStorage();
+    storage.write('clinicPageInitialTab', 2); // 2 = Settings tab index
+
+    // Call parent callback if provided
+    if (widget.onNavigateToSettings != null) {
+      widget.onNavigateToSettings!();
+    } else {
+      // Fallback: Try to update controller
+      widget.controller.update();
+    }
   }
 }
