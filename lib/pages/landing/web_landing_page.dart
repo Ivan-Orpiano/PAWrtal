@@ -6,6 +6,7 @@ import 'package:capstone_app/web/dimensions.dart';
 import 'package:capstone_app/web/user_web/desktop_web/pages/web_dashboard_page.dart';
 import 'package:capstone_app/pages/routes/app_pages.dart';
 import 'package:flutter/material.dart';
+import 'package:capstone_app/components/vet_clinic_banner.dart';
 import 'package:get/get.dart';
 
 class WebLandingPage extends StatelessWidget {
@@ -142,6 +143,7 @@ class _LandingDashboardContent extends StatelessWidget {
 
     return Column(
       children: [
+        const VetClinicBanner(isMobile: false),
         // Filters and Search (exact same as dashboard)
         Padding(
           padding: EdgeInsets.only(

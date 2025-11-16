@@ -8,6 +8,7 @@ import 'package:capstone_app/data/models/notification_model.dart';
 import 'package:capstone_app/data/models/pet_model.dart';
 import 'package:capstone_app/data/models/ratings_and_review_model.dart';
 import 'package:capstone_app/data/models/staff_model.dart';
+import 'package:capstone_app/data/models/vet_clinic_registration_request_model.dart';
 import 'package:capstone_app/data/provider/appwrite_provider.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:capstone_app/utils/appwrite_constant.dart';
@@ -2545,7 +2546,6 @@ class AuthRepository {
         return false;
       }
 
-
       // 1. Update user document (database collection)
       await appWriteProvider.databases!.updateDocument(
         databaseId: AppwriteConstants.dbID,
@@ -2568,7 +2568,6 @@ class AuthRepository {
 
   Future<void> syncAuthNameOnLogin(String userId) async {
     try {
-
       final userDoc = await appWriteProvider.databases!.listDocuments(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.usersCollectionID,
@@ -2608,9 +2607,90 @@ class AuthRepository {
         }
 
         await GetStorage().write('userName', formattedName);
-      } else {
-      }
+      } else {}
+    } catch (e) {}
+  }
+
+  // ============= VET CLINIC REGISTRATION REQUEST METHODS =============
+// Add these methods to your AuthRepository class
+
+  /// Create vet clinic registration request
+  Future<Document> createVetRegistrationRequest(Map<String, dynamic> data) {
+    return appWriteProvider.createVetRegistrationRequest(data);
+  }
+
+  /// Get all vet registration requests
+  Future<List<VetClinicRegistrationRequest>> getAllVetRegistrationRequests({
+    String? status,
+  }) async {
+    try {
+      final docs = await appWriteProvider.getAllVetRegistrationRequests(
+        status: status,
+      );
+
+      return docs.map((doc) {
+        final request = VetClinicRegistrationRequest.fromMap(doc.data);
+        return request.copyWith(documentId: doc.$id);
+      }).toList();
     } catch (e) {
+      return [];
     }
+  }
+
+  /// Get single registration request by ID
+  Future<VetClinicRegistrationRequest?> getVetRegistrationRequestById(
+    String requestId,
+  ) async {
+    try {
+      final doc =
+          await appWriteProvider.getVetRegistrationRequestById(requestId);
+      if (doc != null) {
+        final request = VetClinicRegistrationRequest.fromMap(doc.data);
+        return request.copyWith(documentId: doc.$id);
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Update registration request status
+  Future<void> updateVetRegistrationRequestStatus(
+    String requestId,
+    String status,
+    String reviewedBy,
+    String? reviewNotes,
+  ) {
+    return appWriteProvider.updateVetRegistrationRequestStatus(
+      requestId,
+      status,
+      reviewedBy,
+      reviewNotes,
+    );
+  }
+
+  /// Upload registration document
+  Future<models.File> uploadVetRegistrationDocument(PlatformFile file) {
+    return appWriteProvider.uploadVetRegistrationDocument(file);
+  }
+
+  /// Delete registration document
+  Future<void> deleteVetRegistrationDocument(String fileId) {
+    return appWriteProvider.deleteVetRegistrationDocument(fileId);
+  }
+
+  /// Get registration document URL
+  String getVetRegistrationDocumentUrl(String fileId) {
+    return appWriteProvider.getVetRegistrationDocumentUrl(fileId);
+  }
+
+  /// Subscribe to registration requests changes (real-time)
+  Stream<RealtimeMessage> subscribeToVetRegistrationRequests() {
+    return appWriteProvider.subscribeToVetRegistrationRequests();
+  }
+
+  /// Get registration statistics
+  Future<Map<String, int>> getVetRegistrationStats() {
+    return appWriteProvider.getVetRegistrationStats();
   }
 }

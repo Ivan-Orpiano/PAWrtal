@@ -1,4 +1,5 @@
 import 'package:capstone_app/pages/login/login_page.dart';
+import 'package:capstone_app/pages/routes/app_pages.dart';
 import 'package:capstone_app/utils/web_loading_helper.dart';
 import 'package:capstone_app/web/dimensions.dart';
 import 'package:capstone_app/web/pages/web_login/web_login_controller.dart';
@@ -104,6 +105,27 @@ class WebLoginPage extends GetView<WebLoginController> {
                                     text: "Sign up",
                                     recognizer: TapGestureRecognizer()
                                       ..onTap = controller.navigateToSignUp,
+                                  )
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8,),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: RichText(
+                              textAlign: TextAlign.center,
+                              text: TextSpan(
+                                style: const TextStyle(color: Colors.black),
+                                children: <TextSpan>[
+                                  TextSpan(
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Color.fromARGB(255, 81, 115, 153),
+                                    ),
+                                    text: "Register your veterinary clinic here →",
+                                    recognizer: TapGestureRecognizer()
+                                      ..onTap = _moveToSignUpVet,
                                   )
                                 ],
                               ),
@@ -408,6 +430,10 @@ class WebLoginPage extends GetView<WebLoginController> {
         );
       },
     );
+  }
+
+  void _moveToSignUpVet() {
+    Get.toNamed(Routes.vetClinicRegistration);
   }
 
   void _showResetPasswordDialog(BuildContext context) {

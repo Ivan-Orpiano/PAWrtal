@@ -20,6 +20,8 @@ import 'package:capstone_app/pages/signup/signup_binding.dart';
 import 'package:capstone_app/pages/signup/signup_page.dart';
 import 'package:capstone_app/pages/splash/splash_binding.dart';
 import 'package:capstone_app/pages/splash/splash_page.dart';
+import 'package:capstone_app/pages/vet_clinic_registration/vet_clinic_registration_binding.dart';
+import 'package:capstone_app/pages/vet_clinic_registration/vet_clinic_registration_page.dart';
 
 // Web imports
 import 'package:capstone_app/web/pages/web_login/web_login_binding.dart';
@@ -199,5 +201,11 @@ class AppPages {
         transition: Transition.fadeIn
         // No middleware - public access for password reset
         ),
+
+    GetPage(
+        name: Routes.vetClinicRegistration,
+        page: () => const VetClinicRegistrationPage(),
+        binding: VetClinicRegistrationBinding(),
+        transition: Transition.fadeIn),
   ];
 }

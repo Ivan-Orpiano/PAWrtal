@@ -7,6 +7,7 @@ import 'package:capstone_app/pages/routes/app_pages.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:capstone_app/components/vet_clinic_banner.dart';
 
 class LandingPage extends GetView<LandingController> {
   const LandingPage({super.key});
@@ -101,6 +102,7 @@ class LandingPage extends GetView<LandingController> {
 
           return ListView(
             children: [
+              const VetClinicBanner(isMobile: true),
               // Welcome Banner (only for landing page)
               // Container(
               //   margin: const EdgeInsets.all(16),
