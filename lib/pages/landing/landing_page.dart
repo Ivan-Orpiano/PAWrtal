@@ -1,3 +1,4 @@
+import 'package:capstone_app/components/download_app_button.dart';
 import 'package:capstone_app/mobile/user/components/dashboard_components/search_bar.dart';
 import 'package:capstone_app/mobile/user/components/dashboard_components/tags.dart';
 import 'package:capstone_app/pages/landing/landing_controller.dart';
@@ -22,6 +23,7 @@ class LandingPage extends GetView<LandingController> {
           height: 35,
         ),
         actions: [
+          const DownloadAppButton(isMobileLayout: true),
           TextButton(
             onPressed: () => Get.toNamed(Routes.login),
             child: const Text(

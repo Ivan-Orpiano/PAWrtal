@@ -1,3 +1,4 @@
+import 'package:capstone_app/components/download_app_button.dart';
 import 'package:capstone_app/pages/landing/landing_controller.dart';
 import 'package:capstone_app/pages/landing/landing_page.dart';
 import 'package:capstone_app/pages/landing/web_landing_clinic_page.dart';
@@ -74,6 +75,8 @@ class _DesktopTabletLanding extends StatelessWidget {
                       height: 50,
                     ),
                     const Spacer(),
+                    const DownloadAppButton(),
+                    const SizedBox(width: 16),
                     TextButton(
                       onPressed: () => Get.toNamed(Routes.login),
                       child: const Text(
