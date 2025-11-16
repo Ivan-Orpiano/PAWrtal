@@ -389,6 +389,113 @@ class _VaccinationCompletionDialogState
                           },
                         ),
 
+                        // const SizedBox(height: 24),
+                        // const Divider(),
+                        const SizedBox(height: 16),
+
+                        // Batch Number and Manufacturer
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _batchNumberController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Batch Number',
+                                  border: OutlineInputBorder(),
+                                  hintText: 'Optional',
+                                ),
+                                onChanged: (value) => setState(() {}),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _manufacturerController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Manufacturer',
+                                  border: OutlineInputBorder(),
+                                  hintText: 'Optional',
+                                ),
+                                onChanged: (value) => setState(() {}),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Booster checkbox
+                        CheckboxListTile(
+                          title: const Text('This is a booster shot'),
+                          subtitle: const Text(
+                            'Check if this is a follow-up/booster vaccination',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          value: _isBooster,
+                          onChanged: (value) {
+                            setState(() {
+                              _isBooster = value ?? false;
+                            });
+                          },
+                          controlAffinity: ListTileControlAffinity.leading,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Next Due Date
+                        InkWell(
+                          onTap: () => _selectNextDueDate(context),
+                          child: FormField<DateTime>(
+                            validator: (value) {
+                              if (_nextDueDate == null) {
+                                return 'Please select next due date';
+                              }
+                              return null;
+                            },
+                            builder: (FormFieldState<DateTime> state) {
+                              return InkWell(
+                                onTap: () => _selectNextDueDate(context),
+                                child: InputDecorator(
+                                  decoration: InputDecoration(
+                                    labelText: 'Next Due Date *',
+                                    border: const OutlineInputBorder(),
+                                    suffixIcon:
+                                        const Icon(Icons.calendar_today),
+                                    errorText: state.errorText,
+                                  ),
+                                  child: Text(
+                                    _nextDueDate != null
+                                        ? DateFormat('MMMM dd, yyyy')
+                                            .format(_nextDueDate!)
+                                        : 'Select date',
+                                    style: TextStyle(
+                                      color: _nextDueDate != null
+                                          ? Colors.black87
+                                          : Colors.grey[600],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Vaccination Notes
+                        TextFormField(
+                          controller: _notesController,
+                          decoration: const InputDecoration(
+                            labelText: 'Vaccination Notes',
+                            border: OutlineInputBorder(),
+                            hintText:
+                                'Any reactions, special instructions, etc.',
+                          ),
+                          maxLines: 3,
+                          onChanged: (value) => setState(() {}),
+                        ),
+
                         const SizedBox(height: 24),
                         const Divider(),
                         const SizedBox(height: 16),
@@ -498,98 +605,6 @@ class _VaccinationCompletionDialogState
                               ),
                             ),
                           ],
-                        ),
-
-                        const SizedBox(height: 24),
-                        const Divider(),
-                        const SizedBox(height: 16),
-
-                        // Batch Number and Manufacturer
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: _batchNumberController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Batch Number',
-                                  border: OutlineInputBorder(),
-                                  hintText: 'Optional',
-                                ),
-                                onChanged: (value) => setState(() {}),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: TextFormField(
-                                controller: _manufacturerController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Manufacturer',
-                                  border: OutlineInputBorder(),
-                                  hintText: 'Optional',
-                                ),
-                                onChanged: (value) => setState(() {}),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Booster checkbox
-                        CheckboxListTile(
-                          title: const Text('This is a booster shot'),
-                          subtitle: const Text(
-                            'Check if this is a follow-up/booster vaccination',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                          value: _isBooster,
-                          onChanged: (value) {
-                            setState(() {
-                              _isBooster = value ?? false;
-                            });
-                          },
-                          controlAffinity: ListTileControlAffinity.leading,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Next Due Date
-                        InkWell(
-                          onTap: () => _selectNextDueDate(context),
-                          child: InputDecorator(
-                            decoration: const InputDecoration(
-                              labelText: 'Next Due Date',
-                              border: OutlineInputBorder(),
-                              suffixIcon: Icon(Icons.calendar_today),
-                            ),
-                            child: Text(
-                              _nextDueDate != null
-                                  ? DateFormat('MMMM dd, yyyy')
-                                      .format(_nextDueDate!)
-                                  : 'Select date (Optional)',
-                              style: TextStyle(
-                                color: _nextDueDate != null
-                                    ? Colors.black87
-                                    : Colors.grey[600],
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Vaccination Notes
-                        TextFormField(
-                          controller: _notesController,
-                          decoration: const InputDecoration(
-                            labelText: 'Vaccination Notes',
-                            border: OutlineInputBorder(),
-                            hintText:
-                                'Any reactions, special instructions, etc.',
-                          ),
-                          maxLines: 3,
-                          onChanged: (value) => setState(() {}),
                         ),
 
                         const SizedBox(height: 16),
