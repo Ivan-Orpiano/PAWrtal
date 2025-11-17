@@ -1,4 +1,5 @@
 import 'package:capstone_app/data/models/vet_clinic_registration_request_model.dart';
+import 'package:capstone_app/utils/vet_clinic_email_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:appwrite/appwrite.dart';
@@ -6,6 +7,7 @@ import 'package:appwrite/models.dart' as models;
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:get/get.dart';
 
 class VetClinicRegister extends StatefulWidget {
   final VetClinicRegistrationRequest? preFilledRequest;
@@ -19,6 +21,7 @@ class VetClinicRegister extends StatefulWidget {
 class _VetClinicRegisterState extends State<VetClinicRegister>
     with TickerProviderStateMixin {
   final GetStorage _getStorage = GetStorage();
+  final VetClinicEmailService _emailService = VetClinicEmailService();
 
   final GlobalKey<FormState> inputForm = GlobalKey<FormState>();
 
@@ -45,6 +48,10 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
   bool isLoading = false;
   bool isPasswordVisible = false;
   bool isConfirmPasswordVisible = false;
+
+  // NEW: Password generation toggle
+  bool autoGeneratePassword = true;
+  String? generatedPassword;
 
   late AnimationController _fadeController;
   late AnimationController _slideController;
@@ -88,6 +95,11 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
       vetAddress.text = widget.preFilledRequest!.fullAddress;
       vetContact.text = widget.preFilledRequest!.contactNumber;
       vetEmail.text = widget.preFilledRequest!.email;
+
+      // Generate password immediately if auto-generate is enabled
+      if (autoGeneratePassword) {
+        _generatePassword();
+      }
     } else {
       // Only set default contact if no pre-filled data
       vetContact.text = "09";
@@ -105,11 +117,28 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
     super.dispose();
   }
 
+  // NEW: Generate secure password
+  void _generatePassword() {
+    if (vetName.text.trim().isNotEmpty && vetEmail.text.trim().isNotEmpty) {
+      setState(() {
+        generatedPassword = VetClinicEmailService.generateSecurePassword(
+          clinicName: vetName.text.trim(),
+          email: vetEmail.text.trim(),
+        );
+      });
+    }
+  }
+
   void _onVetNameChanged(String value) {
     setState(() {
       vetNameBorderColor =
           value.length > vetNameLimit ? Colors.orange : Colors.grey;
     });
+
+    // Regenerate password if auto-generate is enabled
+    if (autoGeneratePassword && vetEmail.text.trim().isNotEmpty) {
+      _generatePassword();
+    }
   }
 
   void _onVetAddressChanged(String value) {
@@ -131,6 +160,11 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
       vetEmailBorderColor =
           value.length > vetEmailLimit ? Colors.orange : Colors.grey;
     });
+
+    // Regenerate password if auto-generate is enabled
+    if (autoGeneratePassword && vetName.text.trim().isNotEmpty) {
+      _generatePassword();
+    }
   }
 
   void _onPasswordChanged(String value) {
@@ -239,6 +273,256 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
     );
   }
 
+  // NEW: Build password generation toggle
+  Widget _buildPasswordToggle() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color.fromARGB(255, 81, 115, 153).withOpacity(0.3),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.vpn_key_rounded,
+                color: const Color.fromARGB(255, 81, 115, 153),
+                size: 22,
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Password Generation Method',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color.fromARGB(255, 81, 115, 153),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Auto-generate option
+          InkWell(
+            onTap: () {
+              setState(() {
+                autoGeneratePassword = true;
+                _generatePassword();
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: autoGeneratePassword
+                    ? const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: autoGeneratePassword
+                      ? const Color.fromARGB(255, 81, 115, 153)
+                      : Colors.grey.shade300,
+                  width: 2,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    autoGeneratePassword
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
+                    color: autoGeneratePassword
+                        ? const Color.fromARGB(255, 81, 115, 153)
+                        : Colors.grey,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Auto-generate secure password',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Password will be generated based on clinic details',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Manual entry option
+          InkWell(
+            onTap: () {
+              setState(() {
+                autoGeneratePassword = false;
+                generatedPassword = null;
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: !autoGeneratePassword
+                    ? const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: !autoGeneratePassword
+                      ? const Color.fromARGB(255, 81, 115, 153)
+                      : Colors.grey.shade300,
+                  width: 2,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    !autoGeneratePassword
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
+                    color: !autoGeneratePassword
+                        ? const Color.fromARGB(255, 81, 115, 153)
+                        : Colors.grey,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Enter password manually',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'You will enter the password for this clinic',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Show generated password if auto-generate is enabled
+          if (autoGeneratePassword && generatedPassword != null) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F5E9),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF4CAF50)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: const [
+                      Icon(Icons.check_circle,
+                          color: Color(0xFF4CAF50), size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Generated Password',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF2E7D32),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            generatedPassword!,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Courier New',
+                              color: Color.fromARGB(255, 81, 115, 153),
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.copy, size: 20),
+                          onPressed: () {
+                            Clipboard.setData(
+                                ClipboardData(text: generatedPassword!));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Password copied to clipboard'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          },
+                          tooltip: 'Copy password',
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'This password will be sent to the clinic\'s email address',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[700],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
@@ -249,7 +533,6 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
       body: CustomScrollView(
         slivers: [
           // Modern App Bar
-
           SliverAppBar(
             surfaceTintColor: Colors.transparent,
             expandedHeight: screenHeight * 0.15,
@@ -378,15 +661,6 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 12),
-                            // Text(
-                            //   "Join our network of trusted veterinary clinics",
-                            //   style: TextStyle(
-                            //     fontSize: 16,
-                            //     color: Colors.white.withOpacity(0.9),
-                            //     fontWeight: FontWeight.w500,
-                            //   ),
-                            // ),
                           ],
                         ),
                       ),
@@ -518,76 +792,83 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
                                   return null;
                                 },
                               ),
-                              _buildAnimatedTextField(
-                                controller: vetPassword,
-                                labelText: "Password ",
-                                maxLength: vetPasswordLimit,
-                                borderColor: vetPasswordBorderColor,
-                                onChanged: _onPasswordChanged,
-                                obscureText: !isPasswordVisible,
-                                prefixIcon: Icons.lock_rounded,
-                                animationDelay: 400,
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    isPasswordVisible
-                                        ? Icons.visibility_rounded
-                                        : Icons.visibility_off_rounded,
-                                    color:
-                                        const Color.fromARGB(255, 81, 115, 153),
+
+                              // NEW: Password generation toggle
+                              _buildPasswordToggle(),
+
+                              // Show password fields only if manual entry is selected
+                              if (!autoGeneratePassword) ...[
+                                _buildAnimatedTextField(
+                                  controller: vetPassword,
+                                  labelText: "Password ",
+                                  maxLength: vetPasswordLimit,
+                                  borderColor: vetPasswordBorderColor,
+                                  onChanged: _onPasswordChanged,
+                                  obscureText: !isPasswordVisible,
+                                  prefixIcon: Icons.lock_rounded,
+                                  animationDelay: 400,
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      isPasswordVisible
+                                          ? Icons.visibility_rounded
+                                          : Icons.visibility_off_rounded,
+                                      color: const Color.fromARGB(
+                                          255, 81, 115, 153),
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        isPasswordVisible = !isPasswordVisible;
+                                      });
+                                    },
                                   ),
-                                  onPressed: () {
-                                    setState(() {
-                                      isPasswordVisible = !isPasswordVisible;
-                                    });
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return "Password is required";
+                                    }
+                                    if (value.length < 6) {
+                                      return "Password must be at least 6 characters";
+                                    }
+                                    return null;
                                   },
                                 ),
-                                validator: (value) {
-                                  if (value == null || value.trim().isEmpty) {
-                                    return "Password is required";
-                                  }
-                                  if (value.length < 6) {
-                                    return "Password must be at least 6 characters";
-                                  }
-                                  return null;
-                                },
-                              ),
-                              _buildAnimatedTextField(
-                                controller: vetConfirmPassword,
-                                labelText: "Confirm Password",
-                                maxLength: vetPasswordLimit,
-                                borderColor: vetConfirmPasswordBorderColor,
-                                onChanged: _onConfirmPasswordChanged,
-                                obscureText: !isConfirmPasswordVisible,
-                                prefixIcon: Icons.lock_outline_rounded,
-                                animationDelay: 450,
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    isConfirmPasswordVisible
-                                        ? Icons.visibility_rounded
-                                        : Icons.visibility_off_rounded,
-                                    color:
-                                        const Color.fromARGB(255, 81, 115, 153),
+                                _buildAnimatedTextField(
+                                  controller: vetConfirmPassword,
+                                  labelText: "Confirm Password",
+                                  maxLength: vetPasswordLimit,
+                                  borderColor: vetConfirmPasswordBorderColor,
+                                  onChanged: _onConfirmPasswordChanged,
+                                  obscureText: !isConfirmPasswordVisible,
+                                  prefixIcon: Icons.lock_outline_rounded,
+                                  animationDelay: 450,
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      isConfirmPasswordVisible
+                                          ? Icons.visibility_rounded
+                                          : Icons.visibility_off_rounded,
+                                      color: const Color.fromARGB(
+                                          255, 81, 115, 153),
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        isConfirmPasswordVisible =
+                                            !isConfirmPasswordVisible;
+                                      });
+                                    },
                                   ),
-                                  onPressed: () {
-                                    setState(() {
-                                      isConfirmPasswordVisible =
-                                          !isConfirmPasswordVisible;
-                                    });
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return "Confirm Password is required";
+                                    }
+                                    if (value != vetPassword.text) {
+                                      return "Passwords do not match";
+                                    }
+                                    if (value.length < 6) {
+                                      return "Password must be at least 6 characters";
+                                    }
+                                    return null;
                                   },
                                 ),
-                                validator: (value) {
-                                  if (value == null || value.trim().isEmpty) {
-                                    return "Confirm Password is required";
-                                  }
-                                  if (value != vetPassword.text) {
-                                    return "Passwords do not match";
-                                  }
-                                  if (value.length < 6) {
-                                    return "Password must be at least 6 characters";
-                                  }
-                                  return null;
-                                },
-                              ),
+                              ],
                             ],
                           ),
                         ),
@@ -693,6 +974,18 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
   Future<void> _registerClinic() async {
     if (!inputForm.currentState!.validate()) return;
 
+    // Additional validation for auto-generated password
+    if (autoGeneratePassword && generatedPassword == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please wait while password is being generated'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      _generatePassword();
+      return;
+    }
+
     setState(() => isLoading = true);
 
     try {
@@ -702,11 +995,15 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
       final account = Account(client);
       final databases = Databases(client);
 
+      // Use generated password or manual password
+      final passwordToUse =
+          autoGeneratePassword ? generatedPassword! : vetPassword.text.trim();
+
       // Create user account
       final models.User newUser = await account.create(
         userId: ID.unique(),
         email: vetEmail.text.trim(),
-        password: vetPassword.text.trim(),
+        password: passwordToUse,
         name: vetName.text.trim(),
       );
 
@@ -739,10 +1036,100 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
         data: defaultSettings.toMap(),
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veterinary Admin created successfully!')),
+      // NEW: Send welcome email with credentials
+      final emailResult = await _emailService.sendWelcomeEmail(
+        clinicName: vetName.text.trim(),
+        email: vetEmail.text.trim(),
+        password: passwordToUse,
+        adminName: vetName.text.trim(),
       );
-      Navigator.pop(context);
+
+      if (emailResult['success'] == true) {
+        // Show success dialog with email notification
+        Get.dialog(
+          Dialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE8F5E9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check_circle,
+                      color: Color(0xFF4CAF50),
+                      size: 48,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Clinic Registered Successfully!',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'The veterinary clinic has been registered and a welcome email with account credentials has been sent to ${vetEmail.text.trim()}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.black54,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            const Color.fromARGB(255, 81, 115, 153),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () {
+                        Get.back(); // Close dialog
+                        Navigator.pop(context,
+                            true); // Return to previous page with success
+                      },
+                      child: const Text(
+                        'Done',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          barrierDismissible: false,
+        );
+      } else {
+        // Show success but email failed
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Clinic registered but failed to send email: ${emailResult['message']}'),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+        Navigator.pop(context, true);
+      }
     } catch (e) {
       String errorMessage = "Failed to register.";
       if (e is AppwriteException) {

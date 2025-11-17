@@ -6,13 +6,18 @@ class VetClinicRegistrationRequest {
   String barangay;
   String contactNumber;
   String email;
-  List<String> documentFileIds; // IDs of uploaded files in Appwrite Storage
-  String status; // 'pending', 'approved', 'rejected'
-  String? reviewedBy; // userId of admin who reviewed
-  String? reviewNotes; // Notes from admin
+  List<String> documentFileIds;
+  String status;
+  String? reviewedBy;
+  String? reviewNotes;
   DateTime submittedAt;
   DateTime? reviewedAt;
-  
+
+  // NEW: Address detail fields
+  String? street;
+  String? blockLot;
+  String? buildingUnit;
+
   VetClinicRegistrationRequest({
     this.documentId,
     required this.clinicName,
@@ -25,6 +30,9 @@ class VetClinicRegistrationRequest {
     this.reviewNotes,
     required this.submittedAt,
     this.reviewedAt,
+    this.street,
+    this.blockLot,
+    this.buildingUnit,
   });
 
   // From Appwrite Document
@@ -40,7 +48,12 @@ class VetClinicRegistrationRequest {
       reviewedBy: map['reviewedBy'],
       reviewNotes: map['reviewNotes'],
       submittedAt: DateTime.parse(map['submittedAt']),
-      reviewedAt: map['reviewedAt'] != null ? DateTime.parse(map['reviewedAt']) : null,
+      reviewedAt:
+          map['reviewedAt'] != null ? DateTime.parse(map['reviewedAt']) : null,
+      // NEW: Parse address details
+      street: map['street'] ?? '',
+      blockLot: map['blockLot'] ?? '',
+      buildingUnit: map['buildingUnit'] ?? '',
     );
   }
 
@@ -57,11 +70,41 @@ class VetClinicRegistrationRequest {
       'reviewNotes': reviewNotes ?? '',
       'submittedAt': submittedAt.toIso8601String(),
       'reviewedAt': reviewedAt?.toIso8601String() ?? '',
+      // NEW: Include address details
+      'street': street ?? '',
+      'blockLot': blockLot ?? '',
+      'buildingUnit': buildingUnit ?? '',
     };
   }
 
-  // Full address
-  String get fullAddress => 'Brgy. $barangay, San Jose del Monte, Bulacan';
+  // Full address with all components
+  String get fullAddress {
+    List<String> addressParts = [];
+
+    // Add building/unit if provided
+    if (buildingUnit != null && buildingUnit!.isNotEmpty) {
+      addressParts.add(buildingUnit!);
+    }
+
+    // Add block/lot if provided
+    if (blockLot != null && blockLot!.isNotEmpty) {
+      addressParts.add(blockLot!);
+    }
+
+    // Add street if provided
+    if (street != null && street!.isNotEmpty) {
+      addressParts.add(street!);
+    }
+
+    // Add barangay
+    addressParts.add('Brgy. $barangay');
+
+    // Always add city and province
+    addressParts.add('San Jose del Monte');
+    addressParts.add('Bulacan');
+
+    return addressParts.join(', ');
+  }
 
   // Status color
   Color get statusColor {
@@ -100,6 +143,9 @@ class VetClinicRegistrationRequest {
     String? reviewNotes,
     DateTime? submittedAt,
     DateTime? reviewedAt,
+    String? street,
+    String? blockLot,
+    String? buildingUnit,
   }) {
     return VetClinicRegistrationRequest(
       documentId: documentId ?? this.documentId,
@@ -113,6 +159,9 @@ class VetClinicRegistrationRequest {
       reviewNotes: reviewNotes ?? this.reviewNotes,
       submittedAt: submittedAt ?? this.submittedAt,
       reviewedAt: reviewedAt ?? this.reviewedAt,
+      street: street ?? this.street,
+      blockLot: blockLot ?? this.blockLot,
+      buildingUnit: buildingUnit ?? this.buildingUnit,
     );
   }
 }
