@@ -2611,7 +2611,7 @@ class AuthRepository {
     } catch (e) {}
   }
 
-  // ============= VET CLINIC REGISTRATION REQUEST METHODS =============
+// ============= VET CLINIC REGISTRATION REQUEST METHODS =============
 // Add these methods to your AuthRepository class
 
   /// Create vet clinic registration request
