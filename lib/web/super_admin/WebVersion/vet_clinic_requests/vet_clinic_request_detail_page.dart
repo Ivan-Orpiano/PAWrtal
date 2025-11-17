@@ -312,8 +312,7 @@ class _VetClinicRequestDetailPageState
               ),
               const SizedBox(width: 8),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFF517399).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -561,7 +560,7 @@ class _VetClinicRequestDetailPageState
   Future<void> _viewDocument(String fileId) async {
     try {
       final url = authRepository.getVetRegistrationDocumentUrl(fileId);
-      
+
       if (await canLaunchUrl(Uri.parse(url))) {
         await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
       } else {
@@ -585,9 +584,16 @@ class _VetClinicRequestDetailPageState
   }
 
   Future<void> _registerClinic() async {
-    // Navigate to registration page with pre-filled data
-    final result = await Get.to(() => const VetClinicRegister());
-    
+    // Navigate to registration page with pre-filled data from request
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => VetClinicRegister(
+          preFilledRequest: widget.request,
+        ),
+      ),
+    );
+
     // If registration was successful, mark as approved
     if (result == true) {
       await _updateStatus('approved');
@@ -599,7 +605,8 @@ class _VetClinicRequestDetailPageState
     final confirmed = await Get.dialog<bool>(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(newStatus == 'approved' ? 'Approve Request?' : 'Reject Request?'),
+        title: Text(
+            newStatus == 'approved' ? 'Approve Request?' : 'Reject Request?'),
         content: Text(
           newStatus == 'approved'
               ? 'This will mark the request as approved. The clinic owner will need to be registered separately.'

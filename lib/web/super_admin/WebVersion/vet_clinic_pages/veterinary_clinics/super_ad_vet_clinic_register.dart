@@ -1,3 +1,4 @@
+import 'package:capstone_app/data/models/vet_clinic_registration_request_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:appwrite/appwrite.dart';
@@ -7,7 +8,9 @@ import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:get_storage/get_storage.dart';
 
 class VetClinicRegister extends StatefulWidget {
-  const VetClinicRegister({super.key});
+  final VetClinicRegistrationRequest? preFilledRequest;
+
+  const VetClinicRegister({super.key, this.preFilledRequest});
 
   @override
   State<VetClinicRegister> createState() => _VetClinicRegisterState();
@@ -79,10 +82,19 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
     _fadeController.forward();
     _slideController.forward();
 
-    vetContact.text = "09";
-    vetContact.selection = TextSelection.fromPosition(
-      TextPosition(offset: vetContact.text.length),
-    );
+    // Pre-fill data if provided
+    if (widget.preFilledRequest != null) {
+      vetName.text = widget.preFilledRequest!.clinicName;
+      vetAddress.text = widget.preFilledRequest!.fullAddress;
+      vetContact.text = widget.preFilledRequest!.contactNumber;
+      vetEmail.text = widget.preFilledRequest!.email;
+    } else {
+      // Only set default contact if no pre-filled data
+      vetContact.text = "09";
+      vetContact.selection = TextSelection.fromPosition(
+        TextPosition(offset: vetContact.text.length),
+      );
+    }
   }
 
   @override
@@ -149,95 +161,81 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
     int animationDelay = 0,
     List<TextInputFormatter>? inputFormatters,
   }) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0.0, end: 1.0),
-      duration: Duration(milliseconds: 600 + animationDelay),
-      curve: Curves.elasticOut,
-      builder: (context, value, child) {
-        return Transform.scale(
-          scale: 0.8 + (0.2 * value),
-          child: Opacity(
-            opacity: value,
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color.fromARGB(255, 81, 115, 153)
-                        .withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color.fromARGB(255, 81, 115, 153).withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: TextFormField(
+        controller: controller,
+        maxLength: maxLength + 1,
+        obscureText: obscureText,
+        keyboardType: keyboardType,
+        onChanged: onChanged,
+        inputFormatters: inputFormatters,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+        ),
+        decoration: InputDecoration(
+          labelText: labelText,
+          labelStyle: TextStyle(
+            color: borderColor == Colors.orange
+                ? Colors.orange
+                : const Color.fromARGB(255, 81, 115, 153),
+            fontWeight: FontWeight.w500,
+          ),
+          prefixIcon: prefixIcon != null
+              ? Container(
+                  margin: const EdgeInsets.only(left: 12, right: 8),
+                  child: Icon(
+                    prefixIcon,
+                    color: const Color.fromARGB(255, 81, 115, 153),
+                    size: 22,
                   ),
-                ],
-              ),
-              child: TextFormField(
-                controller: controller,
-                maxLength: maxLength + 1,
-                obscureText: obscureText,
-                keyboardType: keyboardType,
-                onChanged: onChanged,
-                inputFormatters: inputFormatters,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-                decoration: InputDecoration(
-                  labelText: labelText,
-                  labelStyle: TextStyle(
-                    color: borderColor == Colors.orange
-                        ? Colors.orange
-                        : const Color.fromARGB(255, 81, 115, 153),
-                    fontWeight: FontWeight.w500,
-                  ),
-                  prefixIcon: prefixIcon != null
-                      ? Container(
-                          margin: const EdgeInsets.only(left: 12, right: 8),
-                          child: Icon(
-                            prefixIcon,
-                            color: const Color.fromARGB(255, 81, 115, 153),
-                            size: 22,
-                          ),
-                        )
-                      : null,
-                  suffixIcon: suffixIcon,
-                  counterText: "",
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: borderColor, width: 1.5),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: borderColor, width: 1.5),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(
-                      color: Color.fromARGB(255, 81, 115, 153),
-                      width: 2.5,
-                    ),
-                  ),
-                  errorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: Colors.red, width: 1.5),
-                  ),
-                  focusedErrorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: Colors.red, width: 2.5),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 18,
-                  ),
-                ),
-                validator: validator,
-              ),
+                )
+              : null,
+          suffixIcon: suffixIcon,
+          counterText: "",
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: borderColor, width: 1.5),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: borderColor, width: 1.5),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(
+              color: Color.fromARGB(255, 81, 115, 153),
+              width: 2.5,
             ),
           ),
-        );
-      },
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: Colors.red, width: 1.5),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: Colors.red, width: 2.5),
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 18,
+          ),
+        ),
+        validator: validator,
+      ),
     );
   }
 
@@ -595,110 +593,91 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
                         ),
                       ),
                       const SizedBox(height: 30),
-                      TweenAnimationBuilder<double>(
-                        tween: Tween<double>(begin: 0.0, end: 1.0),
-                        duration: const Duration(milliseconds: 800),
-                        curve: Curves.elasticOut,
-                        builder: (context, value, child) {
-                          return Transform.scale(
-                            scale: 0.8 + (0.2 * value),
-                            child: Container(
-                              width: double.infinity,
-                              height: 56,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color:
-                                        const Color.fromARGB(255, 81, 115, 153)
-                                            .withOpacity(0.3),
-                                    blurRadius: 15,
-                                    offset: const Offset(0, 8),
-                                  ),
-                                ],
-                              ),
-                              child: isLoading
-                                  ? Container(
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            const Color.fromARGB(
-                                                255, 81, 115, 153),
-                                            const Color.fromARGB(
-                                                    255, 81, 115, 153)
-                                                .withOpacity(0.8),
-                                          ],
-                                        ),
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      child: const Center(
-                                        child: SizedBox(
-                                          width: 24,
-                                          height: 24,
-                                          child: CircularProgressIndicator(
-                                            valueColor:
-                                                AlwaysStoppedAnimation<Color>(
-                                                    Colors.white),
-                                            strokeWidth: 2,
-                                          ),
-                                        ),
-                                      ),
-                                    )
-                                  : ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.transparent,
-                                        shadowColor: Colors.transparent,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(16),
-                                        ),
-                                      ),
-                                      onPressed: _registerClinic,
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            colors: [
-                                              const Color.fromARGB(
-                                                  255, 81, 115, 153),
-                                              const Color.fromARGB(
-                                                      255, 81, 115, 153)
-                                                  .withOpacity(0.8),
-                                            ],
-                                            begin: Alignment.topLeft,
-                                            end: Alignment.bottomRight,
-                                          ),
-                                          borderRadius:
-                                              BorderRadius.circular(16),
-                                        ),
-                                        child: const Center(
-                                          child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                Icons.app_registration_rounded,
-                                                color: Colors.white,
-                                                size: 20,
-                                              ),
-                                              SizedBox(width: 8),
-                                              Text(
-                                                "Register Clinic",
-                                                style: TextStyle(
-                                                  fontSize: 18,
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
+                      Container(
+                        width: double.infinity,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color.fromARGB(255, 81, 115, 153)
+                                  .withOpacity(0.3),
+                              blurRadius: 15,
+                              offset: const Offset(0, 8),
                             ),
-                          );
-                        },
+                          ],
+                        ),
+                        child: isLoading
+                            ? Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      const Color.fromARGB(255, 81, 115, 153),
+                                      const Color.fromARGB(255, 81, 115, 153)
+                                          .withOpacity(0.8),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: const Center(
+                                  child: SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                          Colors.white),
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  shadowColor: Colors.transparent,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                onPressed: _registerClinic,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        const Color.fromARGB(255, 81, 115, 153),
+                                        const Color.fromARGB(255, 81, 115, 153)
+                                            .withOpacity(0.8),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: const Center(
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.app_registration_rounded,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          "Register Clinic",
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
                       ),
-
                       const SizedBox(height: 40),
                     ],
                   ),
