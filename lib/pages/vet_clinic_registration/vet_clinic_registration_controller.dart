@@ -5,20 +5,31 @@ import 'package:capstone_app/data/repository/auth.repository.dart';
 
 class VetClinicRegistrationController extends GetxController {
   final AuthRepository authRepository = Get.find<AuthRepository>();
-  
+
   final formKey = GlobalKey<FormState>();
-  
+
   // Text Controllers
   final clinicNameController = TextEditingController();
   final contactController = TextEditingController();
   final emailController = TextEditingController();
-  
+
+  // NEW: Address detail controllers
+  final streetController = TextEditingController();
+  final blockController = TextEditingController();
+  final buildingController = TextEditingController();
+  final barangaySearchController =
+      TextEditingController(); // NEW: For searchable dropdown
+
   // Observable Variables
   final selectedBarangay = ''.obs;
   final uploadedFiles = <PlatformFile>[].obs;
   final isUploading = false.obs;
   final isSubmitting = false.obs;
-  
+
+  // NEW: For searchable dropdown
+  final filteredBarangays = <String>[].obs;
+  final showBarangayDropdown = false.obs;
+
   // Barangay List from San Jose Del Monte, Bulacan
   final List<String> barangays = [
     'Assumption',
@@ -93,6 +104,12 @@ class VetClinicRegistrationController extends GetxController {
     contactController.selection = TextSelection.fromPosition(
       TextPosition(offset: contactController.text.length),
     );
+
+    // Initialize filtered barangays
+    filteredBarangays.value = List.from(barangays);
+
+    // Listen to barangay search changes
+    barangaySearchController.addListener(_filterBarangays);
   }
 
   @override
@@ -100,13 +117,78 @@ class VetClinicRegistrationController extends GetxController {
     clinicNameController.dispose();
     contactController.dispose();
     emailController.dispose();
+    streetController.dispose();
+    blockController.dispose();
+    buildingController.dispose();
+    barangaySearchController.dispose();
     super.onClose();
+  }
+
+  // NEW: Filter barangays based on search input
+  void _filterBarangays() {
+    final query = barangaySearchController.text.toLowerCase().trim();
+
+    if (query.isEmpty) {
+      filteredBarangays.value = List.from(barangays);
+      showBarangayDropdown.value = false;
+    } else {
+      filteredBarangays.value = barangays
+          .where((barangay) => barangay.toLowerCase().contains(query))
+          .toList();
+      showBarangayDropdown.value = filteredBarangays.isNotEmpty;
+    }
+  }
+
+  // NEW: Select barangay from dropdown
+  void selectBarangay(String barangay) {
+    selectedBarangay.value = barangay;
+    barangaySearchController.text = barangay;
+    showBarangayDropdown.value = false;
+  }
+
+  // NEW: Clear barangay selection
+  void clearBarangaySearch() {
+    barangaySearchController.clear();
+    selectedBarangay.value = '';
+    filteredBarangays.value = List.from(barangays);
+    showBarangayDropdown.value = false;
+  }
+
+  // NEW: Build complete address string
+  String getCompleteAddress() {
+    List<String> addressParts = [];
+
+    // Add building/unit if provided
+    if (buildingController.text.trim().isNotEmpty) {
+      addressParts.add(buildingController.text.trim());
+    }
+
+    // Add block/lot if provided
+    if (blockController.text.trim().isNotEmpty) {
+      addressParts.add(blockController.text.trim());
+    }
+
+    // Add street if provided
+    if (streetController.text.trim().isNotEmpty) {
+      addressParts.add(streetController.text.trim());
+    }
+
+    // Add barangay if selected
+    if (selectedBarangay.value.isNotEmpty) {
+      addressParts.add('Brgy. ${selectedBarangay.value}');
+    }
+
+    // Always add city and province
+    addressParts.add('San Jose del Monte');
+    addressParts.add('Bulacan');
+
+    return addressParts.join(', ');
   }
 
   Future<void> pickFiles() async {
     try {
       isUploading.value = true;
-      
+
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
@@ -126,7 +208,7 @@ class VetClinicRegistrationController extends GetxController {
             );
             continue;
           }
-          
+
           // Check if file already exists
           final exists = uploadedFiles.any((f) => f.name == file.name);
           if (!exists) {
@@ -188,7 +270,8 @@ class VetClinicRegistrationController extends GetxController {
       final fileIds = <String>[];
       for (var file in uploadedFiles) {
         try {
-          final uploadedFile = await authRepository.uploadVetRegistrationDocument(file);
+          final uploadedFile =
+              await authRepository.uploadVetRegistrationDocument(file);
           fileIds.add(uploadedFile.$id);
         } catch (e) {
           Get.snackbar(
@@ -201,14 +284,15 @@ class VetClinicRegistrationController extends GetxController {
           // Clean up already uploaded files
           for (var uploadedFileId in fileIds) {
             try {
-              await authRepository.deleteVetRegistrationDocument(uploadedFileId);
+              await authRepository
+                  .deleteVetRegistrationDocument(uploadedFileId);
             } catch (_) {}
           }
           return;
         }
       }
 
-      // Create registration request
+      // Create registration request with complete address
       final requestData = {
         'clinicName': clinicNameController.text.trim(),
         'barangay': selectedBarangay.value,
@@ -220,6 +304,10 @@ class VetClinicRegistrationController extends GetxController {
         'reviewNotes': '',
         'submittedAt': DateTime.now().toIso8601String(),
         'reviewedAt': '',
+        // NEW: Store individual address components
+        'street': streetController.text.trim(),
+        'blockLot': blockController.text.trim(),
+        'buildingUnit': buildingController.text.trim(),
       };
 
       await authRepository.createVetRegistrationRequest(requestData);
@@ -295,7 +383,6 @@ class VetClinicRegistrationController extends GetxController {
         ),
         barrierDismissible: false,
       );
-
     } catch (e) {
       Get.snackbar(
         'Error',
