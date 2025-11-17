@@ -101,13 +101,120 @@ class _PawmapState extends State<Pawmap> {
   String searchQuery = '';
   String selectedFilter = 'All';
 
+  // KEEP ORIGINAL CAMERA BOUNDS - Same as web_maps.dart
+  // This defines what the camera can see
   final sanJoseDelMonteBounds = LatLngBounds(
-    const LatLng(14.7500, 121.0000),
-    const LatLng(14.8700, 121.1000),
+    const LatLng(14.7667, 121.0167), // Southwest: 14°46'N, 121°1'E
+    const LatLng(14.8667, 121.1667), // Northeast: 14°52'N, 121°10'E
   );
 
+  // STRICT SJDM POLYGON BOUNDARIES - Based on official barangay map
+  // Traced from the actual SJDM city boundary map showing all 62 barangays
+  // Excludes neighboring municipalities: Norzagaray (N), Rodriguez/Quezon (E),
+  // Quezon City/Caloocan (S), Santa Maria/Marilao (W)
+  final List<LatLng> sjdmPolygonBoundary = const [
+    // Start from SOUTHWEST - Muzon area (border with Caloocan City)
+    LatLng(14.7680, 121.0480), // Muzon South - southernmost point
+
+    // SOUTH BORDER - Muzon to San Manuel (Caloocan & Quezon City border)
+    LatLng(14.7700, 121.0520), // Muzon South boundary
+    LatLng(14.7720, 121.0580), // Between Muzon and Gaya-Gaya
+    LatLng(14.7750, 121.0650), // Gaya-Gaya/Graceville area
+    LatLng(14.7780, 121.0720), // San Manuel area
+
+    // SOUTHEAST CURVE - San Manuel to Ciudad Real (Quezon City border)
+    LatLng(14.7820, 121.0800), // Tungkong Mangga south
+    LatLng(14.7860, 121.0880), // Ciudad Real west
+    LatLng(14.7900, 121.0950), // Ciudad Real center
+
+    // EAST BORDER START - Ciudad Real to Paradise III (Rodriguez, Rizal border)
+    LatLng(14.7950, 121.1020), // Ciudad Real east
+    LatLng(14.8000, 121.1080), // Paradise III south
+    LatLng(14.8050, 121.1140), // Paradise III center
+
+    // EAST BORDER MIDDLE - Paradise III to San Isidro (Rodriguez/Quezon border)
+    LatLng(14.8100, 121.1180), // Paradise III north / San Isidro
+    LatLng(14.8150, 121.1200), // San Isidro - easternmost point
+    LatLng(14.8200, 121.1190), // San Roque east
+
+    // NORTHEAST CURVE - San Roque to Minuyan areas
+    LatLng(14.8250, 121.1160), // Kaybanban east
+    LatLng(14.8300, 121.1120), // Minuyan II east
+    LatLng(14.8350, 121.1080), // Minuyan III east
+    LatLng(14.8400, 121.1050), // Minuyan IV east
+
+    // NORTH BORDER START - Minuyan to Citrus (Norzagaray border - conservative)
+    LatLng(14.8450, 121.1000), // Minuyan Proper east
+    LatLng(14.8480, 121.0920), // Citrus north - avoid disputed areas
+    LatLng(14.8500, 121.0850), // Minuyan V north (conservative boundary)
+
+    // NORTH BORDER MIDDLE - Minuyan to Sapang Palay (Norzagaray border)
+    LatLng(14.8510, 121.0780), // Santo Nino II north
+    LatLng(14.8500, 121.0700), // Bagong Buhay north
+    LatLng(14.8480, 121.0620), // San Rafael V north
+    LatLng(14.8460, 121.0550), // San Martin de Porres / Lawang Pari
+    LatLng(14.8440, 121.0480), // Assumption / Maharlika north
+
+    // NORTHWEST CORNER - Sapang Palay area (Norzagaray border)
+    LatLng(14.8420, 121.0410), // Sapang Palay north
+    LatLng(14.8390, 121.0350), // Sapang Palay northwest
+    LatLng(14.8350, 121.0300), // Gaya-Gaya north / Kaypian
+
+    // WEST BORDER - Kaypian to Dulong Bayan (Santa Maria border)
+    LatLng(14.8300, 121.0270), // Kaypian west - westernmost point
+    LatLng(14.8250, 121.0290), // Kaybanban west
+    LatLng(14.8200, 121.0310), // San Pedro west
+    LatLng(14.8150, 121.0330), // Santo Cristo west
+
+    // WEST BORDER SOUTH - Santo Cristo to Muzon (Santa Maria/Marilao border)
+    LatLng(14.8100, 121.0350), // Dulong Bayan west
+    LatLng(14.8050, 121.0370), // Poblacion west
+    LatLng(14.8000, 121.0390), // Gumaoc West
+    LatLng(14.7950, 121.0410), // Gaya-Gaya west
+    LatLng(14.7900, 121.0430), // Gaya-Gaya southwest
+    LatLng(14.7850, 121.0450), // Muzon West
+    LatLng(14.7800, 121.0460), // Muzon area
+    LatLng(14.7750, 121.0470), // Muzon South area
+
+    // Close polygon - back to start
+    LatLng(14.7680, 121.0480), // Muzon South - southernmost point
+  ];
+
+  // CRITICAL: Point-in-polygon test for STRICT SJDM boundary
   bool isWithinBounds(LatLng point) {
-    return sanJoseDelMonteBounds.contains(point);
+    // Ray casting algorithm for point-in-polygon test
+    // This ensures ONLY areas within the polygon boundary are considered valid SJDM
+    return _isPointInPolygon(point, sjdmPolygonBoundary);
+  }
+
+  // Ray casting algorithm implementation
+  bool _isPointInPolygon(LatLng point, List<LatLng> polygon) {
+    int intersectCount = 0;
+    for (int i = 0; i < polygon.length - 1; i++) {
+      if (_rayCastIntersect(point, polygon[i], polygon[i + 1])) {
+        intersectCount++;
+      }
+    }
+    return (intersectCount % 2) == 1; // Odd number of intersections = inside
+  }
+
+  bool _rayCastIntersect(LatLng point, LatLng vertA, LatLng vertB) {
+    double aY = vertA.latitude;
+    double bY = vertB.latitude;
+    double aX = vertA.longitude;
+    double bX = vertB.longitude;
+    double pY = point.latitude;
+    double pX = point.longitude;
+
+    if ((aY > pY && bY > pY) || (aY < pY && bY < pY) || (aX < pX && bX < pX)) {
+      return false;
+    }
+
+    double m = (bY - aY) / (bX - aX);
+    double bee = (-aX) * m + aY;
+    double x = (pY - bee) / m;
+
+    return x > pX;
   }
 
   @override
@@ -149,9 +256,13 @@ class _PawmapState extends State<Pawmap> {
       Position? position = await _getCurrentUserLocation();
       if (position != null) {
         LatLng fetchedLocation = LatLng(position.latitude, position.longitude);
+
+        // STRICT: If user location is outside SJDM polygon, default to city center
         if (!isWithinBounds(fetchedLocation)) {
-          fetchedLocation = sanJoseDelMonteBounds.center;
+          fetchedLocation =
+              const LatLng(14.8167, 121.0500); // SJDM City Center (Poblacion)
         }
+
         if (mounted) {
           setState(() {
             userLocation = fetchedLocation;
@@ -160,14 +271,14 @@ class _PawmapState extends State<Pawmap> {
       } else {
         if (mounted) {
           setState(() {
-            userLocation = sanJoseDelMonteBounds.center;
+            userLocation = const LatLng(14.8167, 121.0500); // SJDM City Center
           });
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          userLocation = sanJoseDelMonteBounds.center;
+          userLocation = const LatLng(14.8167, 121.0500); // SJDM City Center
         });
       }
     }
@@ -385,10 +496,20 @@ class _PawmapState extends State<Pawmap> {
         break;
     }
 
-    // Only include clinics that have location data
+    // CRITICAL: Only include clinics with location data AND within SJDM POLYGON
     filtered = filtered.where((clinic) {
       final settings = clinicSettingsMap[clinic.documentId ?? ''];
-      return settings?.location != null;
+      if (settings?.location == null) {
+        return false;
+      }
+
+      final location = LatLng(
+        settings!.location!['lat']!,
+        settings.location!['lng']!,
+      );
+
+      // STRICT POLYGON CHECK: Filter out clinics outside SJDM polygon boundary
+      return isWithinBounds(location);
     }).toList();
 
     setState(() {
@@ -397,10 +518,17 @@ class _PawmapState extends State<Pawmap> {
   }
 
   int getFilterCount(String filter) {
-    // Only count clinics that have location data
+    // Only count clinics that have location data AND are within SJDM polygon
     var filtered = allClinics.where((clinic) {
       final settings = clinicSettingsMap[clinic.documentId ?? ''];
-      return settings?.location != null;
+      if (settings?.location == null) return false;
+
+      final location = LatLng(
+        settings!.location!['lat']!,
+        settings.location!['lng']!,
+      );
+
+      return isWithinBounds(location);
     }).toList();
 
     switch (filter) {
@@ -500,10 +628,18 @@ class _PawmapState extends State<Pawmap> {
       final settings = clinicSettingsMap[clinic.documentId ?? ''];
 
       if (settings?.location != null) {
+        final clinicLocation =
+            LatLng(settings!.location!['lat']!, settings.location!['lng']!);
+
+        // STRICT: Skip clinics outside SJDM polygon
+        if (!isWithinBounds(clinicLocation)) {
+          continue;
+        }
+
         final today = DateTime.now();
         final todayStr =
             '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-        final isTodayClosedDate = settings!.closedDates.contains(todayStr);
+        final isTodayClosedDate = settings.closedDates.contains(todayStr);
 
         final isOpenAndAvailable =
             settings.isOpen && settings.isOpenNow() && !isTodayClosedDate;
@@ -512,8 +648,6 @@ class _PawmapState extends State<Pawmap> {
           continue;
         }
 
-        final clinicLocation =
-            LatLng(settings.location!['lat']!, settings.location!['lng']!);
         final dist = calculateDistance(userLocation!, clinicLocation);
 
         if (dist < shortestDistance) {
@@ -529,16 +663,18 @@ class _PawmapState extends State<Pawmap> {
         final nearestLocation =
             LatLng(settings!.location!['lat']!, settings.location!['lng']!);
 
+        // STRICT: Double-check polygon bounds before moving
         if (isWithinBounds(nearestLocation)) {
           _mapController.move(nearestLocation, 17);
           fetchRoute(nearestLocation);
         } else {
           _showNoNearestClinicMessage(
-              'Nearest open clinic is outside the service area');
+              'Nearest open clinic is outside San Jose del Monte city limits');
         }
       }
     } else {
-      _showNoNearestClinicMessage('No open clinics available nearby');
+      _showNoNearestClinicMessage(
+          'No open clinics available in San Jose del Monte');
     }
   }
 
@@ -585,6 +721,7 @@ class _PawmapState extends State<Pawmap> {
       final location =
           LatLng(settings!.location!['lat']!, settings.location!['lng']!);
 
+      // STRICT: Only show markers within SJDM polygon boundary
       if (!isWithinBounds(location)) {
         continue;
       }
