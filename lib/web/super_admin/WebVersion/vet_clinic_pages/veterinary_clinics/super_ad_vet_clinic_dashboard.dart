@@ -2,6 +2,7 @@ import 'package:capstone_app/data/models/clinic_model.dart';
 import 'package:capstone_app/data/models/clinic_settings_model.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/archive_clinics/archived_clinics_dashboard.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterinary_clinics/super_ad_vet_clinic_detail_page.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_requests/vet_clinic_requests_dashboard.dart';
 import 'package:capstone_app/web/super_admin/desktop/super_admin_desktop_home_page.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/sa_dashboard_components/sa_sort_button.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/sa_dashboard_components/sa_search_bar.dart';
@@ -28,14 +29,15 @@ class SuperAdminVetClinicDashboard extends StatefulWidget {
 }
 
 class _SuperAdminVetClinicDashboardState
-    extends State<SuperAdminVetClinicDashboard> with SingleTickerProviderStateMixin {
+    extends State<SuperAdminVetClinicDashboard>
+    with SingleTickerProviderStateMixin {
   final SuperAdminHomeController controller = SuperAdminHomeController.instance;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isLoggingOut = false;
 
   StreamSubscription? _clinicSubscription;
   StreamSubscription? _settingsSubscription;
-  
+
   late AnimationController _fabAnimationController;
   late Animation<double> _fabScaleAnimation;
   late DashboardResponsive _responsive;
@@ -74,13 +76,10 @@ class _SuperAdminVetClinicDashboardState
   }
 
   void _setupRealtimeListeners() {
-    
-    _clinicSubscription = controller.authRepository
-        .subscribeToClinicChanges()
-        .listen((event) {
-      
+    _clinicSubscription =
+        controller.authRepository.subscribeToClinicChanges().listen((event) {
       final eventType = event.events.first;
-      
+
       if (eventType.contains('.create')) {
         _showRealTimeNotification(
           'New clinic added',
@@ -98,18 +97,16 @@ class _SuperAdminVetClinicDashboardState
         );
         controller.fetchAllClinics();
       }
-    }, onError: (error) {
-    });
+    }, onError: (error) {});
 
     _settingsSubscription = controller.authRepository
         .subscribeToClinicSettingsChanges()
         .listen((event) {
-      
       final eventType = event.events.first;
-      
+
       if (eventType.contains('.update')) {
         final clinicId = event.payload['clinicId'] as String?;
-        
+
         if (clinicId != null) {
           _showRealTimeNotification(
             'Clinic settings updated',
@@ -121,13 +118,12 @@ class _SuperAdminVetClinicDashboardState
       } else if (eventType.contains('.create')) {
         controller.fetchAllClinics();
       }
-    }, onError: (error) {
-    });
+    }, onError: (error) {});
   }
 
   void _showRealTimeNotification(String message, IconData icon, Color color) {
     if (!mounted) return;
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Container(
@@ -290,7 +286,8 @@ class _SuperAdminVetClinicDashboardState
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const SuperAdminUserManagementScreen(),
+                        builder: (context) =>
+                            const SuperAdminUserManagementScreen(),
                       ),
                     );
                   },
@@ -343,6 +340,22 @@ class _SuperAdminVetClinicDashboardState
                       context,
                       MaterialPageRoute(
                         builder: (context) => const ArchivedClinicsDashboard(),
+                      ),
+                    );
+                  },
+                ),
+                _buildDrawerItem(
+                  context,
+                  icon: Icons.pending_actions_rounded,
+                  title: 'Registration Requests',
+                  subtitle: 'Review clinic applications',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const VetClinicRequestsDashboard(),
                       ),
                     );
                   },
@@ -560,7 +573,8 @@ class _SuperAdminVetClinicDashboardState
                 },
                 borderRadius: BorderRadius.circular(_responsive.scale(11)),
                 child: Container(
-                  padding: EdgeInsets.symmetric(vertical: _responsive.scale(15)),
+                  padding:
+                      EdgeInsets.symmetric(vertical: _responsive.scale(15)),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [
@@ -874,7 +888,7 @@ class _SuperAdminVetClinicDashboardState
       child: LayoutBuilder(
         builder: (context, constraints) {
           final gridConfig = _responsive.getGridConfig(filteredClinics.length);
-          
+
           return Container(
             constraints: BoxConstraints(
               minHeight: MediaQuery.of(context).size.height * 0.6,
@@ -914,7 +928,8 @@ class _SuperAdminVetClinicDashboardState
                             final result = await Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => SuperAdminVetClinicDetailPage(
+                                builder: (context) =>
+                                    SuperAdminVetClinicDetailPage(
                                   clinic: clinic,
                                   settings: settings,
                                 ),
@@ -1033,16 +1048,19 @@ class _SuperAdminVetClinicDashboardState
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color.fromRGBO(81, 115, 153, 1),
+                            backgroundColor:
+                                const Color.fromRGBO(81, 115, 153, 1),
                             foregroundColor: Colors.white,
                             padding: EdgeInsets.symmetric(
                               horizontal: _responsive.scale(28),
                               vertical: _responsive.scale(14),
                             ),
                             elevation: 4,
-                            shadowColor: const Color.fromRGBO(81, 115, 153, 0.3),
+                            shadowColor:
+                                const Color.fromRGBO(81, 115, 153, 0.3),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(_responsive.scale(12)),
+                              borderRadius:
+                                  BorderRadius.circular(_responsive.scale(12)),
                             ),
                           ),
                         ),

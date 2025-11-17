@@ -6874,7 +6874,7 @@ class AppWriteProvider {
     }
   }
 
-  // ============= VET CLINIC REGISTRATION REQUEST METHODS =============
+// ============= VET CLINIC REGISTRATION REQUEST METHODS =============
 // Add these methods to your AppWriteProvider class
 
   /// Create vet clinic registration request

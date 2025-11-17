@@ -42,6 +42,7 @@ import 'package:capstone_app/data/repository/auth.repository.dart';
 import 'package:capstone_app/utils/user_session_service.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/pet_owners_pages/user_page.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/veterinary_clinics/super_ad_vet_clinic_dashboard.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_requests/vet_clinic_requests_dashboard.dart';
 import 'package:capstone_app/web/super_admin/WebVersion/view_report/user_app_feedback/app_feedback.dart';
 
 // SECURITY: Import middleware
@@ -207,5 +208,10 @@ class AppPages {
         page: () => const VetClinicRegistrationPage(),
         binding: VetClinicRegistrationBinding(),
         transition: Transition.fadeIn),
+
+    GetPage(
+      name: '/vet-clinic-requests',
+      page: () => const VetClinicRequestsDashboard(),
+    ),
   ];
 }
