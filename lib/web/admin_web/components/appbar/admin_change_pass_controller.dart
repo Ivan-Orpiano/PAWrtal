@@ -1,5 +1,6 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:capstone_app/data/repository/auth.repository.dart';
+import 'package:capstone_app/utils/appwrite_constant.dart';
 import 'package:capstone_app/utils/custom_snack_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -238,5 +239,26 @@ class AdminChangePasswordController extends GetxController {
     return currentPasswordController.text.isNotEmpty ||
         newPasswordController.text.isNotEmpty ||
         confirmPasswordController.text.isNotEmpty;
+  }
+
+  Future<void> markPasswordAsChanged(String clinicId) async {
+    try {
+      final databases =
+          Databases(authRepository.appWriteProvider.appwriteClient);
+
+      await databases.updateDocument(
+        databaseId: AppwriteConstants.dbID,
+        collectionId: AppwriteConstants.clinicsCollectionID,
+        documentId: clinicId,
+        data: {
+          'hasChangedPassword': true,
+        },
+      );
+
+      // Update local storage
+      _storage.write('hasChangedPassword', true);
+    } catch (e) {
+      print('Error marking password as changed: $e');
+    }
   }
 }

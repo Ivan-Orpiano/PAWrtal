@@ -1,5 +1,6 @@
 import 'package:capstone_app/data/models/vet_clinic_registration_request_model.dart';
 import 'package:capstone_app/utils/vet_clinic_email_service.dart';
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_pages/vet_clinic_components/super_ad_pin_maps.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:appwrite/appwrite.dart';
@@ -49,9 +50,13 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
   bool isPasswordVisible = false;
   bool isConfirmPasswordVisible = false;
 
-  // NEW: Password generation toggle
+  // Password generation toggle
   bool autoGeneratePassword = true;
   String? generatedPassword;
+
+  // ============ ADD THIS VARIABLE ============
+  Map<String, double>? selectedClinicLocation;
+  // ===========================================
 
   late AnimationController _fadeController;
   late AnimationController _slideController;
@@ -117,7 +122,7 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
     super.dispose();
   }
 
-  // NEW: Generate secure password
+  // Generate secure password
   void _generatePassword() {
     if (vetName.text.trim().isNotEmpty && vetEmail.text.trim().isNotEmpty) {
       setState(() {
@@ -127,6 +132,16 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
         );
       });
     }
+  }
+
+  void _onLocationSelected(Map<String, double> location) {
+    setState(() {
+      if (location.isEmpty) {
+        selectedClinicLocation = null;
+      } else {
+        selectedClinicLocation = location;
+      }
+    });
   }
 
   void _onVetNameChanged(String value) {
@@ -793,7 +808,7 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
                                 },
                               ),
 
-                              // NEW: Password generation toggle
+                              // Password generation toggle
                               _buildPasswordToggle(),
 
                               // Show password fields only if manual entry is selected
@@ -873,7 +888,34 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
                           ),
                         ),
                       ),
+
                       const SizedBox(height: 30),
+
+                      // ============ MAP SECTION - ADD HERE ============
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color.fromARGB(255, 81, 115, 153)
+                                  .withOpacity(0.08),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: SuperAdPinMaps(
+                          onLocationSelected: _onLocationSelected,
+                          currentLocation: selectedClinicLocation,
+                        ),
+                      ),
+                      // ============ END MAP SECTION ============
+
+                      const SizedBox(height: 30),
+
+                      // Register Button
                       Container(
                         width: double.infinity,
                         height: 56,
@@ -986,6 +1028,33 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
       return;
     }
 
+    // NEW: Validate location selection
+    if (selectedClinicLocation == null || selectedClinicLocation!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.warning_rounded, color: Colors.white),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Please pin the clinic location on the map before registering',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
     setState(() => isLoading = true);
 
     try {
@@ -1027,8 +1096,12 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
         },
       );
 
-      // Create default clinic settings
-      final defaultSettings = ClinicSettings(clinicId: clinicDoc.$id);
+      // Create default clinic settings WITH LOCATION
+      final defaultSettings = ClinicSettings(
+        clinicId: clinicDoc.$id,
+        location: selectedClinicLocation, // NEW: Include the selected location
+      );
+
       await databases.createDocument(
         databaseId: AppwriteConstants.dbID,
         collectionId: AppwriteConstants.clinicSettingsCollectionID,
@@ -1036,7 +1109,7 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
         data: defaultSettings.toMap(),
       );
 
-      // NEW: Send welcome email with credentials
+      // Send welcome email with credentials
       final emailResult = await _emailService.sendWelcomeEmail(
         clinicName: vetName.text.trim(),
         email: vetEmail.text.trim(),
@@ -1079,7 +1152,7 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'The veterinary clinic has been registered and a welcome email with account credentials has been sent to ${vetEmail.text.trim()}',
+                    'The veterinary clinic has been registered with location coordinates and a welcome email with account credentials has been sent to ${vetEmail.text.trim()}',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 14,
@@ -1123,7 +1196,7 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                'Clinic registered but failed to send email: ${emailResult['message']}'),
+                'Clinic registered with location but failed to send email: ${emailResult['message']}'),
             backgroundColor: Colors.orange,
             duration: const Duration(seconds: 5),
           ),
@@ -1136,7 +1209,10 @@ class _VetClinicRegisterState extends State<VetClinicRegister>
         errorMessage = e.message ?? errorMessage;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage)),
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+        ),
       );
     } finally {
       setState(() => isLoading = false);
