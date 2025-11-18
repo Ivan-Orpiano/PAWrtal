@@ -19,7 +19,8 @@ class VetClinicRequestsDashboard extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 1,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: Color(0xFF517399)),
+          icon: const Icon(Icons.arrow_back_ios_rounded,
+              color: Color(0xFF517399)),
           onPressed: () => Get.back(),
         ),
         title: Image.asset(
@@ -151,17 +152,24 @@ class VetClinicRequestsDashboard extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(child: _buildStatCard('Total', stats['total']!, Colors.blue)),
+            Expanded(
+                child: _buildStatCard('Total', stats['total']!, Colors.blue)),
             const SizedBox(width: 8),
-            Expanded(child: _buildStatCard('Pending', stats['pending']!, Colors.orange)),
+            Expanded(
+                child: _buildStatCard(
+                    'Pending', stats['pending']!, Colors.orange)),
           ],
         ),
         const SizedBox(height: 8),
         Row(
           children: [
-            Expanded(child: _buildStatCard('Approved', stats['approved']!, Colors.green)),
+            Expanded(
+                child: _buildStatCard(
+                    'Approved', stats['approved']!, Colors.green)),
             const SizedBox(width: 8),
-            Expanded(child: _buildStatCard('Rejected', stats['rejected']!, Colors.red)),
+            Expanded(
+                child:
+                    _buildStatCard('Rejected', stats['rejected']!, Colors.red)),
           ],
         ),
       ],
@@ -173,11 +181,15 @@ class VetClinicRequestsDashboard extends StatelessWidget {
       children: [
         Expanded(child: _buildStatCard('Total', stats['total']!, Colors.blue)),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatCard('Pending', stats['pending']!, Colors.orange)),
+        Expanded(
+            child: _buildStatCard('Pending', stats['pending']!, Colors.orange)),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatCard('Approved', stats['approved']!, Colors.green)),
+        Expanded(
+            child:
+                _buildStatCard('Approved', stats['approved']!, Colors.green)),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatCard('Rejected', stats['rejected']!, Colors.red)),
+        Expanded(
+            child: _buildStatCard('Rejected', stats['rejected']!, Colors.red)),
       ],
     );
   }
@@ -216,22 +228,22 @@ class VetClinicRequestsDashboard extends StatelessWidget {
 
   Widget _buildFilters(VetClinicRequestsController controller, bool isMobile) {
     return Obx(() => Container(
-      margin: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            _buildFilterChip(controller, 'all', 'All'),
-            const SizedBox(width: 8),
-            _buildFilterChip(controller, 'pending', 'Pending'),
-            const SizedBox(width: 8),
-            _buildFilterChip(controller, 'approved', 'Approved'),
-            const SizedBox(width: 8),
-            _buildFilterChip(controller, 'rejected', 'Rejected'),
-          ],
-        ),
-      ),
-    ));
+          margin: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildFilterChip(controller, 'all', 'All'),
+                const SizedBox(width: 8),
+                _buildFilterChip(controller, 'pending', 'Pending'),
+                const SizedBox(width: 8),
+                _buildFilterChip(controller, 'approved', 'Approved'),
+                const SizedBox(width: 8),
+                _buildFilterChip(controller, 'rejected', 'Rejected'),
+              ],
+            ),
+          ),
+        ));
   }
 
   Widget _buildFilterChip(
@@ -256,14 +268,16 @@ class VetClinicRequestsDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildSearchBar(VetClinicRequestsController controller, bool isMobile) {
+  Widget _buildSearchBar(
+      VetClinicRequestsController controller, bool isMobile) {
     return Container(
       margin: EdgeInsets.all(isMobile ? 16 : 24),
       child: TextField(
         onChanged: controller.updateSearchQuery,
         decoration: InputDecoration(
           hintText: 'Search by clinic name, email, or location...',
-          prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF517399)),
+          prefixIcon:
+              const Icon(Icons.search_rounded, color: Color(0xFF517399)),
           filled: true,
           fillColor: Colors.white,
           border: OutlineInputBorder(
@@ -291,9 +305,17 @@ class VetClinicRequestsDashboard extends StatelessWidget {
   ) {
     return GestureDetector(
       onTap: () async {
-        final result = await Get.to(() => VetClinicRequestDetailPage(request: request));
+        // Navigate to detail page
+        final result = await Get.to(
+          () => VetClinicRequestDetailPage(request: request),
+          // Prevent page caching to ensure fresh data
+          preventDuplicates: false,
+        );
+
+        // If result is true, refresh was triggered from detail page
         if (result == true) {
-          controller.refreshRequests();
+          // The controller should already be refreshed, but ensure it
+          await controller.refreshRequests();
         }
       },
       child: Container(
@@ -339,7 +361,8 @@ class VetClinicRequestsDashboard extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: request.statusColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
@@ -348,7 +371,8 @@ class VetClinicRequestsDashboard extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(request.statusIcon, size: 16, color: request.statusColor),
+                      Icon(request.statusIcon,
+                          size: 16, color: request.statusColor),
                       const SizedBox(width: 4),
                       Text(
                         request.status.toUpperCase(),
@@ -369,7 +393,8 @@ class VetClinicRequestsDashboard extends StatelessWidget {
               runSpacing: 8,
               children: [
                 _buildInfoChip(Icons.email_rounded, request.email, isMobile),
-                _buildInfoChip(Icons.phone_rounded, request.contactNumber, isMobile),
+                _buildInfoChip(
+                    Icons.phone_rounded, request.contactNumber, isMobile),
                 _buildInfoChip(
                   Icons.calendar_today_rounded,
                   DateFormat('MMM dd, yyyy').format(request.submittedAt),

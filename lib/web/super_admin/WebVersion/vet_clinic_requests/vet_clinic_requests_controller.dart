@@ -6,11 +6,12 @@ class VetClinicRequestsController extends GetxController {
   final AuthRepository authRepository = Get.find<AuthRepository>();
 
   // Observable variables
-  final RxList<VetClinicRegistrationRequest> allRequests = 
+  final RxList<VetClinicRegistrationRequest> allRequests =
       <VetClinicRegistrationRequest>[].obs;
   final RxBool isLoading = true.obs;
   final RxString errorMessage = ''.obs;
-  final RxString selectedFilter = 'all'.obs; // 'all', 'pending', 'approved', 'rejected'
+  final RxString selectedFilter =
+      'all'.obs; // 'all', 'pending', 'approved', 'rejected'
   final RxString searchQuery = ''.obs;
 
   @override
@@ -26,7 +27,8 @@ class VetClinicRequestsController extends GetxController {
       errorMessage.value = '';
 
       final requests = await authRepository.getAllVetRegistrationRequests(
-        status: status ?? (selectedFilter.value == 'all' ? null : selectedFilter.value),
+        status: status ??
+            (selectedFilter.value == 'all' ? null : selectedFilter.value),
       );
 
       allRequests.value = requests;
@@ -95,6 +97,23 @@ class VetClinicRequestsController extends GetxController {
 
   /// Refresh requests
   Future<void> refreshRequests() async {
-    await fetchRequests();
+    try {
+      isLoading.value = true;
+      errorMessage.value = '';
+
+      final requests = await authRepository.getAllVetRegistrationRequests(
+        status: selectedFilter.value == 'all' ? null : selectedFilter.value,
+      );
+
+      // IMPORTANT: Use assignAll instead of value = to trigger reactivity properly
+      allRequests.assignAll(requests);
+
+      // Force update to ensure UI rebuilds
+      allRequests.refresh();
+    } catch (e) {
+      errorMessage.value = 'Failed to fetch requests: ${e.toString()}';
+    } finally {
+      isLoading.value = false;
+    }
   }
 }

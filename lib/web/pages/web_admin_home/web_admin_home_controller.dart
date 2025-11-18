@@ -10,6 +10,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
+import 'package:capstone_app/data/models/clinic_model.dart';
+
 class WebAdminHomeController extends GetxController {
   final GetStorage _getStorage = GetStorage();
 
@@ -21,42 +23,37 @@ class WebAdminHomeController extends GetxController {
   final RxList<Widget> pages = <Widget>[].obs;
   final RxList<String> navigationLabels = <String>[].obs;
 
-@override
-void onInit() {
-  super.onInit();
+  @override
+  void onInit() {
+    super.onInit();
 
-  _loadUserRole();
-  _buildNavigationBasedOnPermissions();
-  
-  // 🔧 FIX: Register WebAppointmentController early
-  _registerControllers();
-}
+    _loadUserRole();
+    _buildNavigationBasedOnPermissions();
+
+    // 🔧 FIX: Register WebAppointmentController early
+    _registerControllers();
+  }
 
 // 🆕 ADD THIS METHOD
-void _registerControllers() {
-  try {
-    
-    // Register WebAppointmentController if not already registered
-    if (!Get.isRegistered<WebAppointmentController>()) {
-      Get.put(
-        WebAppointmentController(
-          authRepository: Get.find<AuthRepository>(),
-          session: Get.find<UserSessionService>(),
-        ),
-        permanent: true, // Keep it alive
-      );
-    } else {
-    }
-  } catch (e) {
+  void _registerControllers() {
+    try {
+      // Register WebAppointmentController if not already registered
+      if (!Get.isRegistered<WebAppointmentController>()) {
+        Get.put(
+          WebAppointmentController(
+            authRepository: Get.find<AuthRepository>(),
+            session: Get.find<UserSessionService>(),
+          ),
+          permanent: true, // Keep it alive
+        );
+      } else {}
+    } catch (e) {}
   }
-}
 
   void _loadUserRole() {
-
     final role = _getStorage.read("role") as String?;
     final clinicId = _getStorage.read("clinicId") as String?;
     final userId = _getStorage.read("userId") as String?;
-
 
     if (role == null || role.isEmpty) {
       userRole.value = '';
@@ -87,7 +84,6 @@ void _registerControllers() {
   }
 
   void _buildNavigationBasedOnPermissions() {
-
     // Clear existing pages and labels
     pages.clear();
     navigationLabels.clear();
@@ -128,25 +124,20 @@ void _registerControllers() {
 
       // Staffs page is NEVER shown to staff users
     }
-
   }
 
   void _printAccessSummary() {
-
     if (userRole.value == "admin") {
     } else if (userRole.value == "staff") {
       final allPages = ["Clinic", "Appointments", "Messages"];
       final noAccess =
           allPages.where((page) => !userAuthorities.contains(page)).toList();
-      if (noAccess.isNotEmpty) {
-      }
+      if (noAccess.isNotEmpty) {}
     }
-
   }
 
   void setSelectedIndex(int index) {
     final maxIndex = pages.length - 1;
-
 
     if (index >= 0 && index <= maxIndex) {
       selectedIndex.value = index;
@@ -375,15 +366,56 @@ void _registerControllers() {
 
   /// NEW: Log permission details for debugging
   void debugPrintPermissions() {
-    getDashboardWidgetVisibility().forEach((widget, visible) {
-    });
+    getDashboardWidgetVisibility().forEach((widget, visible) {});
   }
 
-  void debugPrintState() {
-  }
+  void debugPrintState() {}
 
   @override
   void onClose() {
     super.onClose();
+  }
+
+  Future<bool> shouldPromptPasswordChange() async {
+    try {
+      // Only check for admin users
+      if (!isAdmin) return false;
+
+      final clinicId = _getStorage.read("clinicId") as String?;
+      if (clinicId == null || clinicId.isEmpty) return false;
+
+      // Check if password has been changed (nullable check)
+      final hasChangedPassword =
+          _getStorage.read('hasChangedPassword') as bool?;
+
+      // If already changed (true), no need to prompt
+      if (hasChangedPassword == true) return false;
+
+      // Fetch from database to confirm
+      final authRepository = Get.find<AuthRepository>();
+
+      // ✅ FIX: Get the document and convert to Clinic model
+      final clinicDoc = await authRepository.getClinicById(clinicId);
+
+      if (clinicDoc != null) {
+        // ✅ Convert Document to Clinic model
+        final clinic = Clinic.fromMap(clinicDoc.data);
+        clinic.documentId = clinicDoc.$id;
+
+        // ✅ Now we can safely access hasChangedPassword
+        final dbHasChanged = clinic.hasChangedPassword ?? false;
+
+        // Update local storage to match database
+        _getStorage.write('hasChangedPassword', dbHasChanged);
+
+        // Return true if password has NOT been changed (false or null)
+        return !dbHasChanged;
+      }
+
+      return false;
+    } catch (e) {
+      print('Error checking password change status: $e');
+      return false;
+    }
   }
 }

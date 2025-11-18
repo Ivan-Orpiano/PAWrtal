@@ -13,6 +13,8 @@ class Clinic {
   late String image;
   String? profilePictureId;
   String? dashboardPic;
+  bool?
+      hasChangedPassword; // NEW: Track if admin changed from auto-generated password (nullable)
 
   Clinic({
     this.documentId,
@@ -29,6 +31,7 @@ class Clinic {
     required this.image,
     this.profilePictureId,
     this.dashboardPic,
+    this.hasChangedPassword, // NEW: Nullable, no default
   });
 
   Clinic.fromMap(Map<String, dynamic> map) {
@@ -46,6 +49,7 @@ class Clinic {
     image = map['image'] ?? '';
     profilePictureId = map['profilePictureId'] ?? '';
     dashboardPic = map['dashboardPic'] ?? '';
+    hasChangedPassword = map['hasChangedPassword'] as bool?; // NEW: Nullable
   }
 
   Map<String, dynamic> toMap() {
@@ -63,6 +67,8 @@ class Clinic {
       'image': image,
       'profilePictureId': profilePictureId ?? '',
       'dashboardPic': dashboardPic ?? '',
+      'hasChangedPassword':
+          hasChangedPassword ?? false, // NEW: Use false if null
     };
   }
 
@@ -81,6 +87,7 @@ class Clinic {
     String? image,
     String? profilePictureId,
     String? dashboardPic,
+    bool? hasChangedPassword, // NEW
   }) {
     return Clinic(
       documentId: documentId ?? this.documentId,
@@ -97,6 +104,7 @@ class Clinic {
       image: image ?? this.image,
       profilePictureId: profilePictureId ?? this.profilePictureId,
       dashboardPic: dashboardPic ?? this.dashboardPic,
+      hasChangedPassword: hasChangedPassword ?? this.hasChangedPassword, // NEW
     );
   }
 }

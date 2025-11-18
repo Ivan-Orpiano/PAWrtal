@@ -1,3 +1,4 @@
+import 'package:capstone_app/web/super_admin/WebVersion/vet_clinic_requests/vet_clinic_requests_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:capstone_app/data/models/vet_clinic_registration_request_model.dart';
@@ -596,14 +597,56 @@ class _VetClinicRequestDetailPageState
 
     // If registration was successful, mark as approved
     if (result == true) {
-      await _updateStatus('approved');
+      // NEW: Directly update status and refresh controller
+      setState(() => isProcessing = true);
+
+      try {
+        final userId = storage.read('userId') ?? '';
+
+        await authRepository.updateVetRegistrationRequestStatus(
+          widget.request.documentId!,
+          'approved',
+          userId,
+          'Clinic registered successfully by super admin',
+        );
+
+        // Force controller refresh
+        try {
+          final controller = Get.find<VetClinicRequestsController>();
+          await controller.refreshRequests();
+        } catch (e) {
+          print('Controller not found: $e');
+        }
+
+        Get.snackbar(
+          'Success',
+          'Clinic registered and request approved',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green.shade100,
+          colorText: Colors.green.shade900,
+        );
+
+        Get.back(result: true); // Return to dashboard
+      } catch (e) {
+        Get.snackbar(
+          'Error',
+          'Clinic registered but failed to update request status: ${e.toString()}',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.orange.shade100,
+          colorText: Colors.orange.shade900,
+        );
+      } finally {
+        setState(() => isProcessing = false);
+      }
     }
   }
 
   Future<void> _updateStatus(String newStatus) async {
     // Show confirmation dialog
-    final confirmed = await Get.dialog<bool>(
-      AlertDialog(
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
             newStatus == 'approved' ? 'Approve Request?' : 'Reject Request?'),
@@ -614,11 +657,11 @@ class _VetClinicRequestDetailPageState
         ),
         actions: [
           TextButton(
-            onPressed: () => Get.back(result: false),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () => Get.back(result: true),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor:
                   newStatus == 'approved' ? Colors.green : Colors.red,
@@ -651,50 +694,89 @@ class _VetClinicRequestDetailPageState
         notes,
       );
 
-      Get.snackbar(
-        'Success',
-        'Request has been ${newStatus}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.shade100,
-        colorText: Colors.green.shade900,
+      // ✅ FIX: Refresh the controller data FIRST
+      try {
+        final controller = Get.find<VetClinicRequestsController>();
+        await controller.refreshRequests();
+      } catch (e) {
+        print('Controller not found: $e');
+      }
+
+      // ✅ FIX: Use the EXACT same navigation method as the back button
+      // This is copied from your AppBar leading button
+      if (!mounted) return;
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Request has been $newStatus'),
+          backgroundColor: Colors.green.shade600,
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
 
-      Get.back(result: true); // Return to dashboard with refresh
+      // Navigate back using Get.back() - same as back button
+      Get.back(result: true);
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to update status: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.shade100,
-        colorText: Colors.red.shade900,
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update status: ${e.toString()}'),
+          backgroundColor: Colors.red.shade600,
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     } finally {
-      setState(() => isProcessing = false);
+      if (mounted) {
+        setState(() => isProcessing = false);
+      }
     }
   }
 
   Future<String?> _getReviewNotes() async {
     final controller = TextEditingController();
 
-    return await Get.dialog<String>(
-      AlertDialog(
+    return await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Rejection Notes'),
-        content: TextField(
-          controller: controller,
-          maxLines: 3,
-          decoration: const InputDecoration(
-            hintText: 'Enter reason for rejection (optional)',
-            border: OutlineInputBorder(),
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Please provide a reason for rejection:',
+              style: TextStyle(fontSize: 14, color: Colors.black87),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              maxLines: 3,
+              maxLength: 200,
+              decoration: const InputDecoration(
+                hintText: 'Enter reason for rejection...',
+                border: OutlineInputBorder(),
+                counterText: '',
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () => Navigator.of(dialogContext).pop(null),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () => Get.back(result: controller.text.trim()),
+            onPressed: () {
+              final text = controller.text.trim();
+              Navigator.of(dialogContext)
+                  .pop(text.isEmpty ? 'No reason provided' : text);
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
