@@ -615,7 +615,6 @@ class _VetClinicRequestDetailPageState
           final controller = Get.find<VetClinicRequestsController>();
           await controller.refreshRequests();
         } catch (e) {
-          print('Controller not found: $e');
         }
 
         Get.snackbar(
@@ -699,7 +698,6 @@ class _VetClinicRequestDetailPageState
         final controller = Get.find<VetClinicRequestsController>();
         await controller.refreshRequests();
       } catch (e) {
-        print('Controller not found: $e');
       }
 
       // ✅ FIX: Use the EXACT same navigation method as the back button

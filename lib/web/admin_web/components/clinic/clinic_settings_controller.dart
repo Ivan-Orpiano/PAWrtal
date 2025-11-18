@@ -582,7 +582,7 @@ class ClinicSettingsController extends GetxController {
 
       _showSnackBar("Clinic settings updated successfully!");
     } catch (e) {
-      _showSnackBar("Failed to update clinic settings: $e", isError: true);
+      // _showSnackBar("Failed to update clinic settings: $e", isError: true);
     } finally {
       isSaving.value = false;
     }
