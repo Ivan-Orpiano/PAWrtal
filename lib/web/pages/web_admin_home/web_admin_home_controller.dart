@@ -414,7 +414,6 @@ class WebAdminHomeController extends GetxController {
 
       return false;
     } catch (e) {
-      print('Error checking password change status: $e');
       return false;
     }
   }

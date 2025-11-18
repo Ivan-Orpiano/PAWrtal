@@ -258,7 +258,6 @@ class AdminChangePasswordController extends GetxController {
       // Update local storage
       _storage.write('hasChangedPassword', true);
     } catch (e) {
-      print('Error marking password as changed: $e');
     }
   }
 }

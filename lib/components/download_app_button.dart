@@ -11,7 +11,7 @@ class DownloadAppButton extends StatelessWidget {
     this.isMobileLayout = false,
   });
 
-  static const String apkDownloadUrl = 'https://github.com/hail-dev/PAWrtal-App/releases/download/v0.1.0/PAWrtal.apk';
+  static const String apkDownloadUrl = 'https://github.com/hail-dev/PAWrtal-App/releases/download/v1.0.0/PAWrtal.apk';
 
   @override
   Widget build(BuildContext context) {
@@ -179,13 +179,13 @@ class DownloadAppButton extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        Text(
-          'Version 1.0.0 • ${(0.0).toStringAsFixed(1)} MB',
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade600,
-          ),
-        ),
+        // Text(
+        //   'Version 1.0.0 • ${(0.0).toStringAsFixed(1)} MB',
+        //   style: TextStyle(
+        //     fontSize: 12,
+        //     color: Colors.grey.shade600,
+        //   ),
+        // ),
       ],
     );
   }
