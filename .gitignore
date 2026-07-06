@@ -43,11 +43,12 @@ app.*.map.json
 /android/app/release
 .metadata
 analysis_options.yaml
-
+.gitignore
 firebase.json
 pubspec.lock
-
+.gitignore
 pubspec.yaml
-
+.gitignore
 devtools_options.yaml
 vercel.json
+#Confi
